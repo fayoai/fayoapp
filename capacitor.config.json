@@ -1,0 +1,9 @@
+{
+  "appId": "com.mifsmart.platform",
+  "appName": "MIF Smart",
+  "webDir": "dist",
+  "android": {"allowMixedContent": false},
+  "ios": {"contentInset": "automatic" },
+  "server": {"androidScheme": "https"},
+  "plugins": {"SplashScreen": {"launchShowDuration": 1500, "backgroundColor": "#151519", "showSpinner": false}}
+}

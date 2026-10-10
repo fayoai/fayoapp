@@ -1,0 +1,36 @@
+name: iOS simulator build (manual, not App Store release)
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'Deployed HTTPS API origin'
+        required: true
+        type: string
+jobs:
+  ios-simulator:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Validate origin
+        env:
+          APP_URL: ${{ inputs.api_base_url }}
+        run: node -e "const u=new URL(process.env.APP_URL);if(u.protocol!=='https:')process.exit(1)"
+      - name: Build app assets
+        env:
+          VITE_API_BASE_URL: ${{ inputs.api_base_url }}
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npx cap add ios
+          npx cap sync ios
+      - name: Build iOS Simulator version without signing
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath ios-build CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mif-smart-ios-simulator-unsigned
+          path: ios-build/Build/Products/Debug-iphonesimulator/App.app/**
+          if-no-files-found: error
+          retention-days: 7

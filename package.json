@@ -1,16 +1,21 @@
 {
   "name": "mif-smart-platform",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"node --watch api/dev-server.mjs\" \"vite --host 0.0.0.0\"",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test api/*.test.mjs",
+    "test": "node --test api/*.test.mjs scripts/*.test.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "deploy": "npm run build && wrangler deploy",
-    "check": "npm run test && npm run build"
+    "check": "npm run test && npm run build",
+    "mobile:add:android": "npx cap add android",
+    "mobile:add:ios": "npx cap add ios",
+    "mobile:sync": "npm run build && npx cap sync",
+    "desktop:install": "npm --prefix apps/desktop install",
+    "desktop:run": "npm --prefix apps/desktop start"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",
@@ -22,12 +27,16 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
-    "zod": "^4.1.11"
+    "zod": "^4.1.11",
+    "@capacitor/core": "8.5.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.2.1",
     "vite": "^7.1.7",
-    "wrangler": "^4.40.0"
+    "wrangler": "^4.40.0",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/ios": "8.5.2"
   }
 }

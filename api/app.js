@@ -27,11 +27,28 @@ async function requireAdmin(c,next){const key=secret(c);if(!key)return error(c,5
 function parseBody(schema,body){const r=schema.safeParse(body);return r.success?r.data:null;}
 const readBody=async c=>{try{return await c.req.json();}catch{return {};}};
 app.onError((err,c)=>{console.error('API error',err?.message);return error(c,500,'Unexpected server error');});
-app.use('/api/*',async(c,next)=>{c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');c.header('Cache-Control','no-store');if(!['GET','HEAD','OPTIONS'].includes(c.req.method) && !sameOrigin(c))return error(c,403,'Cross-origin request rejected');await next();});
+// Native WebView apps can access only explicitly configured public endpoints.
+// Never CORS-expose /api/admin/* (cookie authentication stays same-origin).
+const publicNative=/^\/api\/(?:health|bootstrap|articles(?:\/.*)?|leads|commerce\/(?:catalog|checkout|order\/[^/]+|module\/[^/]+\/download))$/;
+function allowedNativeOrigin(c){
+ const origin=c.req.header('Origin');
+ if(!origin||!publicNative.test(c.req.path))return null;
+ const allow=(env(c).ALLOWED_APP_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean);
+ return allow.includes(origin)?origin:null;
+}
+app.use('/api/*',async(c,next)=>{
+ c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');
+ c.header('Referrer-Policy','strict-origin-when-cross-origin');c.header('Cache-Control','no-store');
+ const origin=allowedNativeOrigin(c);
+ if(origin){c.header('Access-Control-Allow-Origin',origin);c.header('Vary','Origin');c.header('Access-Control-Allow-Methods','GET, POST, OPTIONS');c.header('Access-Control-Allow-Headers','Content-Type');}
+ if(c.req.method==='OPTIONS'&&origin)return c.body(null,204);
+ if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!sameOrigin(c)&&!origin)return error(c,403,'Cross-origin request rejected');
+ await next();
+});
 app.get('/api/health',async c=>{const sql=db(c);if(!sql)return c.json({ok:true,service:'MIF Smart API',database:'unconfigured',mode:'preview'});try{await query(sql,'SELECT 1');return c.json({ok:true,service:'MIF Smart API',database:'connected',mode:'live'});}catch{return c.json({ok:false,service:'MIF Smart API',database:'error'},503);}});
 app.get('/api/articles',async c=>{const sql=db(c);if(!sql)return c.json({ok:true,data:[]});const rows=await query(sql,'SELECT id,slug,title_ar,title_en,excerpt_ar,excerpt_en,created_at FROM articles WHERE published=true ORDER BY created_at DESC LIMIT 100');return c.json({ok:true,data:rows});});
 app.get('/api/articles/:slug',async c=>{const sql=db(c);if(!sql)return error(c,404,'Article not found');const rows=await query(sql,'SELECT * FROM articles WHERE slug=$1 AND published=true',[c.req.param('slug')]);return rows.length?c.json({ok:true,data:rows[0]}):error(c,404,'Article not found');});
-app.get('/api/bootstrap',async c=>{const sql=db(c);if(!sql)return c.json({ok:true,mode:'preview',catalog:seedCatalog,settings:seedSettings});const [catalog,settings]=await Promise.all([query(sql,'SELECT * FROM catalog WHERE active = true ORDER BY sort_order, created_at'),query(sql,'SELECT key,value FROM site_settings')]);return c.json({ok:true,mode:'live',catalog,settings:Object.fromEntries(settings.map(s=>[s.key,s.value]))});});
+app.get('/api/bootstrap',async c=>{const sql=db(c);if(!sql)return c.json({ok:true,mode:'preview',catalog:seedCatalog,settings:seedSettings});const [catalog,settings]=await Promise.all([query(sql,'SELECT * FROM catalog WHERE active = true ORDER BY sort_order, created_at'),query(sql,'SELECT key,value FROM site_settings')]);return c.json({ok:true,mode:'live',catalog:catalog.filter(x=>!['smart-home','contracting','ai'].includes(x.category)),settings:Object.fromEntries(settings.map(s=>[s.key,s.value]))});});
 app.post('/api/leads',async c=>{const data=parseBody(leadSchema,await readBody(c));if(!data)return error(c,400,'Please check form fields');if(data.website)return c.json({ok:true});const sql=db(c);if(!sql)return error(c,503,'Database is not connected; inquiries are temporarily disabled');const result=await query(sql,'INSERT INTO leads(name,email,phone,company,service,message) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',[data.name,data.email,data.phone,data.company,data.service,data.message]);return c.json({ok:true,id:result[0].id},201);});
 app.post('/api/orders',async c=>{const data=parseBody(orderSchema,await readBody(c));if(!data)return error(c,400,'Please check order details');if(data.website)return c.json({ok:true,reference:'RECEIVED'});const sql=db(c);if(!sql)return error(c,503,'Database is not connected; order requests are temporarily disabled');const ids=[...new Set(data.items.map(x=>x.id))];if(ids.length!==data.items.length || ids.some(x=>!idSchema.safeParse(x).success))return error(c,400,'Invalid cart items');const valid=await query(sql,'SELECT id,title_ar,price,active FROM catalog WHERE id = ANY($1::uuid[]) AND kind = $2',[ids,'product']);if(valid.length!==data.items.length||valid.some(x=>!x.active))return error(c,400,'Some products are unavailable');const rows=data.items.map(i=>{const item=valid.find(x=>x.id===i.id);return {catalog_id:i.id,quantity:i.quantity,unit_price:item.price,title_snapshot:item.title_ar};});const subtotal=rows.some(r=>r.unit_price===null)?null:rows.reduce((acc,row)=>acc+Number(row.unit_price)*row.quantity,0);const ref=`MIF-${new Date().getUTCFullYear()}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
 // Insert order and its lines as one atomic SQL statement.
