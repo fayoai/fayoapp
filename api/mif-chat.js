@@ -62,13 +62,20 @@ export function installMifChat(app,{db,env,query}){
 
  app.post('/api/chat/public',async c=>{
   const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
-  // Anonymous model calls must be guarded by Cloudflare's distributed rate limiter.
-  const rate=env(c).CHAT_RATE_LIMITER;
-  if(!rate?.limit)return fail(c,503,'Public conversations are not enabled yet');
+  // Guest chat is anonymous but rate-limited atomically using tenant-owned PostgreSQL.
+  const sql=db(c),cfg=env(c);
+  if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED!=='true')return fail(c,503,'MIF Smart conversations are not configured yet');
   const ip=c.req.header('CF-Connecting-IP')||'';
   if(!ip)return fail(c,403,'Unable to verify visitor request');
-  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ip)))).map(x=>x.toString(16).padStart(2,'0')).join('');
-  try{const limit=await rate.limit({key:hash});if(!limit?.success)return fail(c,429,'Too many messages; try again shortly')}catch{return fail(c,503,'Public chat security is unavailable')}
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cfg.SESSION_SECRET+'|public-chat|'+ip));
+  const key=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+  const sqlLimit="INSERT INTO mif_guest_usage(client_key,bucket,hits,expires_at) VALUES($1,$2,1,now()+$3::interval) ON CONFLICT(client_key,bucket) DO UPDATE SET hits=CASE WHEN mif_guest_usage.expires_at<=now() THEN 1 ELSE mif_guest_usage.hits+1 END,expires_at=CASE WHEN mif_guest_usage.expires_at<=now() THEN now()+$3::interval ELSE mif_guest_usage.expires_at END RETURNING hits";
+  try{
+   const minute=await query(sql,sqlLimit,[key,'minute','1 minute']);
+   if((minute[0]?.hits||0)>6)return fail(c,429,'Too many messages; try again shortly');
+   const day=await query(sql,sqlLimit,[key,'day','1 day']);
+   if((day[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
+  }catch{return fail(c,503,'Public chat protection is temporarily unavailable')}
   try{return c.json({ok:true,answer:await respondWithOwnerKey(v.data.question,{...env(c),...await platformCredentials(db(c),env(c),query)})})}catch(e){return fail(c,e.status||502,e.message)}
  });
  app.get('/api/admin/chat/threads',async c=>{
