@@ -13,18 +13,19 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run check
-      - name: Deploy to Cloudflare or temporary preview
+      - name: Verify Cloudflare deployment credentials
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
-            echo "Deploying to the configured Cloudflare account"
-            npx wrangler deploy
-          else
-            echo "Cloudflare account secrets are absent; deploying a temporary, public preview only"
-            # Temporary accounts do not permit cron triggers. Retain them for authenticated production deploys.
-            node -e "const fs=require('fs');const p='wrangler.jsonc';const x=JSON.parse(fs.readFileSync(p,'utf8'));delete x.triggers;fs.writeFileSync(p,JSON.stringify(x,null,2))"
-            npx wrangler deploy --temporary
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository Actions Secrets."
+            exit 1
           fi
+      - name: Deploy MIF Smart Worker to the authenticated Cloudflare account
+        shell: bash
+        run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
