@@ -7,7 +7,10 @@
     "nodejs_compat"
   ],
   "vars": {
-    "MIF_APP_SURFACE": "developer"
+    "MIF_APP_SURFACE": "developer",
+    "NEON_PROJECT_ID": "blue-wave-63999494",
+    "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
+    "NEON_DB_ROLE_NAME": "mif_smart_owner"
   },
   "assets": {
     "directory": "./dist/developer",

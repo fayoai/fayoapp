@@ -36,6 +36,8 @@ jobs:
           MIF_NEON_API_KEY: ${{ secrets.MIF_NEON_API_KEY }}
           MIF_NEON_ORG_ID: ${{ secrets.MIF_NEON_ORG_ID }}
           MIF_SITE_ORIGIN: ${{ vars.MIF_SITE_ORIGIN }}
+          MIF_REGISTRATION_ENABLED: ${{ vars.MIF_REGISTRATION_ENABLED }}
+          MIF_PUBLIC_CHAT_ENABLED: ${{ vars.MIF_PUBLIC_CHAT_ENABLED }}
         run: |
           set -euo pipefail
           SECRET_FILE="${RUNNER_TEMP}/mif-worker-secrets.json"
@@ -51,7 +53,9 @@ jobs:
             MIF_PLATFORM_OWNER_EMAIL:'PLATFORM_OWNER_EMAIL',
             MIF_NEON_API_KEY:'NEON_API_KEY',
             MIF_NEON_ORG_ID:'NEON_ORG_ID',
-            MIF_SITE_ORIGIN:'SITE_ORIGIN'
+            MIF_SITE_ORIGIN:'SITE_ORIGIN',
+            MIF_REGISTRATION_ENABLED:'REGISTRATION_ENABLED',
+            MIF_PUBLIC_CHAT_ENABLED:'PUBLIC_CHAT_ENABLED'
           };
           const values=Object.fromEntries(
             Object.entries(names).filter(([source])=>!!process.env[source]).map(([source,target])=>[target,process.env[source]])
