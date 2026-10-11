@@ -117,7 +117,7 @@ export function installMifChat(app,{db,env,query}){
   // Every billable request reserves tenant quota atomically, even under concurrency.
   const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND w.id=$2 ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
    FROM target,mif_subscription_plans p WHERE target.id=s.workspace_id
-   AND p.id=s.plan_id AND p.active=true
+   AND p.id=s.plan_id AND p.active=true AND p.application=COALESCE((SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1),'enterprise')
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
@@ -125,7 +125,14 @@ export function installMifChat(app,{db,env,query}){
   const accountMode=profiles[0]?.account_type==='developer'?'developer':'enterprise';
   let result;try{
    // Tenant-scoped aggregates only. No raw contacts, private messages, payment credentials or other organizations.
-   const stats=await query(sql,`SELECT w.name,
+   const developers=accountMode==='developer'?await query(sql,`SELECT
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1) odoo_databases,
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1 AND last_status='ok') verified_connections,
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1 AND last_status='failed') failed_connections,
+    (SELECT count(*)::int FROM rawi_implementation_projects WHERE workspace_id=$1 AND status='active') active_implementations,
+    (SELECT count(*)::int FROM rawi_odoo_diagnostics WHERE workspace_id=$1 AND status='error') diagnostic_errors,
+    (SELECT coalesce(jsonb_agg(row_data),'[]'::jsonb) FROM (SELECT label,api_version,odoo_version,last_status FROM rawi_odoo_connections WHERE workspace_id=$1 ORDER BY updated_at DESC LIMIT 12) row_data) connections`,[claim[0].workspace_id]):null;
+    const stats=accountMode==='developer'?developers:await query(sql,`SELECT w.name,
    (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=w.id) contacts,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id) invoices,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id AND status='issued' AND due_on<CURRENT_DATE) overdue_invoices,
@@ -137,7 +144,7 @@ export function installMifChat(app,{db,env,query}){
    (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
-   result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),accountMode);
+   result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify(accountMode==='developer'?{odoo_developer_context:developers?.[0]||{}}:{workspaces:stats}).slice(0,3000),accountMode);
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);

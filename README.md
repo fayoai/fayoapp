@@ -1,4 +1,4 @@
-# MIF Smart 7.3 — Corporate SaaS + RAWI AI ERP
+# MIF Smart 8.0 — Corporate SaaS + Two Independent RAWI Applications
 
 **Two different brands and product surfaces.**
 
@@ -52,3 +52,29 @@ See `MIF_SMART_SETUP_AR.md`.
 The GitHub workflow publishes a **temporary Cloudflare preview** when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are absent. A permanent hostname, persistent secure Worker bindings, real AI provider account credentials and a verified email sending service must be configured separately. Do not switch public registration on before implementing production email verification and abuse safeguards. No automated recurring payment collection has been implemented.
 
 Advanced ERP vertical compliance, bank reconciliation, e-invoicing/ZATCA integration, full statutory payroll, country-specific legal requirements, on-server Odoo deployment, and real client acceptance testing are **not complete**. Their implementation depends on requirements, real access and domain validation, not just interface scaffolding.
+
+## RAWI 8.0 — Separate Enterprise and Developer applications
+
+Three independently routed software surfaces are now managed by **MIF Smart SaaS**:
+
+| Surface | Route | Approved identity | Purpose |
+| --- | --- | --- | --- |
+| MIF Smart company and SaaS | `/mif`, `/mif/console` | Original MIF identity | Website, products, SaaS plans, tenants and AI providers |
+| **RAWI Enterprise** | `/` (and `/enterprise`) | Original **orange** RAWI icon `public/rawi-mark.svg` | ERP company operations, business AI, customers, purchases/sales, inventory, projects, payroll foundation |
+| **RAWI Developer** | `/developer/` | Same RAWI symbol, separate **black background / yellow foreground** `public/rawi-developer-mark.svg` | Odoo integrations, read-only verification, module scaffolding, diagnostics, implementation tracking and Odoo engineering AI |
+
+Enterprise logo/style/manifest remain unchanged. Developer has its **own app JSX/CSS**, login/registration UI, independent PWA manifest ID/scope/start URL, scoped service worker, separate desktop Electron packaging config and independent product in the MIF website catalog. Sessions are served by the same securely authenticated platform, while client application type is enforced in authorization, trial-plan assignment and AI quota usage.
+
+### Separate SaaS management
+The `mif_subscription_plans.application` field binds pricing and usage quotas to either `enterprise` or `developer`. A tenant cannot be assigned a subscription for the wrong app. Developer signup receives a separately code-named **internal trial** `rawi-developer-evaluation`; Enterprise retains `rawi-evaluation`. Neither creates a credit balance with external model providers. AI model credentials and allocations remain managed by MIF Smart centrally; the Developer assistant uses a distinct Odoo-specialist policy, with tenant-scoped and credential-free integration diagnostics.
+
+### Developer platform adapters
+The supported platform registry lives in `api/rawi-platform-registry.js`; only Odoo is currently enabled. Future system types will require a separately reviewed adapter, authentication, validation, module deployment method and security tests before activation. Developer Studio also supports an AI-assisted natural-language **addon specification proposal**, validated with strict field/schema rules and charged against Developer quota, followed by an editable downloadable ZIP. Basic Odoo module ZIP generation is **not** automated remote installation; no server file-system access or customer code execution is claimed.
+
+### Installable clients
+- Independent **PWA** installs: `/manifest.webmanifest` for Enterprise; `/developer/manifest.webmanifest` for Developer. Browsers identify them as different apps.
+- Independent desktop package configuration: `apps/desktop` for Enterprise and `apps/developer-desktop` for Developer, with separate product IDs. Desktop binaries need a verified permanent HTTPS endpoint; signing and platform-specific icon bundles are still required before public distribution.
+- App-store native mobile binaries, developer OS-native icon formats and secure native cross-origin authentication are not finished. PWA installation is the browser-supported mobile/desktop option today.
+
+### Production blockers
+Temporary Cloudflare previews do **not** contain the production secret bindings by default. To use the SaaS and Developer AI/Odoo workflows live, configure the permanent Cloudflare account, dedicated Neon `DATABASE_URL`, session/encryption secrets, platform owner identity, provider credentials/AI binding and validated external Odoo API access. Self-registration remains disabled by default pending verification and abuse controls. Automated recurring billing, fiscal and payroll compliance, real Odoo server-side module deployment, and legally approved customer terms have not been verified or implemented as production-ready modules. The product must not be described as complete for regulated financial processing solely on the strength of UI or unit tests.
