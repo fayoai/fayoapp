@@ -1,5 +1,10 @@
 // Canonical product discovery/configuration, shared between storefront and API.
 export const productRequirements={
+ 'MIF-AI-ERP':[
+  {key:'users',type:'number',ar:'المستخدمون',en:'Users',min:1,max:10000,default:5},
+  {key:'integrations',type:'multi',ar:'برامج الأعمال المطلوب ربطها',en:'Business platforms to connect',options:[['odoo','Odoo','Odoo'],['erpnext','ERPNext','ERPNext'],['zoho','Zoho','Zoho'],['email','البريد الإلكتروني','Email']],default:['odoo']},
+  {key:'modules',type:'multi',ar:'الوظائف المطلوبة',en:'Required features',options:[['crm','العملاء','CRM'],['invoices','الفواتير','Invoices'],['tasks','المهام','Tasks'],['knowledge','قاعدة المعرفة','Knowledge']],default:['crm','invoices','tasks','knowledge']}
+ ],
  'MIF-ERP':[
   {key:'users',type:'number',ar:'عدد المستخدمين',en:'Users',min:1,max:1000,default:10},
   {key:'version',type:'select',ar:'إصدار Odoo',en:'Odoo version',options:[['19','Odoo 19','Odoo 19'],['20','Odoo 20','Odoo 20'],['other','إصدار آخر','Other version']],default:'20'},
