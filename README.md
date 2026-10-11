@@ -98,3 +98,7 @@ Temporary Cloudflare previews do **not** contain the production secret bindings 
 - The approved company/RAWI Enterprise/RAWI Developer identities and original colors are unchanged.
 - `Odoo Community المطوّر` (Enhanced Odoo Community) is explicitly offered by its correct product name as a scoped implementation/customization service. No unsupported Enterprise licenses, prices, automatic deployments or fictitious capabilities are claimed. Its product page routes to a preselected inquiry, not into the RAWI application.
 - Run `npm run db:migrate` to idempotently seed the new published product in the connected database. A preview or successful build does not mean production AI, email verification, checkout or legal compliance is live.
+
+### Website AI attribution and accounting
+
+The public `/mif` AI calls now use a company-specific, public-information-only system policy rather than the private RAWI Enterprise assistant persona. Successful replies are recorded in `mif_ai_usage` with null tenant and actor (no raw visitor IP), so owner analytics include real website model consumption. The deployment audit identifies whether the public assistant is actually configured and enabled.

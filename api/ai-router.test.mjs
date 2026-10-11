@@ -40,3 +40,16 @@ test('Workers AI binding can be used without a browser-visible API key',async()=
  assert.equal(r.answer,'Workers AI reply');assert.equal(r.provider,'workers_ai');
  assert.ok(!JSON.stringify(seen).includes('SENSITIVE_SECRET_ABC'));
 });
+
+test('Public MIF website chat uses a company-specific policy, not RAWI tenant persona',async()=>{
+ const original=globalThis.fetch;let sent;
+ globalThis.fetch=async(_url,opts)=>{sent=JSON.parse(opts.body);return {ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'MIF Smart response'}]}]})}};
+ try{
+  const result=await routeAI('Tell me about MIF Smart',[{code:'openai',model:'test-model',key:'server-key'}],[],'','mif-public');
+  assert.equal(result.answer,'MIF Smart response');
+  assert.match(sent.instructions,/You are MIF Smart/);
+  assert.match(sent.instructions,/Enhanced Odoo Community/);
+  assert.doesNotMatch(sent.instructions,/You are RAWI/);
+  assert.ok(!JSON.stringify(sent).includes('PRIVATE_TENANT_123'));
+ }finally{globalThis.fetch=original}
+});

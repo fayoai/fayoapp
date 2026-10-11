@@ -77,7 +77,12 @@ export function installMifChat(app,{db,env,query}){
    const day=await query(sql,sqlLimit,[key,'day','1 day']);
    if((day[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
   }catch{return fail(c,503,'Public chat protection is temporarily unavailable')}
-  try{const result=await routeAI(v.data.question,await getAIProviders(sql,cfg,query));return c.json({ok:true,answer:result.answer})}catch(e){return fail(c,e.status||502,e.message)}
+  try{
+   const result=await routeAI(v.data.question,await getAIProviders(sql,cfg,query),[],'','mif-public');
+   // Public requests are recorded without visitor IP, email or an invented tenant.
+   try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES(NULL,NULL,$1,$2,$3,$4)',[result.provider,result.model,result.input_tokens,result.output_tokens])}catch(e){console.error('MIF public AI usage audit failed',e.message)}
+   return c.json({ok:true,answer:result.answer});
+  }catch(e){return fail(c,e.status||502,e.message)}
  });
  app.get('/api/admin/chat/threads',async c=>{
   const sql=db(c);if(!sql)return fail(c,503,'Storage is not connected');
