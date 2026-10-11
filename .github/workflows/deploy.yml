@@ -96,6 +96,44 @@ jobs:
           else
             echo "::warning::Runtime not verified: MIF_DATABASE_URL is not configured; all database-backed screens remain unavailable."
           fi
+      - name: Verify RAWI email registration is live after deployment
+        shell: bash
+        env:
+          MIF_RESEND_API_KEY: ${{ secrets.MIF_RESEND_API_KEY }}
+          MIF_EMAIL_FROM: ${{ vars.MIF_EMAIL_FROM }}
+          MIF_REGISTRATION_ENABLED: ${{ vars.MIF_REGISTRATION_ENABLED }}
+        run: |
+          set -euo pipefail
+          if [[ "${MIF_REGISTRATION_ENABLED}" != "true" ]]; then
+            echo "::error::Set repository Actions variable MIF_REGISTRATION_ENABLED=true to activate email signup."
+            exit 1
+          fi
+          if [[ -z "${MIF_RESEND_API_KEY}" ]]; then
+            echo "::error::Missing repository Actions Secret MIF_RESEND_API_KEY."
+            exit 1
+          fi
+          if [[ ! "${MIF_EMAIL_FROM}" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+            echo "::error::Set a valid sender under Actions variable MIF_EMAIL_FROM (for example no-reply@fayo.app)."
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          const target='https://rawi-enterprise.fayosaas.workers.dev/api/public/rawi/status';
+          let status;
+          for(let i=0;i<5;i++){
+           try{
+            const response=await fetch(target,{signal:AbortSignal.timeout(12000),headers:{'Cache-Control':'no-cache'}});
+            if(!response.ok)throw Error('RAWI status HTTP '+response.status);
+            status=await response.json();
+            if(status.ok&&status.registration_enabled===true)break;
+           }catch(e){console.log('Registration check attempt '+(i+1)+': '+e.message)}
+           if(i<4)await new Promise(resolve=>setTimeout(resolve,2500));
+          }
+          if(!status?.ok||status.registration_enabled!==true){
+           console.error('::error::RAWI registration is not active in the deployed Cloudflare Worker. Review DATABASE_URL, SESSION_SECRET, CONNECTOR_ENCRYPTION_KEY, Neon and email sender settings.');
+           process.exit(1);
+          }
+          console.log('RAWI email-code registration is enabled in the deployed Enterprise Worker.');
+          NODE
       - name: Verify real production domain when configured
         shell: bash
         env:
