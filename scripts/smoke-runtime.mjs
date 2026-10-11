@@ -1,6 +1,6 @@
 // Assert actual public Worker->Neon availability and a protected session endpoint.
 const targets=[
- ['RAWI Enterprise','https://rawi-enterprise.fayosaas.workers.dev'],
+ ['RAWI ERP','https://rawi-enterprise.fayosaas.workers.dev'],
  ['MIF Smart','https://mif-smart-platform.fayosaas.workers.dev']
 ];
 let errors=0;
