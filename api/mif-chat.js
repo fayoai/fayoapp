@@ -1,8 +1,9 @@
 import {seal,unseal} from './ai-erp.js';
 import {getAIProviders,routeAI} from './ai-router.js';
 import {z} from 'zod';
+import {documentsSchema} from './rawi-documents.js';
 const uuid=z.string().uuid();
-const input=z.object({question:z.string().trim().min(1).max(2500)});
+const input=z.object({question:z.string().trim().min(1).max(2500),documents:documentsSchema.optional()});
 const authInput=input.extend({thread_id:uuid.nullable().optional(),workspace_id:uuid.nullable().optional()});
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
@@ -62,7 +63,8 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
  });
 
  app.post('/api/chat/public',async c=>{
-  const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
+  if(Number(c.req.header('content-length')||0)>3600000)return fail(c,413,'Attachments are too large');
+   const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
   // Guest chat is anonymous but rate-limited atomically using tenant-owned PostgreSQL.
   const sql=db(c),cfg=env(c);
   if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED!=='true')return fail(c,503,'MIF Smart conversations are not configured yet');
@@ -81,7 +83,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    const visitorMode=cfg.MIF_APP_SURFACE==='enterprise'?'enterprise-public':'mif-public';
    const products=visitorMode==='mif-public'?await query(sql,'SELECT code,title_ar,title_en,summary_ar,summary_en FROM mif_products WHERE published=true ORDER BY sort_order,created_at LIMIT 12'):[];
    const catalogue=JSON.stringify(products.map(p=>({code:p.code,title_ar:p.title_ar,title_en:p.title_en,summary_ar:p.summary_ar,summary_en:p.summary_en}))).slice(0,3000);
-   const result=await routeAI(v.data.question,await getAIProviders(centralDb(c),cfg,query),[],catalogue,visitorMode);
+   const result=await routeAI(v.data.question,await getAIProviders(centralDb(c),cfg,query),[],catalogue,visitorMode,v.data.documents||[]);
    // Public requests are recorded without visitor IP, email or an invented tenant.
    try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES(NULL,NULL,$1,$2,$3,$4)',[result.provider,result.model,result.input_tokens,result.output_tokens])}catch(e){console.error('MIF public AI usage audit failed',e.message)}
    return c.json({ok:true,answer:result.answer});
@@ -107,7 +109,8 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
   return rows.length?c.json({ok:true}):fail(c,404,'Conversation not found');
  });
  app.post('/api/admin/chat/send',async c=>{
-  const v=authInput.safeParse(await parse(c)),sql=db(c);if(!v.success)return fail(c,400,'Invalid message');if(!sql)return fail(c,503,'Storage is not connected');
+  if(Number(c.req.header('content-length')||0)>3600000)return fail(c,413,'Attachments are too large');
+   const v=authInput.safeParse(await parse(c)),sql=db(c);if(!v.success)return fail(c,400,'Invalid message');if(!sql)return fail(c,503,'Storage is not connected');
   const user=c.get('adminId');
   const rec=await query(sql,"SELECT COUNT(*)::int n FROM mif_chat_messages m JOIN mif_chat_threads t ON t.id=m.thread_id WHERE t.owner_id=$1 AND m.role='user' AND m.created_at>now()-interval '1 minute'",[user]);
   if((rec[0]?.n||0)>=12)return fail(c,429,'Too many messages; try again shortly');
@@ -143,7 +146,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
-   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),'enterprise');
+   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),'enterprise',v.data.documents||[]);
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
