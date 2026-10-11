@@ -6,21 +6,25 @@ test('Single chat input has one visual border, no nested brand bar, and stays ov
  const ui=read('src/MifSmartShell.jsx'),css=read('src/mif-smart-shell.css');
  assert.equal((ui.match(/className="mif-composer"/g)||[]).length,1);
  assert.equal((ui.match(/className="rawi-send"/g)||[]).length,1);
+ assert.match(ui,/<form className="mif-composer"/);
+ assert.doesNotMatch(ui,/\{authed&&<form className="mif-composer"/);
  assert.doesNotMatch(ui,/className="rawi-composer-actions"/);
  assert.match(css,/\.mif-chat-page\{[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto;/);
  assert.match(css,/\.mif-composer textarea\{[^}]*border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important/);
  assert.match(css,/\.mif-body-chats\{height:calc\(100dvh - 80px/);
 });
-test('Seven navigation tabs keep New in the center and account form appears directly on gated tabs',()=>{
+test('Seven navigation tabs keep New centered and unauthenticated gated tabs display inline chat login',()=>{
  const ui=read('src/MifSmartShell.jsx');
- const order=['chats','operations','team','new','schedule','alerts','account'];
+ const order=['chats','operations','schedule','new','team','alerts','account'];
  const start=ui.slice(ui.indexOf('const nav='),ui.indexOf('function',ui.indexOf('const nav=')));
  assert.deepEqual([...start.matchAll(/\['(chats|operations|team|new|schedule|alerts|account)'/g)].map(x=>x[1]),order);
- assert.match(ui,/tab==='schedule'&&\(checking\?null:authed\?<MifSchedule[^>]*>:authPanel\)/);
- assert.match(ui,/tab==='team'&&\(checking\?null:authed\?<RawiTeamPanel/);
- assert.match(ui,/tab==='alerts'&&\(checking\?null:authed\?<RawiNotificationsPanel/);
+ assert.match(ui,/tab==='schedule'&&!checking&&authed&&<MifSchedule/);
+ assert.match(ui,/tab==='team'&&!checking&&authed&&<RawiTeamPanel/);
+ assert.match(ui,/tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel/);
+ assert.match(ui,/if\(!authed\)\{setPostAuthTab/);
  assert.match(ui,/const authPanel=<section/);
- assert.match(ui,/!authed&&!checking&&authPanel/);
+ assert.match(ui,/!authed&&!checking&&showAuth&&authPanel/);
+ assert.doesNotMatch(ui,/:authPanel/);
  assert.doesNotMatch(ui,/rawi-need-account/);
 });
 test('Login is compact, no invitation input, and PWA installation button is not shown when installed',()=>{
@@ -28,9 +32,10 @@ test('Login is compact, no invitation input, and PWA installation button is not 
  assert.doesNotMatch(ui,/form\.invitation|Invitation code|رمز الدعوة/);
  assert.doesNotMatch(backend,/hashInvite|user\.invitation/);
  assert.match(ui,/window\.localStorage\.setItem\('rawi-erp-installed','1'\)/);
- assert.match(ui,/!installed&&<div className="rawi-auth-bottom"/);
+ assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini"/);
  assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account"/);
- assert.match(css,/\.mif-login-page\{width:min\(100%,445px\)/);
+ assert.match(css,/\.mif-login-page\{width:min\(100%,365px\)/);
+ assert.match(css,/\.mif-login-page\{[^}]*border:0;border-radius:0;background:transparent;box-shadow:none/);
  assert.match(css,/\.rawi-install-in-account\{[^}]*width:auto;/);
 });
 test('Team and notifications read real authorized company records; membership must be registered in central and tenant DB',()=>{

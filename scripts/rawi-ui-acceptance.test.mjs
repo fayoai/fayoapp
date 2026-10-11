@@ -22,7 +22,7 @@ test('RAWI ERP chat and sign in have approved interaction and account-only downl
  assert.match(s,/onInput=\{e=>/);
  assert.match(s,/className="rawi-auth-tabs"/);
  assert.match(s,/className="rawi-account-form"/);
- assert.match(s,/className="rawi-auth-bottom"/);
+ assert.match(s,/className="rawi-auth-heading"/);
  assert.match(s,/installed&&/);
  assert.doesNotMatch(s,/form\.invitation/);
  assert.match(s,/const authPanel=/);

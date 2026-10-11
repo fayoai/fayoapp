@@ -7,7 +7,7 @@
 .mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid var(--rawi-blue);outline-offset:3px}
 .mif-app button:disabled{cursor:not-allowed}
 .mif-body{width:100%;max-width:1500px;margin:0 auto;flex:1;min-height:0;padding:25px clamp(16px,3vw,46px) calc(116px + env(safe-area-inset-bottom))}
-.mif-body-chats{height:calc(100dvh - 80px - env(safe-area-inset-bottom));max-width:none;display:flex;overflow:hidden;padding:2px clamp(11px,3vw,30px) 0}
+.mif-body-chats{height:calc(100dvh - 80px - env(safe-area-inset-bottom));min-height:0;max-width:none;display:flex;overflow:hidden;padding:0 clamp(11px,3vw,30px)}
 .mif-chat-page{width:min(100%,870px);height:100%;min-height:0;flex:1;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;position:relative}
 .rawi-chat-tools{display:flex;align-items:center;gap:9px;flex:none;min-height:46px;padding:3px 5px}
 .rawi-enterprise-tools{justify-content:flex-start}
@@ -18,7 +18,7 @@
 .rawi-workspace-picker select{min-height:38px;max-width:240px;border:1px solid var(--rawi-border);border-radius:12px;color:#24436d;background:white;padding:6px 10px}
 .rawi-identity-label{margin-inline-start:auto;max-width:260px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--rawi-muted);font-size:12px}
 .mif-chat-scroll{min-height:0;min-width:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#cbd8ea transparent;padding:10px clamp(4px,2vw,18px) 12px;overscroll-behavior:contain}
-.mif-chat-scroll.is-empty{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+.mif-chat-scroll.is-empty{display:flex;flex-direction:column;align-items:stretch;justify-content:center}
 .mif-welcome-message{margin:10px 0 0;display:flex;align-items:flex-start;gap:12px;width:100%;max-width:820px}
 .mif-welcome-message img{width:46px;height:46px;object-fit:contain;border-radius:14px;flex:none}
 .mif-welcome-message>div{min-width:0;padding:1px 0}
@@ -61,10 +61,9 @@
 .mif-account-detail{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;border-bottom:1px solid #edf1f7;padding:13px 5px;color:#77869e;font-size:13px}
 .mif-account-detail strong{font-size:13px;color:#263c60;font-weight:750;overflow-wrap:anywhere}
 .mif-account-detail button{border:0;border-radius:10px;padding:8px 11px;color:var(--rawi-blue);background:#edf4ff}
-.mif-login-page{width:min(100%,445px);max-height:calc(100dvh - 115px);overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:20px 22px;margin:clamp(8px,2vh,20px) auto;border:1px solid #e1e9f6;border-radius:19px;background:#fff;box-shadow:0 8px 28px #173f850b}
-.rawi-auth-brand{display:flex;align-items:center;justify-content:center;flex-direction:row;gap:9px;text-align:center}
-.rawi-auth-brand img{width:43px;height:43px;object-fit:contain;border-radius:12px;box-shadow:0 3px 9px #2166e816}
-.rawi-auth-brand strong{font-size:16px;color:#1a3b71;letter-spacing:.01em}
+.mif-login-page{width:min(100%,365px);max-height:none;overflow:visible;display:flex;flex-direction:column;gap:11px;padding:7px 0;margin:12px auto 6px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.rawi-auth-heading{text-align:center;color:#435b80;font-size:12px;font-weight:700}
+.rawi-auth-heading strong{font-size:12px;font-weight:700}
 .rawi-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;border:1px solid #e4edf9;background:#f3f7fe}
 .rawi-auth-tabs button{border:0;border-radius:9px;background:transparent;color:#8291a7;min-height:36px;font-size:12px;font-weight:750}
 .rawi-auth-tabs button.selected{background:#fff;box-shadow:0 2px 10px #1c38570e;color:var(--rawi-blue)}
@@ -74,8 +73,8 @@
 .rawi-account-form input:focus{border-color:var(--rawi-blue);box-shadow:0 0 0 3px #2166e814}
 .rawi-account-form button[type=submit]{display:flex;align-items:center;justify-content:center;gap:8px;min-height:43px;margin-top:1px;border:0;border-radius:10px;background:var(--rawi-blue);color:#fff;font-weight:800;font-size:13px;box-shadow:none}
 .rawi-account-form button[type=submit]:disabled{opacity:.48;box-shadow:none}
-.rawi-auth-bottom{padding-top:5px;display:flex;align-items:center;justify-content:center}
-.rawi-install-in-account{display:inline-flex;justify-content:center;align-items:center;gap:5px;min-height:29px;width:auto;padding:4px 10px;border:1px solid #dbe8fb;border-radius:9px;background:#f4f8ff;color:#285cba;font-size:11px;font-weight:750;align-self:center}
+.rawi-install-in-account{display:inline-flex;justify-content:center;align-items:center;gap:4px;min-height:25px;width:auto;padding:3px 7px;border:1px solid #dbe8fb;border-radius:8px;background:#f4f8ff;color:#285cba;font-size:10px;font-weight:750;align-self:center}
+.rawi-install-mini{margin-inline-start:auto;white-space:nowrap;flex:none}
 .mif-logout{display:flex;justify-content:center;align-items:center;gap:8px;min-height:46px;margin-top:7px;border:1px solid #f1d8da;border-radius:12px;background:#fff7f7;color:#9b3941;font-size:13px;font-weight:700}
 .mif-access-gate,.rawi-need-account{max-width:530px;margin:28px auto;text-align:center;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:25px}
 .mif-access-gate img{width:66px;height:66px}
@@ -122,12 +121,12 @@
  .mif-bottom-item{font-size:10px;padding:4px 2px;max-width:none}
  .mif-bottom-item.new .mif-bottom-icon{width:58px;height:58px}
  .mif-account{margin:12px auto;padding:22px 19px;border-radius:20px}
- .mif-login-page{padding:17px 15px;max-height:calc(100dvh - 96px)}
+ .mif-login-page{padding:6px 0;max-height:none}
  .mif-bubble{max-width:95%}
  .mif-history-overlay{top:45px}
 }
 @media(max-height:550px){.mif-bottom-nav{height:68px}.mif-bottom-item.new .mif-bottom-icon{width:52px;height:52px}.mif-body-chats{height:calc(100dvh - 68px)}.mif-chat-scroll{padding-bottom:5px}.mif-composer textarea{min-height:30px}}
 @media(prefers-reduced-motion:reduce){.mif-app *, .mif-app *::before, .mif-app *::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 .rawi-auth-split{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.mif-chat-scroll>.rawi-login-compact{flex:none;align-self:center;margin:clamp(12px,4vh,36px) auto 15px;max-height:none;width:min(100%,425px);box-shadow:0 6px 18px #193b7008}
+.mif-chat-scroll>.rawi-login-compact{flex:none;align-self:center;margin:clamp(9px,2vh,18px) auto 7px;max-height:none;width:min(100%,365px);box-shadow:none}
 @media(max-width:420px){.rawi-auth-split{grid-template-columns:1fr}.mif-bottom-item{font-size:9px}.mif-bottom-item .mif-bottom-icon{width:32px}.rawi-auth-brand strong{font-size:14px}}
