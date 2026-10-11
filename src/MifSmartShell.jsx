@@ -9,7 +9,6 @@ import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,ArrowU
 import './mif-smart-shell.css';
 const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
 const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:'',description:''};
-const planDepartments={crm:['العملاء والفرص','CRM'],sales:['المبيعات','Sales'],purchases:['المشتريات','Purchases'],inventory:['المخزون','Inventory'],accounting:['المحاسبة','Accounting'],employees:['الموظفون','Employees'],payroll:['الرواتب','Payroll'],payments:['المدفوعات','Payments'],projects:['المشاريع','Projects'],expenses:['المصروفات','Expenses'],reports:['التقارير','Reports'],contacts:['جهات الاتصال','Contacts'],invoices:['الفواتير','Invoices'],activities:['أنشطة الأعمال','Business activities'],insights:['المؤشرات','Insights'],knowledge:['المعرفة','Knowledge']};
 const documentMimeByExtension=Object.freeze({pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',rtf:'application/rtf'});
 const maxDocumentSize=1572864,maxDocumentTotal=2621440,maxDocuments=2;
 const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
@@ -300,8 +299,8 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
       </div>
       {companyPlan&&companyPlan.name===company.name.trim()&&companyPlan.activity===company.activity.trim()?<>
        <p>{companyPlan.summary}</p>
-       <div className="rawi-business-departments">{(companyPlan.sections||[]).map(id=><span key={id}>{planDepartments[id]?L(...planDepartments[id]):id}</span>)}</div>
-       <small>{companyPlan.source==='ai'?L('تم التحليل بالذكاء الاصطناعي وسيُحفظ ترتيب الإدارات عند إكمال البيانات.','Analyzed with AI; department priorities will be saved when you finish.'):L('تهيئة مبدئية حسب النشاط؛ ستُستخدم حتى يتوفر مزود الذكاء الاصطناعي.','Basic activity-based setup, used until an AI provider is available.')}</small>
+       <div className="rawi-business-departments">{(companyPlan.repositories||[]).map(item=><span key={item.key}>{item.name}</span>)}</div>
+       <small>{L('راوي صمم هذه المستودعات وحقولها ومراحلها خصيصًا لنشاط شركتك.','Rawi designed these repositories, fields and workflows specifically for your company.')}</small>
       </>:<p>{companyPlanBusy?L('راوي يقرأ اسم الشركة والنشاط ويجهز الإدارات المناسبة...','Rawi is analyzing the company and preparing relevant departments...'):companyPlanError||L('جاري تجهيز مساحة العمل...','Preparing workspace...')}</p>}
      </aside>}
      {companyError&&<p role="alert" className="mif-form-error">{companyError}</p>}
