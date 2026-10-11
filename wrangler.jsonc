@@ -24,6 +24,7 @@
       "/developer/*"
     ]
   },
+  "ai": {"binding": "AI"},
   "vars": {
     "MIF_APP_SURFACE": "mif",
     "RAWI_ENTERPRISE_ORIGIN": "https://rawi-enterprise.fayosaas.workers.dev",
