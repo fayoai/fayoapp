@@ -17,18 +17,16 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": [
       "/api/*",
-      "/developer",
-      "/developer/",
       "/mif",
       "/mif/*",
       "/sitemap.xml",
-      "/"
+      "/",
+      "/developer/*"
     ]
   },
   "vars": {
     "MIF_APP_SURFACE": "mif",
     "RAWI_ENTERPRISE_ORIGIN": "https://rawi-enterprise.fayosaas.workers.dev",
-    "RAWI_DEVELOPER_ORIGIN": "https://rawi-developer.fayosaas.workers.dev",
     "NEON_PROJECT_ID": "blue-wave-63999494",
     "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
     "NEON_DB_ROLE_NAME": "mif_smart_owner"
