@@ -17,6 +17,14 @@ export async function getAIProviders(sql,env,query){
  }
  // Environment secrets are an explicit operator-controlled fallback, not a public setting.
  for(const code of providerCodes){const [keyVar,modelVar]=managedEnv[code];if(!seen.has(code)&&env[keyVar]&&!rows.some(p=>p.code===code)){providers.push({code,model:env[modelVar]||defaults[code],key:env[keyVar]});}}
+ // Preserve the previously stored OpenAI credential until the operator migrates it.
+ if(sql&&!rows.some(p=>p.code==='openai')&&!env.OPENAI_API_KEY){
+  try{const saved=await query(sql,"SELECT encrypted_value,metadata FROM mif_platform_settings WHERE name='openai'");
+   if(saved[0]?.encrypted_value){const key=await unseal(saved[0].encrypted_value,env.CONNECTOR_ENCRYPTION_KEY);
+    if(key)providers.push({code:'openai',model:saved[0].metadata?.model||defaults.openai,key});
+   }
+  }catch{}
+ }
  return providers;
 }
 async function requestProvider(provider,messages,instructions){
