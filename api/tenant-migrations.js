@@ -29,7 +29,7 @@ export async function seedTenantIdentity({central,tenant,query,workspaceId,appli
  await query(tenant,`INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,messages_used,period_starts_at,period_ends_at)
   VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(workspace_id) DO NOTHING`,
   [row.workspace_id,row.plan_id,row.subscription_status,row.messages_used,row.period_starts_at,row.period_ends_at]);
- if(application==='enterprise')await query(tenant,`INSERT INTO erp_invoice_templates(workspace_id,name)
+ await query(tenant,`INSERT INTO erp_invoice_templates(workspace_id,name)
  SELECT $1,'RAWI' WHERE NOT EXISTS(SELECT 1 FROM erp_invoice_templates WHERE workspace_id=$1)`,[row.workspace_id]);
  const check=await query(tenant,`SELECT w.id FROM erp_workspaces w
  JOIN erp_memberships m ON m.workspace_id=w.id AND m.admin_id=w.owner_id
@@ -52,7 +52,8 @@ export async function migrateTenantBatch({central,query,settings,workspaceId,lim
  if(!reserved.length)return {status:'busy'};
  const row=reserved[0];
  if(row.neon_project_id!==settings.NEON_PROJECT_ID||row.neon_branch_id!==settings.NEON_BRANCH_ID)throw Error('Neon project or branch changed; refusing cross-project migration');
- const expected='rawi_'+(row.application==='developer'?'d':'e')+'_'+workspaceId.replaceAll('-','');
+ if(row.application!=='enterprise')throw Error('This product is not active');
+ const expected='rawi_e_'+workspaceId.replaceAll('-','');
  if(row.database_name!==expected)throw Error('Tenant database registry mismatch');
  const tenant=connector(tenantDbUrl(settings.DATABASE_URL,row.database_name));
  let pos=Number(row.migration_version||0);
