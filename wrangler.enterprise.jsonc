@@ -8,6 +8,7 @@
   ],
   "vars": {
     "MIF_APP_SURFACE": "enterprise",
+    "PUBLIC_CHAT_ENABLED": "true",
     "NEON_PROJECT_ID": "blue-wave-63999494",
     "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
     "NEON_DB_ROLE_NAME": "mif_smart_owner"
