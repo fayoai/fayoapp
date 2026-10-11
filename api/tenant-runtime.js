@@ -3,7 +3,7 @@ import {tenantDatabaseName} from './neon-tenant-databases.js';
 const workspaceRegex=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 export function tenantDbUrl(baseUrl,name){
  if(typeof baseUrl!=='string'||!baseUrl)throw Error('Central Neon connection string is not configured');
- if(!/^rawi_[ed]_[0-9a-f]{32}$/.test(name))throw Error('Invalid isolated tenant database name');
+ if(!/^rawi_e_[0-9a-f]{32}$/.test(name))throw Error('Invalid isolated tenant database name');
  const url=new URL(baseUrl);
  if(!['postgres:','postgresql:'].includes(url.protocol)||!url.hostname.endsWith('.neon.tech'))throw Error('Invalid trusted Neon connection');
  url.pathname='/'+name;
@@ -11,7 +11,7 @@ export function tenantDbUrl(baseUrl,name){
 }
 export function tenantWorkspaceFromRequest(c){
  const path=c.req.path;
- let x=path.match(/^\/api\/admin\/(?:erp\/w|developer\/w)\/([^/]+)(?:\/|$)/);
+ let x=path.match(/^\/api\/admin\/erp\/w\/([^/]+)(?:\/|$)/);
  if(x)return x[1];
  x=path.match(/^\/api\/admin\/erp\/workspaces\/([^/]+)\/profile$/);
  if(x)return x[1];
@@ -21,7 +21,7 @@ export function tenantWorkspaceFromRequest(c){
 }
 export async function attachTenantDb(c,{central,query,settings,onReady=neon}){
  const surface=settings.MIF_APP_SURFACE;
- if(!['enterprise','developer'].includes(surface))return null;
+ if(surface!=='enterprise')return null;
  const requested=tenantWorkspaceFromRequest(c);
  if(!requested)return null;
  let id=requested;
