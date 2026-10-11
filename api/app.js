@@ -6,6 +6,7 @@ import {z} from 'zod';
 import {installAiErp} from './ai-erp.js';
 import {installErpCore} from './erp-core.js';
 import {installMifChat} from './mif-chat.js';
+import {installPlatformSaas} from './platform-saas.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const db=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -19,7 +20,7 @@ async function equal(a,b){const x=new Uint8Array(await crypto.subtle.digest('SHA
 function originOK(c){const origin=c.req.header('origin');if(!origin)return true;try{const src=new URL(origin),dst=new URL(c.req.url);return src.origin===dst.origin||(['localhost','127.0.0.1'].includes(src.hostname)&&['localhost','127.0.0.1'].includes(dst.hostname))}catch{return false}}
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
-app.get('/api/health',async c=>{const sql=db(c);if(!sql)return c.json({ok:false,service:'MIF Smart',database:'not_configured'},503);try{await query(sql,'SELECT 1');return c.json({ok:true,service:'MIF Smart AI ERP',database:'connected'})}catch{return fail(c,503,'Database unavailable')}});
+app.get('/api/health',async c=>{const sql=db(c);if(!sql)return c.json({ok:false,service:'MIF Smart',database:'not_configured'},503);try{await query(sql,'SELECT 1');return c.json({ok:true,service:'MIF Smart RAWI',database:'connected'})}catch{return fail(c,503,'Database unavailable')}});
 app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN;if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap)))return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins');if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
 // Customer accounts are independent from the platform operator's OpenAI settings.
 app.post('/api/admin/register',async c=>{
@@ -50,4 +51,5 @@ app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Dat
 installAiErp(app,{db,env,query});
 installErpCore(app,{db,env,query});
 installMifChat(app,{db,env,query});
+installPlatformSaas(app,{db,env,query});
 export default app;
