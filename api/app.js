@@ -37,7 +37,7 @@ function originOK(c){const origin=c.req.header('origin');if(!origin)return true;
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
 function signupReady(settings){
- try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&!!settings.CONNECTOR_ENCRYPTION_KEY&&mailReady(settings)&&!!neonTenantConfig(settings)}catch{return false}
+ try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&mailReady(settings)&&!!neonTenantConfig(settings)}catch{return false}
 }
 app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:false}));
 app.get('/api/health',async c=>{
