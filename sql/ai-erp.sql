@@ -127,3 +127,7 @@ CREATE TABLE IF NOT EXISTS erp_email_log (
  delivery_status text NOT NULL CHECK(delivery_status IN ('sent','failed')),
  created_at timestamptz NOT NULL DEFAULT now()
 );
+
+INSERT INTO catalog(sku,kind,category,title_ar,title_en,description_ar,description_en,icon,featured,sort_order,active)
+VALUES('MIF-AI-ERP','service','erp','MIF Smart AI ERP','MIF Smart AI ERP','منصة AI ERP للعملاء والفواتير والمهام والتكاملات.','AI ERP platform for contacts, invoices, tasks and integrations.','brain-circuit',true,0,true)
+ON CONFLICT(sku) DO NOTHING;
