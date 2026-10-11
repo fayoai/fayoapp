@@ -121,6 +121,8 @@ export function installMifChat(app,{db,env,query}){
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
+  const profiles=await query(sql,'SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1',[user]);
+  const accountMode=profiles[0]?.account_type==='developer'?'developer':'enterprise';
   let result;try{
    // Tenant-scoped aggregates only. No raw contacts, private messages, payment credentials or other organizations.
    const stats=await query(sql,`SELECT w.name,
@@ -135,7 +137,7 @@ export function installMifChat(app,{db,env,query}){
    (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
-   result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000));
+   result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),accountMode);
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
