@@ -35,7 +35,8 @@ test('Registration and Odoo developer forms keep their functional fields and res
  const shell=source('src/MifSmartShell.jsx');
  const dev=source('src/RawiDevelopers.jsx');
  const css=source('src/rawi-developers.css');
- for(const kind of ['enterprise','developer'])assert.match(shell,new RegExp("account_type==='"+kind+"'"));
+ assert.match(shell,/account_type:'enterprise'/);
+ assert.doesNotMatch(shell,/account_type==='developer'/);
  for(const id of ['connection','module','implementation']){
   assert.match(dev,new RegExp('rawi-dev-form-'+id));
   assert.match(css,new RegExp('\\.rawi-dev-form-'+id));

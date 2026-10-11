@@ -23,7 +23,7 @@ test('Developer route has dedicated UI while Enterprise no longer imports Odoo d
  assert.match(app,/RawiDeveloperApp/);
  assert.match(app,/pathname\.startsWith\('\/developer\/'\)/);
  assert.doesNotMatch(enterprise,/import RawiDevelopers/);
- assert.match(enterprise,/location\.replace\('\/developer\/'\)/);
+ assert.doesNotMatch(enterprise,/location\.replace\('\/developer\/'\)/);
  assert.match(developer,/RAWI Developer/);
  assert.match(developer,/RawiDevelopers/);
 });

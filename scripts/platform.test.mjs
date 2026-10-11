@@ -16,7 +16,7 @@ test('RAWI is the independent client application and MIF Smart retains corporate
  assert.ok(manifest.icons.every(i=>existsSync(path.join(root,'public',i.src.slice(1)))));
  assert.doesNotMatch(read('index.html'),/MIF ERP|MIF Smart AI ERP/);
 });
-test('Chat-first app has exactly five bottom navigation actions',()=>{
+test('Chat-first app installs from bottom navigation',()=>{
  const shell=read('src/MifSmartShell.jsx'),app=read('src/App.jsx');
  assert.match(app,/MifSmartShell/);
  assert.match(shell,/\['chats'/);
@@ -26,7 +26,8 @@ test('Chat-first app has exactly five bottom navigation actions',()=>{
  assert.match(shell,/beforeinstallprompt/);
  assert.match(shell,/rawi-mark.svg/);
  assert.doesNotMatch(shell,/mif-logo.svg/);
- assert.match(shell,/\/mif\/console/);
+ assert.doesNotMatch(shell,/\/mif\/console/);
+ assert.match(shell,/\['install','تنزيل','Install',Download\]/);
  assert.doesNotMatch(shell,/MIF Smart AI ERP|Odoo Community|<CommerceStore/);
 });
 test('Only installed applications are offered for download',()=>{
