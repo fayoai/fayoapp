@@ -10,6 +10,10 @@ export default {
   const url=new URL(request.url);
   const boundary=surfacePolicy(env.MIF_APP_SURFACE,url.pathname,request.method,{enterprise:env.RAWI_ENTERPRISE_ORIGIN,developer:env.RAWI_DEVELOPER_ORIGIN});
   if(boundary){if(boundary.location)return Response.redirect(new URL(boundary.location,url),boundary.status);return new Response('Not found',{status:boundary.status,headers:{'Cache-Control':'no-store'}})}
+  // The Enterprise Worker runs before static asset routing on '/': explicitly serve its app shell.
+  if(env.MIF_APP_SURFACE==='enterprise'&&(request.method==='GET'||request.method==='HEAD')&&url.pathname==='/'&&env.ASSETS){
+   return env.ASSETS.fetch(request);
+  }
   if(url.pathname==='/sitemap.xml'){
    const canonical=getCanonicalOrigin(env);
    if(!canonical||url.origin!==canonical||!env.DATABASE_URL)return new Response('Not found',{status:404,headers:{'Cache-Control':'no-store'}});
