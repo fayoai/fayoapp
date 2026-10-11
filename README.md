@@ -1,4 +1,4 @@
-# MIF Smart 7.3 — Corporate SaaS + RAWI AI ERP
+# MIF Smart 8.0 — Corporate SaaS, RAWI Enterprise and RAWI Developers
 
 **Two different brands and product surfaces.**
 
@@ -52,3 +52,24 @@ See `MIF_SMART_SETUP_AR.md`.
 The GitHub workflow publishes a **temporary Cloudflare preview** when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are absent. A permanent hostname, persistent secure Worker bindings, real AI provider account credentials and a verified email sending service must be configured separately. Do not switch public registration on before implementing production email verification and abuse safeguards. No automated recurring payment collection has been implemented.
 
 Advanced ERP vertical compliance, bank reconciliation, e-invoicing/ZATCA integration, full statutory payroll, country-specific legal requirements, on-server Odoo deployment, and real client acceptance testing are **not complete**. Their implementation depends on requirements, real access and domain validation, not just interface scaffolding.
+
+## Version 8.0: two genuinely separate client applications
+
+**The company MIF Smart is the owner SaaS and corporate website, not a client app.**
+
+| Surface | URL | Identity | Purpose |
+| --- | --- | --- | --- |
+| MIF Smart | `/mif`, `/mif/console` | Existing original corporate logo | Product catalog, owner administration, SaaS subscriptions and AI provider configuration |
+| RAWI Enterprise | `/` | **Original orange icon and UI unchanged** | Business ERP, invoices, CRM, accounting, inventory, HR, projects and AI assistance |
+| RAWI Developers | `/developers/` | **Black background, approved RAWI glyph in yellow** | Standalone Odoo engineering app, Odoo API connectors, modules, implementations, diagnostics, AI engineering chat |
+
+The two products have different PWA install identities, manifests, browser service-worker scopes, login/register screens, navigation, icon branding, route handling and server-side permissions. They share the authorized SaaS authentication/Neon infrastructure only; being logged into one product does **not** confer authorization to the other. A Developers account cannot access Enterprise ERP operation routes. Developer AI context includes only permitted Odoo and implementation aggregates.
+
+- Original asset `public/rawi-mark.svg` was **not touched**. The Developers icon at `public/developers/rawi-dev-mark.svg` reuses exactly the same vector glyph with colors changed only in that new asset to `#ffd637` on `#080808`.
+- Developer PWA: `public/developers/manifest.webmanifest`, start `/developers/`, scope `/developers/`, separate service worker that never caches authenticated customer/API data.
+- Enterprise PWA `public/manifest.webmanifest` and the original `/` application are preserved.
+- Optional independent unsigned desktop wrapper for Windows/macOS/Linux: `apps/desktop-developers` and `.github/workflows/apps-desktop-developers.yml`, with a dedicated Electron app identifier and generated icon. Requires verified, permanent HTTPS deployment; native binaries are not signed or published until corresponding certificates and workflow setup exist.
+- MIF Smart catalog includes **two separately manageable products**. Enterprise and Developer SaaS plans are product-specific; their free internal evaluation quotas are separate. No external AI provider credit or paid customer price is invented.
+- Developer application is **Odoo only at this stage**; future systems would need individually implemented, tested adapters and permissions, not just a UI menu.
+
+**Deployment limitations:** Temporary Cloudflare Workers previews are not a permanent authenticated production deployment. Real interactive registration, chat AI and Odoo connections require production secrets, an active provider account and valid Odoo API credentials. Odoo module generator produces installable *basic scaffolds* for review and staging but does not remotely deploy production add-ons, execute repairs, or grant database/server privileges. Full statutory tax, payroll, e-invoicing, sophisticated accounting, SSO/MFA, electronic signature, verified email onboarding, production mobile store releases and recurring automated billing are **not complete**; they need additional implementation and outside integrations before commercial launch.
