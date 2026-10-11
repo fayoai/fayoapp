@@ -1,4 +1,4 @@
-# MIF Smart 8.0 — Corporate SaaS + Two Independent RAWI Applications
+# MIF Smart 8.1 — Corporate SaaS + Two Independent RAWI Applications
 
 **Two different brands and product surfaces.**
 
@@ -78,3 +78,16 @@ The supported platform registry lives in `api/rawi-platform-registry.js`; only O
 
 ### Production blockers
 Temporary Cloudflare previews do **not** contain the production secret bindings by default. To use the SaaS and Developer AI/Odoo workflows live, configure the permanent Cloudflare account, dedicated Neon `DATABASE_URL`, session/encryption secrets, platform owner identity, provider credentials/AI binding and validated external Odoo API access. Self-registration remains disabled by default pending verification and abuse controls. Automated recurring billing, fiscal and payroll compliance, real Odoo server-side module deployment, and legally approved customer terms have not been verified or implemented as production-ready modules. The product must not be described as complete for regulated financial processing solely on the strength of UI or unit tests.
+
+## 8.1 verified improvements — no brand or color changes
+
+- Enterprise and Developer registration: fixed an account-type variable ordering defect that prevented new subscriptions from being assigned correctly. Live sign-up remains disabled until actual Cloudflare secrets, secure domain, and email verification are configured.
+- MIF corporate owner SaaS: website inquiries now have internal notes, next follow-up date, chronological actor-stamped change history, and delivery status. Record creation remains durable even if optional transactional email sending fails.
+- Resend mail notifications are **opt-in**: configure `RESEND_API_KEY`, a verified `MAIL_FROM`, and `MIF_INQUIRY_NOTIFY_EMAIL`. Unconfigured mail is never marked sent.
+- MIF public website: both Enterprise and Developer product previews render even before Neon is connected. Production-only sitemap at `/sitemap.xml`, descriptive public product metadata, canonical links and OG fields require a real HTTPS `SITE_ORIGIN` matching the request origin. Temporary Cloudflare preview pages remain noindex.
+- Android/iOS **debug build** workflows now target an explicitly supplied public HTTPS server where session cookies and APIs share an origin. Added separate Developer Android and Developer iOS simulator workflows, unique app identifiers, and generated raster launcher icons derived only from approved brand SVGs. These are test wrappers, not signed mobile-store releases, and remote-content loading requires a secured server.
+- Database additive migration: `sql/mif-inquiry-workflow.sql`.
+- Duplicate legacy Developer website card and a misclassified evaluation plan were archived/deactivated **without deleting their records** from the project database. Exactly one active canonical Developer product/plan remains.
+- Original RAWI Enterprise orange, RAWI Developer black/yellow, and MIF Smart corporate identity sources are not changed.
+
+**Not production complete yet:** permanent Cloudflare binding and domain, real AI provider credentials, verified email identity and signup flow, paid recurring subscription provider and webhook reconciliation, actual Odoo account for connector acceptance tests, complete industry-specific statutory accounting/HR/e-invoicing requirements, and signed store releases. Unit/build and preview deployment results cannot substitute for real account end-to-end tests.
