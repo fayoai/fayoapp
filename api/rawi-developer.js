@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {validateRemote,seal,unseal} from './ai-erp.js';
+import {buildOdooModule} from './rawi-module-builder.js';
 const uuid=z.string().uuid();
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
@@ -102,6 +103,13 @@ export function installRawiDeveloper(app,{db,env,query}){
   return {sql,workspace};
  }
  const view="id,label,base_url,database_name,api_version,login,(length(encrypted_credential)>0) has_credential,odoo_version,last_status,last_tested_at,last_summary,created_at";
+ app.post('/api/admin/developer/w/:workspace/modules/build',async c=>{
+  const g=await gate(c,true);if(g.error)return g.error;
+  let bytes,technical;
+  try{const params=await parse(c);bytes=buildOdooModule(params);technical=params.technical_name}
+  catch{return fail(c,400,'Invalid module fields or names')}
+  return new Response(bytes,{status:200,headers:{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="'+technical+'.zip"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ });
  app.get('/api/admin/developer/w/:workspace/connections',async c=>{
   const g=await gate(c);if(g.error)return g.error;
   return c.json({ok:true,data:await query(g.sql,'SELECT '+view+' FROM rawi_odoo_connections WHERE workspace_id=$1 ORDER BY updated_at DESC',[g.workspace])});
