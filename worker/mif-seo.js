@@ -12,7 +12,8 @@ const content={
  '/mif/about':{title:'About MIF Smart | Business Software',description:'Learn about MIF Smart and its enterprise and developer software applications.'},
  '/mif/contact':{title:'Contact MIF Smart',description:'Get in touch with MIF Smart about RAWI Enterprise, RAWI Developer and technical solutions.'},
  '/mif/products/rawi':{title:'RAWI Enterprise | AI ERP by MIF Smart',description:'RAWI Enterprise brings business operations together in an AI-powered ERP workspace.'},
- '/mif/products/rawi-developer':{title:'RAWI Developer | Odoo Engineering by MIF Smart',description:'RAWI Developer supports Odoo connections, diagnostic checks, addon building and implementation projects.'}
+ '/mif/products/rawi-developer':{title:'RAWI Developer | Odoo Engineering by MIF Smart',description:'RAWI Developer supports Odoo connections, diagnostic checks, addon building and implementation projects.'},
+ '/mif/products/odoo-community-enhanced':{title:'Enhanced Odoo Community | MIF Smart',description:'Odoo Community implementation and agreed custom modules, keeping the original Odoo product name.'}
 };
 export function seoForPage(path){
  if(path.startsWith('/mif/console'))return {...content['/mif'],index:false};

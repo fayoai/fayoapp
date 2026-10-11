@@ -74,3 +74,16 @@ INSERT INTO mif_site_pages(slug,title_ar,title_en,body_ar,body_en,seo_descriptio
 ('about','عن MIF Smart','About MIF Smart','MIF Smart تطور وتدير أنظمة أعمال متصلة. راوي RAWI هو أول منتج في منظومتنا، ويجمع وظائف ERP مع المساعدة الذكية.','MIF Smart develops and operates connected business software. RAWI is the first product, combining ERP workflows with intelligent assistance.','تعرف على MIF Smart ومنتجها الأول RAWI','Learn about MIF Smart and RAWI',true),
 ('privacy','سياسة الخصوصية','Privacy policy','نحرص على حماية معلومات العملاء وعدم إظهار بيانات المؤسسات دون تصريح. سيتم نشر التفاصيل القانونية المعتمدة قبل فتح التسجيل التجاري.','We restrict unauthorized access to business records. Approved legal privacy terms must be published before commercial sign-up.', 'خصوصية البيانات في MIF Smart','MIF Smart data privacy',false)
 ON CONFLICT(slug) DO NOTHING;
+
+-- Explicitly requested product: enhanced Odoo Community, never renamed MIF ERP.
+-- No invented prices or unsupported Enterprise license claims.
+INSERT INTO mif_products(code,slug,title_ar,title_en,category,summary_ar,summary_en,description_ar,description_en,features_ar,features_en,published,sort_order)
+VALUES('ODOO-COMMUNITY-ENHANCED','odoo-community-enhanced','Odoo Community المطوّر','Enhanced Odoo Community','erp-platform',
+'نقدّم Odoo Community مع تطويرات وتخصيصات يتم تحديدها حسب متطلبات المشروع.',
+'Original Odoo Community with extensions agreed for each implementation.',
+'تطوير وتهيئة نظام Odoo Community باسمه الأصلي. تشمل الخدمات الموديولات والتعديلات المتفق عليها مع العميل ضمن نطاق تنفيذ واضح. لا تشمل تلقائيًا خصائص Enterprise أو ترخيصها.',
+'Customize and implement Odoo Community under its original name, with scoped modules and agreed extensions. No Enterprise license or features are implied.',
+'["Odoo Community باسمه الأصلي","تخصيصات وموديولات حسب الاتفاق","تهيئة وتنفيذ حسب نطاق المشروع"]'::jsonb,
+'["Original Odoo Community","Agreed custom modules and extensions","Project-scoped implementation"]'::jsonb,
+true,3)
+ON CONFLICT(code) DO NOTHING;

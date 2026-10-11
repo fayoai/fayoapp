@@ -91,3 +91,10 @@ Temporary Cloudflare previews do **not** contain the production secret bindings 
 - Original RAWI Enterprise orange, RAWI Developer black/yellow, and MIF Smart corporate identity sources are not changed.
 
 **Not production complete yet:** permanent Cloudflare binding and domain, real AI provider credentials, verified email identity and signup flow, paid recurring subscription provider and webhook reconciliation, actual Odoo account for connector acceptance tests, complete industry-specific statutory accounting/HR/e-invoicing requirements, and signed store releases. Unit/build and preview deployment results cannot substitute for real account end-to-end tests.
+
+## 8.2 — AI-first company website and requested Odoo Community product
+
+- The `/mif` hero now contains a **real API-backed** AI interaction panel, using the existing rate-limited `/api/chat/public` route; it does not show simulated AI answers. Anonymous AI remains unavailable until `PUBLIC_CHAT_ENABLED=true`, `DATABASE_URL`, `SESSION_SECRET` and an enabled working provider are configured. Each visitor question is processed independently; users are warned not to submit sensitive data.
+- The approved company/RAWI Enterprise/RAWI Developer identities and original colors are unchanged.
+- `Odoo Community المطوّر` (Enhanced Odoo Community) is explicitly offered by its correct product name as a scoped implementation/customization service. No unsupported Enterprise licenses, prices, automatic deployments or fictitious capabilities are claimed. Its product page routes to a preselected inquiry, not into the RAWI application.
+- Run `npm run db:migrate` to idempotently seed the new published product in the connected database. A preview or successful build does not mean production AI, email verification, checkout or legal compliance is live.

@@ -5,3 +5,34 @@
 .mif-company-database-metrics span{color:#77888c;font-size:12px}
 .mif-company-database-metrics strong{font-size:16px;color:#273137}
 .mif-company-setting-card>p{font-size:12px;line-height:1.9;color:#687b80}
+
+/* AI-first corporate landing: approved MIF identity/colors are unchanged. */
+.mif-ai-widget{min-width:0;min-height:340px;display:flex;flex-direction:column;border:1px solid #e8eae6;border-radius:24px;background:#fff;box-shadow:0 30px 65px #1a20202b;overflow:hidden}
+.mif-ai-widget-head{display:flex;align-items:center;gap:12px;padding:14px 17px;background:linear-gradient(145deg,#263039,#11181d);color:#fff}
+.mif-ai-widget-head img{height:37px;width:37px;object-fit:contain}
+.mif-ai-widget-head div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.mif-ai-widget-head strong{font-size:14px}
+.mif-ai-widget-head small{font-size:11px;color:#cad5da}
+.mif-ai-widget-head svg{color:#e35a0e}
+.mif-ai-widget-messages{padding:15px;flex:1;min-height:125px;max-height:260px;overflow-y:auto;overflow-wrap:anywhere}
+.mif-ai-widget-intro{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:118px;color:#273137}
+.mif-ai-widget-intro svg{color:#e35a0e}
+.mif-ai-widget-intro strong{font-size:14px}
+.mif-ai-widget .mif-ai-widget-intro p{font-size:12px;line-height:1.7;margin:0}
+.mif-ai-message{border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#fafaf8}
+.mif-ai-message.user{background:#fff0e3}
+.mif-ai-message span{font-size:11px;font-weight:800;color:#d45815}
+.mif-ai-widget .mif-ai-message p{font-size:13px;line-height:1.7;margin:5px 0;white-space:pre-wrap;max-width:none}
+.mif-ai-widget-suggestions{display:flex;flex-wrap:wrap;gap:7px;padding:0 15px 13px}
+.mif-ai-widget-suggestions button{background:#fafaf8;border:1px solid #e8eae6;color:#34444b;border-radius:10px;font-size:11px;padding:8px 9px;text-align:start}
+.mif-ai-widget-suggestions button:hover{border-color:#e35a0e}
+.mif-ai-widget-form{display:flex;gap:9px;align-items:center;padding:12px 14px;border-top:1px solid #edf0ee}
+.mif-ai-widget-form input{flex:1;min-width:0;border:1px solid #dae0dd;border-radius:11px;padding:11px;color:#26343b;background:#fff;font-size:13px}
+.mif-ai-widget-form button{display:grid;place-items:center;border:0;background:#e35a0e;color:#fff;border-radius:10px;width:42px;height:42px;flex-shrink:0}
+.mif-ai-widget-form button:disabled{opacity:.55;cursor:not-allowed}
+.mif-ai-widget .mif-ai-widget-note{display:block;font-size:10px;line-height:1.6;padding:0 15px 11px;color:#778588}
+.mif-ai-widget .mif-ai-widget-loading{font-size:12px;color:#65777c}
+.mif-ai-widget .mif-ai-widget-error{font-size:12px;padding:0 15px;color:#ba5620;line-height:1.7;overflow-wrap:anywhere}
+.mif-ai-widget-error a{display:inline-flex;gap:4px;align-items:center;text-decoration:underline!important}
+.mif-ai-visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:720px){.mif-ai-widget{min-height:330px}.mif-ai-widget-messages{max-height:230px}}
