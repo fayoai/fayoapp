@@ -1,9 +1,21 @@
 {
   "appId": "com.mifsmart.platform",
-  "appName": "MIF Smart",
+  "appName": "MIF Smart AI ERP",
   "webDir": "dist",
-  "android": {"allowMixedContent": false},
-  "ios": {"contentInset": "automatic" },
-  "server": {"androidScheme": "https"},
-  "plugins": {"SplashScreen": {"launchShowDuration": 1500, "backgroundColor": "#151519", "showSpinner": false}}
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#151f24",
+      "showSpinner": false
+    }
+  }
 }
