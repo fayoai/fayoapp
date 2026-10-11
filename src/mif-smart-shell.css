@@ -61,7 +61,7 @@
 .rawi-chat-file button{display:grid;place-items:center;flex:none;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:#7d8da4;padding:2px}
 .rawi-chat-file button:hover{background:#e9effa;color:#284877}
 
-.rawi-composer-toolbar>.rawi-send{flex:none;display:grid;place-items:center;width:34px;height:34px;margin:0 1px 0 auto;border:0;border-radius:50%;background:var(--rawi-blue);color:#fff;box-shadow:none}
+.rawi-composer-toolbar>.rawi-send{flex:none;display:grid;place-items:center;width:34px;height:34px;margin:0;margin-inline-start:auto;border:0;border-radius:50%;background:var(--rawi-blue);color:#fff;box-shadow:none}
 .rawi-send:hover:not(:disabled){background:var(--rawi-blue-dark)}
 .rawi-composer-brand img{width:22px;height:22px;object-fit:contain}
 .rawi-send:disabled{background:#e8effb;color:#a5b5cf}
@@ -145,7 +145,7 @@
  .mif-welcome-message p{font-size:19px}
  .mif-chat-page>.mif-composer{width:min(100%,540px);min-height:50px;gap:8px;margin-bottom:clamp(17px,4vh,28px)}
  .mif-composer-field{min-height:69px;padding:8px 9px 5px;border-radius:15px;gap:5px}
- .rawi-composer-toolbar>.rawi-send{width:32px;height:32px;margin:0 0 0 auto;border-radius:50%}
+ .rawi-composer-toolbar>.rawi-send{width:32px;height:32px;margin:0;margin-inline-start:auto;border-radius:50%}
  .mif-composer textarea{min-height:34px;font-size:14px}
  .mif-bottom-nav{height:calc(64px + env(safe-area-inset-bottom));gap:0;padding:5px max(3px,env(safe-area-inset-right)) calc(3px + env(safe-area-inset-bottom))}
  .mif-bottom-item{font-size:9px;min-height:49px;padding:1px 0;gap:1px;max-width:none;white-space:nowrap}
@@ -187,3 +187,5 @@
 .rawi-company-form>button[type=submit]{display:flex;align-items:center;justify-content:center;gap:7px;align-self:end;border:0;background:var(--rawi-blue);border-radius:11px;color:white;min-height:44px;padding:9px 19px;font-weight:750;font-size:13px}
 .rawi-company-form>button:disabled{opacity:.55}
 @media(max-width:560px){.rawi-company-grid{grid-template-columns:1fr}.rawi-company-setup{padding:16px 14px;margin:3px auto 14px}.rawi-company-form>button[type=submit]{align-self:stretch}}
+
+.rawi-signup-unavailable{font-size:12px;line-height:1.8;color:#9b4141;background:#fff5f5;border-radius:9px;padding:10px 12px;margin:0}
