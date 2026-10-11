@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {Activity,AlertTriangle,BarChart3,Boxes,CalendarClock,CheckCircle2,Coins,RefreshCw,Users,Wallet} from 'lucide-react';
 import {api,tr} from './App.jsx';
+import './rawi-insights.css';
 const money=n=>new Intl.NumberFormat('ar-SA',{style:'currency',currency:'SAR'}).format((Number(n)||0)/100);
 const cards=[
  ['customers','العملاء','Customers',Users],
