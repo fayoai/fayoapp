@@ -102,3 +102,40 @@
 .mif-owner-settings input{width:100%;padding:10px 12px;min-height:44px;border:1px solid #dae1dc;border-radius:9px}
 .mif-owner-settings form button{background:#e45a13;color:#fff;border:0;border-radius:9px;min-height:44px}
 .mif-owner-settings small{color:#677a80;font-size:11px;line-height:1.8}
+
+
+/* MIF Smart / RAWI visual system — company symbol on white; RAWI on orange. */
+.mif-app{background:linear-gradient(145deg,#fafaf8,#fff 58%,#f9f7f5)}
+.mif-topbar{background:#ffffffed;backdrop-filter:blur(18px);border-bottom-color:#eef0ec;box-shadow:0 3px 19px #1f2b3105}
+.mif-head-control,.mif-head-signin{border-radius:12px;transition:background .16s,transform .16s;letter-spacing:0}
+.mif-head-control:hover,.mif-head-signin:hover{transform:translateY(-1px)}
+.mif-chat-page{width:min(100%,980px);gap:4px}
+.mif-chat-welcome{padding:32px 12px 46px}
+.mif-rawi-brand{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto 25px;width:max-content;max-width:100%;background:#fff;padding:11px 17px 11px 12px;border:1px solid #e7ebe8;border-radius:19px;box-shadow:0 12px 33px #2330390b;text-align:start}
+.mif-rawi-brand img{width:57px;height:57px;object-fit:contain;border-radius:15px}
+.mif-rawi-brand strong{font-size:24px;font-weight:850;letter-spacing:.5px;display:block;line-height:1.35;color:#24333a}
+.mif-rawi-brand strong span{color:#e45a13;font-size:17px;letter-spacing:0;margin-inline-start:4px}
+.mif-rawi-brand small{color:#748288;display:block;font-size:11px;margin-top:4px;white-space:normal}
+.mif-chat-welcome h1{font-size:clamp(27px,4vw,39px);font-weight:850;color:#222f35;letter-spacing:-.8px}
+.mif-chat-welcome p{font-size:13px;line-height:2;color:#7a898e}
+.mif-chat-messages{gap:19px;padding:29px 4px 34px}
+.mif-bubble{gap:12px}
+.mif-bubble.assistant>img{background:#e45a13;object-fit:cover;padding:0;border-radius:11px;width:36px;height:36px}
+.mif-bubble.user{background:#f4f4f1;border-color:#e9ece7;border-radius:18px 18px 6px 18px;padding:12px 17px;box-shadow:0 2px 13px #27323508}
+.mif-bubble.assistant>div{font-size:14px;line-height:2.1;max-width:100%}
+.mif-bubble.assistant{padding:8px 1px}
+.mif-typing img{width:34px;height:34px;object-fit:contain}
+.mif-composer{border-radius:22px;min-height:70px;padding:11px;box-shadow:0 13px 35px #17202412;border:1px solid #e5e5df;background:#fff;transition:box-shadow .18s,border-color .18s}
+.mif-composer:focus-within{border-color:#edaa82;box-shadow:0 13px 38px #e45a131d}
+.mif-composer textarea{font-size:14px;line-height:1.85;padding:9px 12px;min-height:38px}
+.mif-composer button{width:47px;height:47px;border-radius:15px;transition:transform .16s}
+.mif-composer button:not(:disabled):hover{transform:translateY(-2px)}
+.mif-chat-footnote{font-size:10px;line-height:1.8;color:#939d9e;margin-top:11px}
+.mif-bottom-nav{background:#fffefef7;backdrop-filter:blur(14px);box-shadow:0 -9px 34px #1322220c;border-top-color:#eaeeea}
+.mif-bottom-item{color:#7c8b90;transition:color .16s}
+.mif-bottom-item.active{color:#d95716;font-weight:800}
+.mif-bottom-item.new .mif-bottom-icon{box-shadow:0 8px 24px #e45a135c;border:5px solid #fff}
+.mif-bottom-item.new:hover .mif-bottom-icon{transform:translateY(-2px)}
+.mif-owner-link{margin-top:22px;width:100%;border:1px solid #f0d4c2;background:#fff5ef;color:#c65018;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:14px;font-size:13px;font-weight:800}
+.mif-body-owner{max-width:1450px}
+@media(max-width:620px){.mif-chat-welcome{padding:18px 3px 20px}.mif-rawi-brand{margin-bottom:18px;padding:9px 12px}.mif-rawi-brand img{width:49px;height:49px}.mif-rawi-brand strong{font-size:20px}.mif-rawi-brand small{font-size:10px}.mif-chat-welcome h1{font-size:25px}.mif-chat-page{height:calc(100dvh - 164px)}.mif-composer{min-height:61px;padding:7px;border-radius:19px}.mif-composer button{width:44px;height:44px}.mif-bottom-nav{height:79px}}
