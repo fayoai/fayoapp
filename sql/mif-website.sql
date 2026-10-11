@@ -75,7 +75,7 @@ INSERT INTO mif_site_pages(slug,title_ar,title_en,body_ar,body_en,seo_descriptio
 ('privacy','سياسة الخصوصية','Privacy policy','نحرص على حماية معلومات العملاء وعدم إظهار بيانات المؤسسات دون تصريح. سيتم نشر التفاصيل القانونية المعتمدة قبل فتح التسجيل التجاري.','We restrict unauthorized access to business records. Approved legal privacy terms must be published before commercial sign-up.', 'خصوصية البيانات في MIF Smart','MIF Smart data privacy',false)
 ON CONFLICT(slug) DO NOTHING;
 
--- Explicitly requested product: enhanced Odoo Community, never renamed MIF ERP.
+-- Explicitly requested product: enhanced Odoo Community under its original name.
 -- No invented prices or unsupported Enterprise license claims.
 INSERT INTO mif_products(code,slug,title_ar,title_en,category,summary_ar,summary_en,description_ar,description_en,features_ar,features_en,published,sort_order)
 VALUES('ODOO-COMMUNITY-ENHANCED','odoo-community-enhanced','Odoo Community المطوّر','Enhanced Odoo Community','erp-platform',
