@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {seal} from './ai-erp.js';
-import {providerCodes} from './ai-router.js';
+import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
 const uuid=z.string().uuid();
 const failed=(c,status,error)=>c.json({ok:false,error},status);
 const payload=async c=>{try{return await c.req.json()}catch{return {}}};
@@ -46,6 +46,21 @@ export function installPlatformSaas(app,{db,env,query}){
   if(x.enabled&&code!=='workers_ai'&&!encrypted&&!secretVar)return failed(c,400,'Set an API key before enabling this provider');
   await query(sql,'INSERT INTO mif_ai_providers(code,model,encrypted_key,enabled,priority) VALUES($1,$2,$3,$4,$5) ON CONFLICT(code) DO UPDATE SET model=$2,encrypted_key=$3,enabled=$4,priority=$5,updated_at=now()',[code,x.model,encrypted,x.enabled,x.priority]);
   return c.json({ok:true,configured:code==='workers_ai'?!!env(c).AI?.run:!!encrypted||!!secretVar});
+ });
+ app.post('/api/admin/platform/providers/:code/test',async c=>{
+  const code=c.req.param('code');
+  if(!providerCodes.includes(code))return failed(c,400,'Unknown AI provider');
+  const sql=db(c),active=await query(sql,'SELECT code FROM mif_ai_providers WHERE code=$1 AND enabled=true',[code]);
+  if(!active.length)return failed(c,409,'Enable the provider before testing it');
+  const providers=await getAIProviders(sql,env(c),query),target=providers.find(p=>p.code===code);
+  if(!target)return failed(c,503,'Provider key or AI binding is not configured');
+  try{const result=await routeAI('Respond with a short greeting in Arabic.',[target]);
+    return c.json({ok:true,provider:result.provider,model:result.model,answer:result.answer,input_tokens:result.input_tokens,output_tokens:result.output_tokens});
+  }catch(e){return failed(c,e.status||502,e.message)}
+ });
+ app.get('/api/admin/platform/ai-quotas',async c=>{
+  const usage=await query(db(c),"SELECT provider,count(*)::int requests,coalesce(sum(input_tokens),0)::bigint input_tokens,coalesce(sum(output_tokens),0)::bigint output_tokens FROM mif_ai_usage WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' GROUP BY provider");
+  return c.json({ok:true,period:'UTC today',source:'MIF Smart measured AI requests only',external_credits_verified:false,usage:providerCodes.map(code=>({provider:code,...(usage.find(u=>u.provider===code)||{requests:0,input_tokens:0,output_tokens:0})}))});
  });
  app.get('/api/admin/platform/plans',async c=>c.json({ok:true,data:await query(db(c),'SELECT id,code,title,cycle,price_halalas,message_limit,active,created_at FROM mif_subscription_plans ORDER BY created_at DESC')}));
  app.post('/api/admin/platform/plans',async c=>{
