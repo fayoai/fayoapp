@@ -15,7 +15,6 @@ export default function MifCompany(){
  const company=site.settings?.identity||fallback.identity,contact=site.settings?.contact||fallback.contact,products=MIF_PRODUCTS;
  const workerRoot=window.location.hostname==='mif-smart-platform.fayosaas.workers.dev';
  const enterpriseURL=site.app_origins?.enterprise|| (workerRoot?'https://rawi-enterprise.fayosaas.workers.dev/':'/');
- const developerURL=site.app_origins?.developer|| (workerRoot?'https://rawi-developer.fayosaas.workers.dev/developer/':'/developer/');
  const product=productSlug?productBySlug(productSlug):null;
  const page=pageSlug?(site.pages||[]).find(x=>x.slug===pageSlug):null;
  useEffect(()=>{document.title=isAdmin?'MIF Smart | SaaS':page?L(page.title_ar,page.title_en)+' | MIF Smart':product?L(product.title_ar,product.title_en)+' | MIF Smart':isAbout?L('عن MIF Smart | MIF Smart','About MIF Smart'): 'MIF Smart | Business Software';const meta=document.querySelector('meta[name=description]');if(meta)meta.setAttribute('content',L(site.settings?.seo?.description_ar||company.hero_description_ar,site.settings?.seo?.description_en||company.hero_description_en));const favicon=document.querySelector('link[rel="icon"]');if(favicon)favicon.setAttribute('href','/mif-app-icon.svg');const robots=document.querySelector('meta[name="robots"]');if(robots)robots.setAttribute('content',isAdmin?'noindex,nofollow':'index,follow');},[isAdmin,productSlug,pageSlug,site,lang]);
