@@ -15,3 +15,12 @@
 .mif-readonly-status{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 auto 18px;max-width:1700px;border:1px solid #f1d3bd;background:#fffaf6;padding:12px 17px;border-radius:11px;color:#754621;font-size:12px;line-height:1.8}
 .mif-readonly-status button{background:#e95814;color:#fff;border:0;border-radius:8px;padding:9px 14px;white-space:nowrap;cursor:pointer}
 @media(max-width:650px){.mif-readonly-status{flex-direction:column;align-items:stretch}.mif-readonly-status button{align-self:start}}
+
+.mif-auth{background:radial-gradient(ellipse 530px 440px at 16% 18%,#ec672d1c,transparent 75%),radial-gradient(ellipse 650px 550px at 90% 85%,#243a40,#151f24);position:relative}
+.mif-auth::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.20;background-image:linear-gradient(#FFFFFF10 1px,transparent 1px),linear-gradient(90deg,#FFFFFF10 1px,transparent 1px);background-size:39px 39px;mask-image:linear-gradient(125deg,black,transparent 75%)}
+.mif-auth-card{position:relative;z-index:1;border:1px solid #586368;background:linear-gradient(160deg,#27363c,#202c32 72%);box-shadow:0 32px 85px #0810148f,0 2px 0 #ffffff16 inset;border-radius:24px;max-width:540px}
+.mif-auth-card h1{font-weight:800;letter-spacing:-.7px}
+.mif-auth form input{border:1px solid #62727a;background:#17262d;border-radius:10px}
+.mif-auth form input:focus{outline:2px solid #f5a574;outline-offset:1px}
+.mif-auth form>button{background:#e35a0e;font-size:14px;box-shadow:0 6px 21px #e35a0e33}
+.mif-auth form>button:hover{background:#f26b1b}
