@@ -1,0 +1,36 @@
+/* MIF Smart catalogue administration — visible catalogue, owner-only writes. */
+.mif-owner-products-entry,.mif-company-products-dashboard{width:min(100%,1250px);margin:0 auto;padding:clamp(16px,3vw,34px) clamp(14px,3vw,28px) 60px}
+.mif-owner-products-title{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:25px}
+.mif-owner-products-title span{color:#c45919;font-size:11px;font-weight:850;letter-spacing:.13em}
+.mif-owner-products-title h1{font-size:clamp(21px,3vw,30px);margin:7px 0 0;color:#17252d}
+.mif-owner-products-title>a{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#b95522;font-weight:750;padding:9px 13px;background:#fff8f4;border-radius:11px}
+.mif-company-product-admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0}
+.mif-product-admin-card{min-width:0;min-height:165px;display:grid;grid-template-columns:62px minmax(0,1fr);grid-template-rows:1fr auto;column-gap:13px;row-gap:11px;align-items:center;background:#fff;border:1px solid #e5e9ee;border-radius:20px;padding:19px;box-shadow:0 8px 24px #27374608}
+.mif-product-admin-card.active{border-color:#d5e2fa}
+.mif-product-admin-visual{display:grid;place-items:center;width:61px;height:61px;border-radius:17px;background:#f4f6f9;color:#8995a5}
+.mif-product-admin-card.active .mif-product-admin-visual{background:#edf4ff}
+.mif-product-admin-visual img{width:52px;height:52px;object-fit:contain}
+.mif-product-admin-content{min-width:0}
+.mif-product-admin-content h3{font-size:16px;font-weight:800;color:#1a2936;margin:0 0 7px;line-height:1.4;overflow-wrap:anywhere}
+.mif-product-admin-code{font-size:10px;color:#8c98a4;letter-spacing:.03em;overflow-wrap:anywhere}
+.mif-product-admin-footer{grid-column:1/-1;border-top:1px solid #f0f2f5;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:43px}
+.mif-product-admin-footer span{font-size:11px;font-weight:750}
+.mif-product-admin-footer .status-active{color:#2466c7}
+.mif-product-admin-footer .status-soon{color:#838f9e}
+.mif-product-admin-footer button{padding:8px 13px;font-size:12px;border:1px solid #e9dacc;border-radius:10px;background:#fff8f5;color:#af4d1a;font-weight:750}
+.mif-product-admin-footer button:hover{background:#fcefe7}
+.mif-owner-auth-panel{width:min(100%,500px);margin:32px auto 0;padding:25px;border:1px solid #e6eaf0;border-radius:20px;background:#fff;box-shadow:0 12px 36px #142c4611}
+.mif-owner-auth-heading{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;margin-bottom:17px;color:#202b35}
+.mif-owner-auth-heading svg{color:#c25b21}
+.mif-owner-auth-panel form{display:flex;flex-direction:column;gap:14px}
+.mif-owner-auth-panel label{font-size:12px;font-weight:700;color:#526273;display:flex;flex-direction:column;gap:6px}
+.mif-owner-auth-panel input{width:100%;min-height:48px;border:1px solid #dce2e9;border-radius:11px;padding:10px 13px;background:#fcfdff;color:#15243a;font-size:14px}
+.mif-owner-auth-panel input:focus{outline:2px solid #e6ad8a;outline-offset:1px}
+.mif-owner-auth-panel form>button{min-height:49px;border:0;border-radius:12px;background:#e35a0e;color:#fff;font-weight:800}
+.mif-owner-auth-panel form>button:disabled{opacity:.6}
+.mif-database-warning{margin:0 0 17px;padding:11px 13px;color:#a72d24;border-radius:11px;border:1px solid #f0c7bd;background:#fff5f2;font-size:12px}
+.mif-company-products-dashboard .mif-company-record-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.mif-company-products-dashboard .mif-company-record-head h2{font-size:23px}
+.mif-company-products-dashboard .mif-company-record-head span{font-weight:700;font-size:12px;color:#8090a0}
+@media(max-width:1050px){.mif-company-product-admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.mif-company-product-admin-grid{grid-template-columns:1fr}.mif-product-admin-card{min-height:144px;padding:15px}.mif-owner-auth-panel{padding:20px}.mif-owner-products-entry{padding:16px 14px 45px}}

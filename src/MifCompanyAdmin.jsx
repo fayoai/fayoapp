@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {ArrowLeft,Box,Building2,FileText,LayoutDashboard,Mail,Plus,RefreshCw,Save,ShieldCheck,SlidersHorizontal,X} from 'lucide-react';
 import PlatformConsole from './PlatformConsole.jsx';
+import './mif-products-admin.css';
 import {MIF_PRODUCTS} from './mif-product-catalog.js';
 import {api,useSite,tr} from './App.jsx';
 const blankProduct={code:'',slug:'',title_ar:'',title_en:'',category:'software',summary_ar:'',summary_en:'',description_ar:'',description_en:'',features_ar:[],features_en:[],price_halalas:null,published:false,sort_order:100};
