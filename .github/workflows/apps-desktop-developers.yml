@@ -1,0 +1,43 @@
+name: Package RAWI Developers Desktop (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Verified production HTTPS origin for RAWI Developers'
+        required: true
+        type: string
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cmd: dist:linux
+          - os: windows-latest
+            cmd: dist:win
+          - os: macos-latest
+            cmd: dist:mac
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Validate Developer deployment HTTPS URL
+        shell: bash
+        env:
+          APP_URL: ${{ inputs.site_url }}
+        run: |
+          node -e "const u=new URL(process.env.APP_URL);if(u.protocol!=='https:'||u.hostname.endsWith('.example'))process.exit(1);const fs=require('fs');fs.writeFileSync('apps/desktop-developers/desktop-config.json',JSON.stringify({siteUrl:u.origin+'/developers/'}))"
+      - name: Install desktop dependencies
+        working-directory: apps/desktop-developers
+        run: npm install --no-audit --no-fund
+      - name: Package standalone unsigned Developer app
+        working-directory: apps/desktop-developers
+        run: npm run ${{ matrix.cmd }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rawi-developers-${{ matrix.os }}-unsigned
+          path: apps/desktop-developers/release/*
+          if-no-files-found: error
+          retention-days: 7
