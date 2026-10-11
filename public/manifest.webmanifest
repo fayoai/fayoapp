@@ -1,9 +1,9 @@
 {
   "id": "/",
-  "name": "MIF Smart | إم آي إف سمارت",
-  "short_name": "MIF Smart",
-  "description": "Odoo ERP, SaaS, Odoo Partners, Marketing, Modules and Hosting",
-  "start_url": "/?source=installed",
+  "name": "MIF Smart AI ERP",
+  "short_name": "MIF AI ERP",
+  "description": "AI-native integrated ERP for customers, sales, purchases, accounting, inventory, HR and projects",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -17,8 +17,7 @@
   "dir": "rtl",
   "categories": [
     "business",
-    "productivity",
-    "shopping"
+    "productivity"
   ],
   "icons": [
     {
