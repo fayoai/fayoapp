@@ -4,13 +4,13 @@ import {Resvg} from '@resvg/resvg-js';
 export function approvedNativeSvg(target,raw){
  if(!['enterprise','developer'].includes(target))throw new Error('Unknown RAWI app');
  if(!raw.includes('viewBox="280 165 690 742"'))throw new Error('Expected approved RAWI mark viewBox');
- const expected=target==='developer'?['#080808','#ffd21a']:['#e35a0e','#ffffff'];
+ const expected=target==='developer'?['#080808','#ffd21a']:['#2166e8','#ffffff'];
  if(expected.some(x=>!raw.includes('fill="'+x+'"')))throw new Error('Approved RAWI application colors or mark changed');
  return raw.replace('viewBox="280 165 690 742"','viewBox="254 165 742 742"');
 }
 function png(svg,size){return new Resvg(svg,{fitTo:{mode:'width',value:size},background:'rgba(0,0,0,0)'}).render().asPng()}
 export function writeApprovedNativeIcons(target,root='.'){
- const filename=target==='developer'?'rawi-developer-mark.svg':'rawi-mark.svg';
+ const filename=target==='developer'?'rawi-developer-mark.svg' :'rawi-erp-mark.svg';
  const svg=approvedNativeSvg(target,readFileSync(join(root,'public',filename),'utf8'));
  const res=join(root,'android','app','src','main','res');
  if(existsSync(join(root,'android'))){

@@ -8,7 +8,7 @@ export function prepareNativeConfig(target,siteOrigin,originalEnterprise,origina
  cfg.server={...cfg.server,url:site.origin+(target==='developer'?'/developer/':'/'),cleartext:false,androidScheme:'https'};
  if(target==='developer'){
   if(cfg.appId!=='com.mifsmart.rawideveloper'||cfg.plugins?.SplashScreen?.backgroundColor!=='#080808')throw new Error('Approved Developer native identity is missing');
- }else if(cfg.plugins?.SplashScreen?.backgroundColor!=='#e35a0e')throw new Error('Approved Enterprise orange native identity is missing');
+ }else if(cfg.plugins?.SplashScreen?.backgroundColor!=='#2166e8')throw new Error('Approved RAWI ERP blue native identity is missing');
  return cfg;
 }
 if(process.argv[1]?.endsWith('/prepare-native.mjs')){

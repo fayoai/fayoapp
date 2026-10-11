@@ -1,6 +1,6 @@
 {
   "appId": "com.mifsmart.rawi",
-  "appName": "RAWI AI ERP",
+  "appName": "RAWI ERP",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false
@@ -14,7 +14,7 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 1500,
-      "backgroundColor": "#e35a0e",
+      "backgroundColor": "#2166e8",
       "showSpinner": false
     }
   }
