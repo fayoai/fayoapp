@@ -1,5 +1,5 @@
 /* ERP app shell only. Never cache HTML containing sign-in or private APIs. */
-const CACHE='mif-smart-shell-rawi-erp-blue-v9-0-2-mobile';
+const CACHE='mif-smart-shell-rawi-erp-blue-v9-0-3-composer';
 const SHELL=['/offline.html','/manifest.webmanifest','/rawi-erp-mark.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('mif-smart-')||k.startsWith('mif-'))&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
