@@ -24,6 +24,8 @@
       "/developer/*",
       "/mif",
       "/mif/*",
+      "/admin",
+      "/admin/*",
       "/owner-setup",
       "/sitemap.xml"
     ]
