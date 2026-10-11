@@ -14,7 +14,7 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 1500,
-      "backgroundColor": "#292253",
+      "backgroundColor": "#e35a0e",
       "showSpinner": false
     }
   }
