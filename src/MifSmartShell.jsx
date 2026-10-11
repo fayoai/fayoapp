@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {api,useSite,tr} from './App.jsx';
 import AiErpWorkspace from './AiErpWorkspace.jsx';
+import RawiGeneratedWorkspace from './RawiGeneratedWorkspace.jsx';
 import MifSchedule from './MifSchedule.jsx';
 import {RawiTeamPanel,RawiNotificationsPanel} from './RawiPanels.jsx';
 
@@ -315,7 +316,8 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
     </div>
    </section>}
    {!checking&&!authed&&protectedTabs.includes(tab)&&<div className="mif-protected-auth">{authPanel}</div>}
-   {(tab==='operations'||tab==='integrations')&&!checking&&authed&&<AiErpWorkspace key={tab} mode={tab} notify={setNotice} onOpenThread={openThread} onNewChat={startNew}/>}
+   {tab==='operations'&&!checking&&authed&&<RawiGeneratedWorkspace onOpenThread={openThread} onNewChat={startNew}/>}
+   {tab==='integrations'&&!checking&&authed&&<AiErpWorkspace mode="integrations" notify={setNotice}/>}
    {tab==='schedule'&&!checking&&authed&&<MifSchedule notify={setNotice}/>}
    {tab==='team'&&!checking&&authed&&<RawiTeamPanel workspaceId={workspaceId} workspace={workspaces.find(w=>w.id===workspaceId)} notify={setNotice}/>}
    {tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel workspaceId={workspaceId} onSchedule={()=>navigate('schedule')}/>}
