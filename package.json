@@ -20,7 +20,8 @@
     "mobile:prepare:enterprise": "node scripts/prepare-native.mjs",
     "mobile:icons": "node scripts/native-icons.mjs",
     "smoke:surfaces": "node scripts/smoke-surfaces.mjs",
-    "build:surfaces": "node scripts/build-surfaces.mjs"
+    "build:surfaces": "node scripts/build-surfaces.mjs",
+    "smoke:runtime": "node scripts/smoke-runtime.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",

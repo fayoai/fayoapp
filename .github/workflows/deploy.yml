@@ -69,6 +69,16 @@ jobs:
           done
       - name: Test three deployed Worker boundaries
         run: npm run smoke:surfaces
+      - name: Verify real database-backed application runtimes
+        shell: bash
+        env:
+          MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
+        run: |
+          if [[ -n "$MIF_DATABASE_URL" ]]; then
+            npm run smoke:runtime
+          else
+            echo "::warning::Runtime not verified: MIF_DATABASE_URL is not configured; all database-backed screens remain unavailable."
+          fi
       - name: Verify real production domain when configured
         shell: bash
         env:
