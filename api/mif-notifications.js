@@ -1,7 +1,8 @@
 import {z} from 'zod';
 const email=z.email().max(180);
 export async function notifyMifInquiry(env={},lead={}){
- const sender=email.safeParse(env.MAIL_FROM),recipient=email.safeParse(env.MIF_INQUIRY_NOTIFY_EMAIL);
+ const from=String(env.MAIL_FROM||'').trim(),formatted=/^([^<>\\r\\n]{1,100}) <([^<>\\r\\n]+)>$/.exec(from);
+ const sender=email.safeParse(formatted?formatted[2]:from),recipient=email.safeParse(env.MIF_INQUIRY_NOTIFY_EMAIL);
  if(!env.RESEND_API_KEY||!sender.success||!recipient.success)return {status:'not_configured'};
  const text=['MIF Smart — New website inquiry',
   'Name: '+String(lead.name||'').slice(0,160),
@@ -16,7 +17,7 @@ export async function notifyMifInquiry(env={},lead={}){
   const response=await fetch('https://api.resend.com/emails',{
    method:'POST',
    headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},
-   body:JSON.stringify({from:sender.data,to:[recipient.data],subject:'MIF Smart — New website inquiry',text}),
+   body:JSON.stringify({from,to:[recipient.data],subject:'MIF Smart — New website inquiry',text}),
    signal:AbortSignal.timeout(8000)
   });
   return {status:response.ok?'sent':'failed'};
