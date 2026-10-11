@@ -8,8 +8,8 @@ test('Configured MIF email delivery calls only the verified Resend endpoint',asy
  const old=globalThis.fetch;let calls;
  globalThis.fetch=async(url,opts)=>{calls={url,opts};return new Response(JSON.stringify({id:'test-id'}),{status:200,headers:{'Content-Type':'application/json'}})};
  try{const result=await notifyMifInquiry({RESEND_API_KEY:'secret-from-server',MAIL_FROM:'MIF Smart <notices@example.com>',MIF_INQUIRY_NOTIFY_EMAIL:'owner@example.com'}, {name:'Test Company',email:'visitor@example.com',message:'Requesting a call'});
- // A sender with a display name must be accepted by the mail provider in API-compatible form.
- assert.equal(result.status,'not_configured');
+ // A verified sender display name is valid for Resend.
+ assert.equal(result.status,'sent');
  const direct=await notifyMifInquiry({RESEND_API_KEY:'secret-from-server',MAIL_FROM:'notices@example.com',MIF_INQUIRY_NOTIFY_EMAIL:'owner@example.com'},{name:'Test Company',email:'visitor@example.com',message:'Requesting a call'});
  assert.equal(direct.status,'sent');assert.equal(calls.url,'https://api.resend.com/emails');
  assert.equal(calls.opts.headers.Authorization,'Bearer secret-from-server');
