@@ -77,24 +77,29 @@ export default function MifSmartShell(){
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e);setInstalled(false)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false);setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}};const display=window.matchMedia('(display-mode: standalone)');const onDisplay=()=>{if(display.matches)setInstalled(true)};display.addEventListener?.('change',onDisplay);window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{display.removeEventListener?.('change',onDisplay);window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
  useEffect(()=>{if(!authed){setWorkspaces([]);setWorkspaceId('');return}api('/api/admin/erp/workspaces').then(r=>{const list=r.data||[];setWorkspaces(list);setWorkspaceId(prev=>list.some(w=>w.id===prev)?prev:(list[0]?.id||''))}).catch(()=>setWorkspaces([]))},[authed,tenantGeneration]);
  useEffect(()=>{
-  if(!authed){setTenantSetup(null);return}
-  let active=true;
+  // Company details must be saved before tenant provisioning is permitted.
+  if(!authed||session?.company_setup_required){setTenantSetup(null);return}
+  let active=true,timer;
   const run=async()=>{
    try{
-    const status=await api('/api/admin/tenant/status');
-    const pending=(status.data||[]).find(x=>x.status!=='ready');
-    if(!pending||!active)return;
+    const state=await api('/api/admin/tenant/status');
+    const pending=(state.data||[]).find(x=>x.status!=='ready');
+    if(!active)return;
+    if(!pending){setTenantSetup(null);return}
     for(let attempt=0;attempt<12&&active;attempt++){
      setTenantSetup({status:'migrating',step:attempt+1});
-     const answer=await api('/api/admin/tenant/initialize',{method:'POST',body:'{}'});
-     if(!active)return;
-     if(answer.status==='ready'){setTenantSetup(null);setTenantGeneration(n=>n+1);return}
+     try{
+      const next=await api('/api/admin/tenant/initialize',{method:'POST',body:'{}'});
+      if(!active)return;
+      if(next.status==='ready'){setTenantSetup(null);setTenantGeneration(n=>n+1);return}
+     }catch(e){if(!active)return;if(!/already running/i.test(e.message))throw e}
+     await new Promise(resolve=>{timer=setTimeout(resolve,650)});
     }
-    if(active)setTenantSetup({status:'pending'});
-   }catch(e){if(active)setTenantSetup({status:'failed'})}
+    if(active)setTenantSetup({status:'pending',error:L('إعداد قاعدة الشركة لم يكتمل؛ اضغط إعادة المحاولة','Company database setup is incomplete; press retry')});
+   }catch(e){if(active)setTenantSetup({status:'failed',error:e.message})}
   };
-  run();return()=>{active=false};
- },[authed,session?.email]);
+  run();return()=>{active=false;clearTimeout(timer)};
+ },[authed,session?.email,session?.company_setup_required,tenantGeneration]);
  useEffect(()=>{if(!authed){setThreads([]);setActive('');setMessages([]);return}
   if(!workspaceId){setThreads([]);return}
   api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(r=>setThreads(r.data||[])).catch(()=>{})
@@ -141,6 +146,7 @@ export default function MifSmartShell(){
   const pendingDocs=documents.map(({name,mime_type,data})=>({name,mime_type,data}));
   const privateChat=authed&&!!workspaceId;
   if(tab!=='new'&&tab!=='thread')return;
+  if(authed&&!workspaceId){setChatError(L('مساحة الشركة قيد التجهيز. انتظر اكتمال قاعدة البيانات في أعلى الشاشة.','Your company workspace is being prepared. Wait for database setup at the top.'));return}
   setQuestion('');setDocuments([]);if(questionRef.current)questionRef.current.style.height='auto';setChatError('');setAsking(true);setMessages(m=>[...m,{role:'user',content:text+(pendingDocs.length?'\n📎 '+pendingDocs.map(d=>d.name).join('، '):''),at:new Date().toISOString()}]);
   const ctl=new AbortController();requestRef.current=ctl;
   try{
@@ -247,7 +253,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
   <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)+(!authed&&!checking&&protectedTabs.includes(tab)?' mif-body-auth':'')}>
    {(tab==='new'||tab==='thread')&&<section className="mif-chat-page">
     <div className="rawi-chat-tools rawi-enterprise-tools">
-     {tenantSetup&&<span role="status" className="rawi-setup-state">{tenantSetup.status==='failed'?L('تعذر تهيئة القاعدة','Database setup failed'):L('تهيئة Neon','Preparing Neon')} {tenantSetup.step||''}</span>}
+     {tenantSetup&&<span role="status" className="rawi-setup-state">{tenantSetup.status==='failed'?L('تعذر إعداد مساحة الشركة','Company setup failed'):tenantSetup.status==='pending'?L('إعداد مساحة الشركة مستمر','Company setup pending'):L('جاري إعداد مساحة الشركة','Preparing company workspace')} {tenantSetup.step||''}{tenantSetup.error&&<span title={tenantSetup.error}> · {tenantSetup.error.slice(0,100)}</span>}{tenantSetup.status!=='migrating'&&<button type="button" onClick={()=>setTenantGeneration(n=>n+1)}>{L('إعادة المحاولة','Retry')}</button>}</span>}
      {authed&&<span className="rawi-identity-label" title={session?.email}>{workspaces.find(w=>w.id===workspaceId)?.name||session?.email}</span>}
      {!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={13}/>{L('تنزيل','Install')}</button>}
     </div>
