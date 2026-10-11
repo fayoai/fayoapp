@@ -115,11 +115,11 @@ export function installMifChat(app,{db,env,query}){
    history.reverse();
   }
   // Every billable request reserves tenant quota atomically, even under concurrency.
-  const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
+  const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND w.id=$2 ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
    FROM target,mif_subscription_plans p WHERE target.id=s.workspace_id
    AND p.id=s.plan_id AND p.active=true
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
-   AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user]);
+   AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
   const stats=await query(sql,"SELECT w.name,(SELECT COUNT(*) FROM erp_contacts WHERE workspace_id=w.id)::int contacts,(SELECT COUNT(*) FROM erp_invoices WHERE workspace_id=w.id)::int invoices,(SELECT COUNT(*) FROM erp_tasks WHERE workspace_id=w.id AND status='pending')::int pending_tasks FROM erp_workspaces w WHERE w.id=$1",[claim[0].workspace_id]);
   let result;try{
@@ -131,7 +131,7 @@ export function installMifChat(app,{db,env,query}){
   const answer=result.answer;
   await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[claim[0].workspace_id,user,result.provider,result.model,result.input_tokens,result.output_tokens]);
   if(!id){
-   const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title) VALUES($1,$2) RETURNING id',[user,v.data.question.slice(0,95)]);
+   const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title,workspace_id) VALUES($1,$2,$3) RETURNING id',[user,v.data.question.slice(0,95),workspace]);
    id=created[0].id;
   }
   await query(sql,"WITH first AS(INSERT INTO mif_chat_messages(thread_id,role,content) VALUES($1,'user',$2) RETURNING id), second AS(INSERT INTO mif_chat_messages(thread_id,role,content) SELECT $1,'assistant',$3 FROM first RETURNING id) UPDATE mif_chat_threads SET updated_at=now() WHERE id=$1 AND owner_id=$4",[id,v.data.question,answer,user]);
