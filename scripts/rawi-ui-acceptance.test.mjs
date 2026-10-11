@@ -8,7 +8,7 @@ test('No MIF orange survives in any RAWI ERP stylesheet',()=>{
   const css=read(path);
   assert.doesNotMatch(css,/#(?:e35a0e|e45a13|f3a26e|e89b69|d85314|a8460b)/i,path);
  }
- assert.match(read('src/mif-smart-shell.css'),/\.rawi-composer-actions\{/);
+ assert.match(read('src/mif-smart-shell.css'),/\.rawi-send\{/);
  assert.match(read('src/mif-smart-shell.css'),/\.rawi-auth-tabs\{/);
  assert.match(read('src/mif-company.css'),/#e35a0e/);
 });

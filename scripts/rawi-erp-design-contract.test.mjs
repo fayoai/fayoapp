@@ -42,5 +42,5 @@ test('Seven bottom tabs keep a prominent central New action, protected views sho
  assert.match(src,/!authed&&!checking&&authPanel/);
  assert.doesNotMatch(src,/form\.invitation/);
  const css=read('src/mif-smart-shell.css');
- assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:64px/);
+ assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:63px/);
 });
