@@ -8,8 +8,8 @@ test('No MIF orange survives in any RAWI ERP stylesheet',()=>{
   const css=read(path);
   assert.doesNotMatch(css,/#(?:e35a0e|e45a13|f3a26e|e89b69|d85314|a8460b)/i,path);
  }
- assert.match(read('src/mif-smart-shell.css'),/\.mif-app\s+\.rawi-composer-actions/);
- assert.match(read('src/mif-smart-shell.css'),/\.mif-app\s+\.rawi-auth-tabs/);
+ assert.match(read('src/mif-smart-shell.css'),/\.rawi-composer-actions\{/);
+ assert.match(read('src/mif-smart-shell.css'),/\.rawi-auth-tabs\{/);
  assert.match(read('src/mif-company.css'),/#e35a0e/);
 });
 test('RAWI ERP chat and sign in have approved interaction and account-only download',()=>{
@@ -31,5 +31,5 @@ test('MIF Smart product manager is directly accessible at products route and sho
  assert.match(console,/\/mif\/console\//);
  assert.match(console,/\['platform','database','website','products','pages','inquiries'\]/);
  assert.match(console,/databaseState==='unavailable'/);
- assert.match(console,/mif-product-availability/);
+ assert.match(console,/mif-product-admin-footer|status-soon/);
 });

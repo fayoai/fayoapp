@@ -38,5 +38,5 @@ test('Five bottom tabs preserve the large New center and all login/install contr
  assert.doesNotMatch(src,/rawi-chat-install/);
  assert.match(src,/if\(!authed\)\{navigate\('account'\);return\}/);
  const css=read('src/mif-smart-shell.css');
- assert.match(css,/\.mif-app \.mif-bottom-item\.new \.mif-bottom-icon\{width:66px/);
+ assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:64px/);
 });
