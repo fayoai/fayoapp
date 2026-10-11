@@ -47,8 +47,9 @@ export async function migrateTenantBatch({central,query,settings,workspaceId,lim
  const reserved=await query(central,`UPDATE mif_tenant_databases
  SET status='migrating',updated_at=now(),last_error=''
  WHERE workspace_id=$1 AND
- (status IN ('created','failed') OR (status='migrating' AND updated_at<now()-interval '2 minutes'))
- RETURNING workspace_id,application,database_name,migration_version,neon_project_id,neon_branch_id`,[workspaceId]);
+ (status IN ('created','failed') OR (status='ready' AND migration_version<$2)
+  OR (status='migrating' AND updated_at<now()-interval '2 minutes'))
+ RETURNING workspace_id,application,database_name,migration_version,neon_project_id,neon_branch_id`,[workspaceId,tenantMigrationCount]);
  if(!reserved.length)return {status:'busy'};
  const row=reserved[0];
  if(row.neon_project_id!==settings.NEON_PROJECT_ID||row.neon_branch_id!==settings.NEON_BRANCH_ID)throw Error('Neon project or branch changed; refusing cross-project migration');
