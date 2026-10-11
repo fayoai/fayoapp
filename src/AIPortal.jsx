@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {Link,useNavigate} from 'react-router-dom';
+import {Link,useLocation} from 'react-router-dom';
 import {Activity,ArrowUpLeft,ArrowLeft,Boxes,BrainCircuit,CheckCircle2,ChevronLeft,Command,CreditCard,ExternalLink,FileText,Globe2,HardDrive,Layers3,Mail,MessageSquareText,MonitorSmartphone,Network,Package,Send,ServerCog,ShieldCheck,ShoppingBag,Sparkles,Workflow,Zap} from 'lucide-react';
 import {offers,cycleLabels} from '../api/commerce-model.js';
 import {useSite,tr} from './App.jsx';
@@ -35,7 +35,7 @@ function getGuidance(question,lang){
 function SolutionIcon({sku,size=24}){const Icon=productIcons[sku]||Package;return <Icon size={size} strokeWidth={1.6}/>}
 function SmartShortcut({to,icon:Icon,children}){return <Link to={to} className="ai-shortcut"><Icon size={18}/><span>{children}</span><ArrowUpLeft size={15}/></Link>}
 export default function AIPortal(){
- const {lang}=useSite(),navigate=useNavigate(),L=(ar,en)=>tr(lang,ar,en);
+ const {lang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [draft,setDraft]=useState(''),[messages,setMessages]=useState([]),[active,setActive]=useState('overview');
  const inputRef=useRef(null),feedRef=useRef(null);
  useEffect(()=>{const onKey=(e)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();inputRef.current?.focus()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
@@ -96,5 +96,19 @@ export default function AIPortal(){
    <div className="ai-product-grid">{offers.map((p,i)=><Link to={'/store/'+p.slug} className="ai-product" key={p.sku}><div className="ai-product-head"><div className="ai-product-icon"><SolutionIcon sku={p.sku} size={28}/></div><span className="ai-product-num">{String(i+1).padStart(2,'0')} / {String(offers.length).padStart(2,'0')}</span></div><h3>{L(p.title_ar,p.title_en)}</h3><p>{L(p.description_ar,p.description_en)}</p><div className="ai-product-bottom"><span>{p.cycles.length} {L('أنظمة دفع','billing terms')}</span><span>{L('التفاصيل','Explore')} <ArrowUpLeft size={16}/></span></div></Link>)}</div>
   </section>
   <div className="ai-bottom-cta"><span><Sparkles size={17}/> MIF SMART / CONNECTED EXPERIENCE</span><p>{L('أنت تختار. المنصة توصّلك.','Your intent. Your next step.')}</p><div><Link to="/store">{L('ابدأ من المتجر','Open store')}<ArrowUpLeft size={17}/></Link><Link to="/contact">{L('تواصل معنا','Contact us')}<ArrowUpLeft size={17}/></Link></div></div>
+ </div>;
+}
+
+export function AICommandDock(){
+ const {lang}=useSite(),location=useLocation(),L=(ar,en)=>tr(lang,ar,en);
+ const [open,setOpen]=useState(false),[draft,setDraft]=useState(''),[answers,setAnswers]=useState([]);
+ const inputRef=useRef(null);
+ useEffect(()=>{if(!open)return;inputRef.current?.focus();const onKey=(e)=>{if(e.key==='Escape')setOpen(false)};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[open]);
+ useEffect(()=>{setOpen(false)},[location.pathname]);
+ const ask=(raw)=>{const question=String(raw||draft).trim().slice(0,500);if(!question)return;setDraft('');setAnswers(a=>[...a.slice(-5),{question,answer:getGuidance(question,lang)}])};
+ if(location.pathname==='/')return null;
+ return <div className="ai-command-dock">
+  {open&&<><button type="button" className="ai-command-backdrop" onClick={()=>setOpen(false)} aria-label={L('إغلاق المساعد','Close assistant')}/><div className="ai-command-panel" role="dialog" aria-modal="true" aria-label={L('مساعد MIF التفاعلي','MIF product assistant')}><div className="ai-command-head"><img src="/mif-symbol.png" alt=""/><div><strong>MIF Assistant</strong><small>{L('مساعد التوجيه داخل المنصة','In-app product guidance')}</small></div><button type="button" onClick={()=>setOpen(false)} aria-label={L('إغلاق','Close')}>×</button></div><div className="ai-command-feed"><div className="ai-command-intro"><Sparkles size={19}/><p>{L('اكتب ما تحتاجه، وسأوجّهك للمنتج أو القسم المناسب.','Describe what you need and I will direct you to the right product or section.')}</p></div>{answers.map((a,i)=><div className="ai-command-answer" key={i}><div className="ai-command-user">{a.question}</div><p>{a.answer.text}</p><div>{a.answer.links?.map(x=><Link key={x.to} to={x.to} onClick={()=>setOpen(false)}>{x.label}<ArrowUpLeft size={13}/></Link>)}</div></div>)}</div><div className="ai-command-compose"><form onSubmit={e=>{e.preventDefault();ask()}}><input ref={inputRef} maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)} aria-label={L('رسالتك','Your message')} placeholder={L('ما الذي تبحث عنه؟','What are you looking for?')}/><button type="submit" disabled={!draft.trim()} aria-label={L('إرسال','Send')}><Send size={18}/></button></form><small>{L('مساعد إرشادي دون اتصال بنموذج ذكاء اصطناعي خارجي.','Guided assistant; no external AI model is connected.')}</small></div></div></>}
+  <button type="button" className="ai-command-launcher" onClick={()=>setOpen(x=>!x)} aria-expanded={open}><img src="/mif-symbol.png" alt=""/><span>{L('اسأل MIF','Ask MIF')}</span><Sparkles size={16}/></button>
  </div>;
 }
