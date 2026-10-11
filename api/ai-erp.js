@@ -63,6 +63,47 @@ export function installAiErp(app,{db,env,query}){
   return {sql,id};
  }
  const list=async(c,table,sort='created_at DESC')=>{const g=await gate(c);if(g.err)return g.err;if(table==='erp_tasks'||table==='erp_task_events')await runErpSchedule(g.sql).catch(e=>console.error('On-demand task processing failed',e.message));return c.json({ok:true,data:await query(g.sql,'SELECT * FROM '+table+' WHERE workspace_id=$1 ORDER BY '+sort+' LIMIT 500',[g.id])})};
+ // Conversation-led repository. Every conversation remains private to its owner;
+ // membership in the same business workspace never grants access to another person's chats.
+ app.get('/api/admin/erp/w/:workspace/repository',async c=>{
+  const g=await gate(c);if(g.err)return g.err;
+  const owner=c.get('adminId');
+  const [threads,notes,counts]=await Promise.all([
+   query(g.sql,`SELECT t.id,t.title,t.created_at,t.updated_at,
+     (SELECT COUNT(*)::int FROM mif_chat_messages m WHERE m.thread_id=t.id) message_count,
+     (SELECT LEFT(m.content,1800) FROM mif_chat_messages m WHERE m.thread_id=t.id AND m.role='assistant'
+      ORDER BY m.created_at DESC,m.id DESC LIMIT 1) latest_answer
+    FROM mif_chat_threads t WHERE t.workspace_id=$1 AND t.owner_id=$2 ORDER BY t.updated_at DESC LIMIT 100`,[g.id,owner]),
+   query(g.sql,"SELECT id,title,category,LEFT(body,900) preview,created_at FROM erp_knowledge WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100",[g.id]),
+   query(g.sql,`SELECT
+    (SELECT count(*)::int FROM erp_tasks WHERE workspace_id=$1 AND status='pending') open_tasks,
+    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=$1) invoices,
+    (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=$1) contacts,
+    (SELECT count(*)::int FROM erp_projects WHERE workspace_id=$1) projects`,[g.id])
+  ]);
+  return c.json({ok:true,data:{threads,notes,counts:counts[0]||{}}});
+ });
+ app.post('/api/admin/erp/w/:workspace/repository/save-thread',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const input=z.object({thread_id:uid}).safeParse(await body(c));
+  if(!input.success)return invalid(c,'Invalid conversation');
+  const owner=c.get('adminId');
+  const found=await query(g.sql,`SELECT t.title,
+   (SELECT m.content FROM mif_chat_messages m WHERE m.thread_id=t.id AND m.role='assistant'
+    ORDER BY m.created_at DESC,m.id DESC LIMIT 1) latest_answer
+   FROM mif_chat_threads t WHERE t.id=$1 AND t.workspace_id=$2 AND t.owner_id=$3`,
+   [input.data.thread_id,g.id,owner]);
+  if(!found.length)return invalid(c,'Conversation not found',404);
+  if(!found[0].latest_answer?.trim())return invalid(c,'Conversation has no AI result yet',409);
+  const noteTitle=String(found[0].title||'RAWI').slice(0,180);
+  const noteBody=String(found[0].latest_answer).slice(0,16000);
+  const saved=await query(g.sql,`INSERT INTO erp_knowledge(workspace_id,title,body,category)
+   SELECT $1,$2,$3,'conversation'
+   WHERE NOT EXISTS(SELECT 1 FROM erp_knowledge WHERE workspace_id=$1
+    AND category='conversation' AND title=$2 AND body=$3)
+   RETURNING id,title`,[g.id,noteTitle,noteBody]);
+  return c.json({ok:true,saved:saved.length>0,note:saved[0]||null});
+ });
  app.get('/api/admin/erp/workspaces',async c=>{const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);const data=await query(sql,'SELECT w.*,m.role FROM erp_workspaces w JOIN erp_memberships m ON w.id=m.workspace_id JOIN mif_tenant_databases d ON d.workspace_id=w.id AND d.status=\'ready\' WHERE m.admin_id=$1 ORDER BY w.created_at DESC',[c.get('adminId')]);return c.json({ok:true,data})});
  app.post('/api/admin/erp/workspaces',async c=>{
   if(['enterprise','developer'].includes(env(c).MIF_APP_SURFACE))return invalid(c,'New workspaces require independent Neon database provisioning',503);
