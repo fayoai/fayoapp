@@ -297,3 +297,19 @@
 .mif-app .mif-bottom-nav{height:84px;gap:3px}
 .mif-app .mif-bottom-nav .mif-bottom-item{flex:1;min-width:0}
 @media(max-width:620px){.mif-app .mif-body-chats{padding:4px 9px calc(85px + env(safe-area-inset-bottom))}.mif-app .mif-chat-page{height:calc(100dvh - 92px - env(safe-area-inset-bottom))}.mif-app .mif-bottom-nav{height:80px}.mif-app .mif-bottom-item{font-size:9px}.mif-app .rawi-identity-label{max-width:180px}}
+
+/* RAWI Enterprise: chat first from the top edge, clean controls and account-only sign in. */
+.mif-app .mif-chat-scroll.is-empty{justify-content:flex-start}
+.mif-app .mif-chat-welcome{margin:0;padding:12px 8px 10px;text-align:start}
+.mif-app .mif-rawi-brand{margin:0 0 12px;padding:6px 10px;background:transparent;box-shadow:none;border:0}
+.mif-app .mif-chat-welcome h1{margin:8px 0 0;font-size:clamp(22px,2.8vw,30px);text-align:start}
+.mif-app .rawi-enterprise-tools{justify-content:flex-start;min-height:46px}
+.mif-app .rawi-chat-install{margin-inline-start:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid #e4d8cf;border-radius:12px;background:#fff;color:#a8460b;padding:8px 12px;font-size:12px;font-weight:700}
+.mif-app .mif-login-page{margin:30px auto;width:min(100%,540px);align-items:stretch}
+.mif-app .mif-login-page .rawi-login-mark{width:60px;height:60px;object-fit:contain;align-self:center}
+.mif-app .rawi-account-form{display:grid;gap:14px;width:100%}
+.mif-app .rawi-account-form label{display:grid;gap:7px;font-size:13px;font-weight:650}
+.mif-app .rawi-account-form input{width:100%;min-height:45px;border:1px solid #dfd8d2;border-radius:10px;padding:10px 12px;background:#fff}
+.mif-app .rawi-account-form button{min-height:46px;border:0;background:#e35a0e;color:white;border-radius:11px;font-weight:800}
+.mif-app .mif-login-page .mif-auth-switch{min-height:40px;border:0;background:transparent;color:#a8460b}
+@media(max-width:620px){.mif-app .mif-chat-welcome{padding-top:10px}.mif-app .rawi-chat-install span{display:none}.mif-app .rawi-chat-install{padding:9px}.mif-app .mif-chat-page{height:calc(100dvh - 88px - env(safe-area-inset-bottom))}}
