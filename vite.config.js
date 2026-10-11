@@ -1,7 +1,7 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
-const surfaces={enterprise:'enterprise',developer:'developer',mif:'mif'};
+const surfaces={enterprise:'enterprise',mif:'mif'};
 export default defineConfig(()=>{
  const surface=surfaces[process.env.VITE_APP_SURFACE]||'';
  return {
