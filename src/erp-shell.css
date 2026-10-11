@@ -9,3 +9,9 @@
 .mif-erp-brand strong{font-size:15px;color:#fda16b}
 .mif-startup img{width:80px;height:80px}
 @media(max-width:520px){.mif-auth-mark img{width:130px;height:80px}.mif-erp-brand img{width:83px}}
+
+.mif-auth-explore{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:1px solid #f0894d;border-radius:10px;padding:13px 15px;color:#fff;background:#293b42;font-weight:750;font-size:13px;margin:14px 0 3px}
+.mif-auth-explore:hover{border-color:#ffc39e;background:#344b52}
+.mif-readonly-status{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 auto 18px;max-width:1700px;border:1px solid #f1d3bd;background:#fffaf6;padding:12px 17px;border-radius:11px;color:#754621;font-size:12px;line-height:1.8}
+.mif-readonly-status button{background:#e95814;color:#fff;border:0;border-radius:8px;padding:9px 14px;white-space:nowrap;cursor:pointer}
+@media(max-width:650px){.mif-readonly-status{flex-direction:column;align-items:stretch}.mif-readonly-status button{align-self:start}}

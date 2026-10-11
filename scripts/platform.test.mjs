@@ -22,6 +22,8 @@ test('Root application is ERP only without public store navigation',()=>{
  assert.doesNotMatch(app,/CommerceStore|OrderCenter|AIPortal|<Footer/);
  assert.doesNotMatch(admin,/CommerceAdmin|Catalog notify|Pipeline key/);
  assert.match(admin,/AiErpWorkspace/);
+ assert.match(admin,/onExplore/);
+ assert.match(admin,/\/explore/);
  assert.match(read('api/app.js'),/installErpCore/);
  assert.doesNotMatch(read('api/app.js'),/installCommerce|seedCatalog/);
 });

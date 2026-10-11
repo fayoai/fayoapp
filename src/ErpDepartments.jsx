@@ -17,7 +17,7 @@ const modules={
 function FormField({title,children}){return <label className="erp-core-label"><span>{title}</span>{children}</label>}
 function Block({title,children,icon:Icon}){return <div className="erp-core-panel"><h2>{Icon&&<Icon size={20}/>} {title}</h2>{children}</div>}
 function Empty({children}){return <p className="erp-core-empty">{children}</p>}
-export default function ErpDepartments({section,workspace,lang,notify=()=>{}}){
+export default function ErpDepartments({section,workspace,lang,notify=()=>{},readOnly=false}){
  const L=(ar,en)=>tr(lang,ar,en),mod=modules[section],base='/api/admin/erp/w/'+encodeURIComponent(workspace);
  const [data,setData]=useState([]),[items,setItems]=useState([]),[warehouses,setWarehouses]=useState([]),[contacts,setContacts]=useState([]),[accounts,setAccounts]=useState([]),[employees,setEmployees]=useState([]),[report,setReport]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [item,setItem]=useState({sku:'',name:'',type:'stock',unit:'unit',sale_price:0,cost:0});
@@ -31,7 +31,7 @@ export default function ErpDepartments({section,workspace,lang,notify=()=>{}}){
  const [expense,setExpense]=useState({description:'',amount:0,category:'general',employee_id:'',occurred_on:''});
  const endpoint=s=>base+'/core/'+s;
  const load=async()=>{
-  if(!mod)return;
+  if(!mod||readOnly)return;
   try{
    setError('');
    const requests=section==='inventory'?['items','warehouses','stock','movements']:section==='sales'||section==='purchases'?['documents','items']:section==='accounting'?['accounts','journal']:section==='expenses'?['expenses','employees']:section==='projects'?['projects']:section==='reports'?['reports']:['employees'];
@@ -44,15 +44,16 @@ export default function ErpDepartments({section,workspace,lang,notify=()=>{}}){
    if(more.length)setContacts(results[requests.length].data||[]);
   }catch(e){setError(e.message)}
  };
- useEffect(()=>{load()},[workspace,section]);
+ useEffect(()=>{if(!readOnly)load()},[workspace,section,readOnly]);
  async function save(resource,payload,reset){
+  if(readOnly)return;
   setBusy(true);setError('');
   try{await api(endpoint(resource),{method:'POST',body:JSON.stringify(payload)});notify(L('تم الحفظ','Saved'));reset?.();await load()}
   catch(e){setError(e.message);notify(e.message)}
   finally{setBusy(false)}
  }
  const send=(resource,payload,reset)=>e=>{e.preventDefault();save(resource,payload,reset)};
- const act=async(route,status)=>{setBusy(true);try{await api(route,{method:'PATCH',body:JSON.stringify({status})});await load();notify(L('تم تحديث الحالة','Status updated'))}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const act=async(route,status)=>{if(readOnly)return;setBusy(true);try{await api(route,{method:'PATCH',body:JSON.stringify({status})});await load();notify(L('تم تحديث الحالة','Status updated'))}catch(e){setError(e.message)}finally{setBusy(false)}};
  const field=(state,set,key,title,type='text',options)=> <FormField title={title}>{options?<select required value={state[key]} onChange={e=>set(x=>({...x,[key]:e.target.value}))}><option value="">{L('اختر','Select')}</option>{options.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select>:<input type={type} required={!['location','email','owner','start_on','due_on','occurred_on'].includes(key)} step={type==='number'?'0.01':undefined} min={type==='number'&&key!=='delta'?0:undefined} value={state[key]} onChange={e=>set(x=>({...x,[key]:type==='number'?Number(e.target.value):e.target.value}))}/>}</FormField>;
  const updateLine=(setter,index,key,value)=>setter(x=>({...x,lines:x.lines.map((r,i)=>i===index?{...r,[key]:value}:r)}));
  if(!mod)return null;

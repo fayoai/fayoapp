@@ -12,3 +12,8 @@
 .erp-intro-logo{width:34px;height:35px;object-fit:contain;background:#fff4ed;padding:4px;border-radius:8px;flex:none}
 .erp-chat-intro img{width:91px;height:96px;object-fit:contain;background:#fff4ed;border-radius:18px;padding:12px}
 .erp-launch-logo img{width:88px;height:100px;object-fit:contain}
+
+/* Interface exploration is not a fake ERP account; never allow unauthorized writes. */
+.erp-readonly .erp-panel form,.erp-readonly .erp-core-form,.erp-readonly .erp-prompt,.erp-readonly .erp-record-actions,.erp-readonly .erp-template-form{pointer-events:none;user-select:none}
+.erp-readonly .erp-panel input,.erp-readonly .erp-panel textarea,.erp-readonly .erp-panel select,.erp-readonly .erp-core-form input,.erp-readonly .erp-core-form textarea,.erp-readonly .erp-core-form select{background:#fafafa}
+.erp-readonly .erp-nav,.erp-readonly .erp-ai-side{pointer-events:auto}
