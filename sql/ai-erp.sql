@@ -131,3 +131,19 @@ CREATE TABLE IF NOT EXISTS erp_email_log (
 INSERT INTO catalog(sku,kind,category,title_ar,title_en,description_ar,description_en,icon,featured,sort_order,active)
 VALUES('MIF-AI-ERP','service','erp','MIF Smart AI ERP','MIF Smart AI ERP','منصة AI ERP للعملاء والفواتير والمهام والتكاملات.','AI ERP platform for contacts, invoices, tasks and integrations.','brain-circuit',true,0,true)
 ON CONFLICT(sku) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS erp_external_invoices (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL REFERENCES erp_workspaces(id) ON DELETE CASCADE,
+ provider text NOT NULL CHECK(provider IN ('odoo','erpnext','zoho')),
+ external_id text NOT NULL,
+ invoice_number text NOT NULL,
+ customer_name text NOT NULL DEFAULT '',
+ total_amount numeric(18,2) NOT NULL DEFAULT 0,
+ currency char(3) NOT NULL DEFAULT 'SAR',
+ status text NOT NULL DEFAULT '',
+ invoice_date date,
+ updated_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(workspace_id,provider,external_id)
+);
+CREATE INDEX IF NOT EXISTS erp_external_invoices_workspace ON erp_external_invoices(workspace_id,updated_at DESC);
