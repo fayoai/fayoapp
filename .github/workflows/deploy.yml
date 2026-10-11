@@ -129,7 +129,7 @@ jobs:
            if(i<4)await new Promise(resolve=>setTimeout(resolve,2500));
           }
           if(!status?.ok||status.registration_enabled!==true){
-           console.error('::error::RAWI registration is not active in the deployed Cloudflare Worker. Review DATABASE_URL, SESSION_SECRET, CONNECTOR_ENCRYPTION_KEY, Neon and email sender settings.');
+           console.error('::error::RAWI registration is not active in the deployed Cloudflare Worker. Review DATABASE_URL, SESSION_SECRET, Neon API provisioning and email sender settings. AI connector encryption is optional for signup.');
            process.exit(1);
           }
           console.log('RAWI email-code registration is enabled in the deployed Enterprise Worker.');
