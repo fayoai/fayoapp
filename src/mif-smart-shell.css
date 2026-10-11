@@ -91,3 +91,14 @@
 @media(min-width:900px){.mif-chat-page{height:calc(100dvh - 188px)}.mif-bottom-nav{width:min(610px,100%);height:80px;left:50%;right:auto;transform:translateX(-50%);border-radius:21px 21px 0 0;border-inline:1px solid #ececea}.mif-history-overlay{bottom:80px}}
 @media(max-width:620px){.mif-topbar{height:61px;min-height:61px;padding:0 12px}.mif-head-logo img{width:110px;height:49px}.mif-head-actions{gap:6px}.mif-head-control{padding:8px;min-width:36px;min-height:36px}.mif-head-control span{display:none}.mif-head-signin{min-height:35px;padding:6px 10px}.mif-body{padding:4px 12px 94px}.mif-body-chats{padding-bottom:83px}.mif-chat-page{height:calc(100dvh - 164px)}.mif-chat-welcome{padding-bottom:15px}.mif-chat-welcome img{width:69px;height:69px}.mif-composer{min-height:56px;border-radius:17px}.mif-composer button{width:42px;height:42px}.mif-bottom-nav{height:79px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}.mif-bottom-item{font-size:10px}.mif-history-overlay{top:61px;bottom:79px}.mif-body-operations,.mif-body-schedule{padding:12px 7px 96px}.mif-dialog{padding:27px 20px}}
 @media(max-height:520px){.mif-chat-welcome img{height:45px}.mif-chat-welcome h1{font-size:23px;margin:5px 0}.mif-chat-page{min-height:260px}}
+
+.mif-owner-settings{border-top:1px solid #e6e9e5;margin-top:22px;padding-top:24px;display:grid;gap:12px;text-align:start}
+.mif-owner-settings h3{font-size:15px;display:flex;align-items:center;gap:8px;margin:0}
+.mif-owner-settings h3 svg{color:#dd601d}
+.mif-owner-settings p{font-size:12px;color:#718088;line-height:1.85;margin:0}
+.mif-owner-status{display:flex;align-items:center;gap:8px;background:#fff6f0;padding:12px;color:#ba4d12;border:1px solid #f2d6c5;border-radius:9px;font-size:12px;font-weight:700}
+.mif-owner-settings form{display:grid;gap:12px}
+.mif-owner-settings label{display:grid;gap:6px;font-size:12px;font-weight:700}
+.mif-owner-settings input{width:100%;padding:10px 12px;min-height:44px;border:1px solid #dae1dc;border-radius:9px}
+.mif-owner-settings form button{background:#e45a13;color:#fff;border:0;border-radius:9px;min-height:44px}
+.mif-owner-settings small{color:#677a80;font-size:11px;line-height:1.8}
