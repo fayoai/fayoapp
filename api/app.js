@@ -14,6 +14,7 @@ import {installRawiActivities} from './rawi-activities.js';
 import {installRawiDeveloper} from './rawi-developer.js';
 import {evaluationSettings,ensureEvaluationPlan,enforceAuthLimit} from './rawi-onboarding.js';
 import {installRawiReadiness} from './rawi-readiness.js';
+import {installRawiTeam} from './rawi-team.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const db=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -66,6 +67,7 @@ app.get('/api/admin/my-subscription',async c=>{
 });
 app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
 installAiErp(app,{db,env,query});
+installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
 installMifChat(app,{db,env,query});
 installPlatformSaas(app,{db,env,query});
