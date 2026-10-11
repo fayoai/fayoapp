@@ -23,7 +23,7 @@ const byteLength=data=>{
  return Math.floor(encoded.length*3/4)-(encoded.endsWith('==')?2:encoded.endsWith('=')?1:0);
 };
 export const documentSchema=z.object({
- name:z.string().trim().min(1).max(120),
+ name:z.string().trim().min(1).max(120).refine(name=>!/[\/\\\x00-\x1f]/.test(name),'Invalid document name'),
  mime_type:z.string().min(3).max(120),
  data:z.string().min(20).max(2100000)
 }).superRefine((value,ctx)=>{
