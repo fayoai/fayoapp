@@ -1,55 +1,84 @@
-import React,{useEffect,useMemo,useState,useCallback,useRef} from 'react';
-import {Activity,ArrowLeft,BookOpen,Bot,Check,ChevronLeft,Code2,Database,Download,FolderKanban,LockKeyhole,LogOut,MessageCircle,Plus,Send,ShieldCheck,UserRound,Wrench,X} from 'lucide-react';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {MessageCircle,Code2,Plus,UserRound,Download,Send,Menu,X,Trash2,LogOut} from 'lucide-react';
 import {api,useSite,tr} from './App.jsx';
 import RawiDevelopers from './RawiDevelopers.jsx';
 import './rawi-developer-app.css';
 const initial={name:'',organization:'',email:'',password:''};
-const menu=[['overview','لوحة المطور','Overview',Activity],['studio','مساحة أودو','Odoo Studio',Database],['assistant','المساعد الذكي','AI Assistant',Bot],['account','الحساب','Account',UserRound]];
-function Stat({icon:Icon,name,value}){return <article className="rd-stat"><Icon size={20}/><small>{name}</small><strong>{value}</strong></article>}
+const tabs=[['chats','المحادثات','Chats',MessageCircle],['studio','أودو','Odoo',Code2],['new','جديدة','New',Plus],['account','حسابي','Account',UserRound]];
 export default function RawiDeveloperApp(){
- const {lang,setLang}=useSite(),L=(ar,en)=>tr(lang,ar,en),params=new URLSearchParams(window.location.search);
- const [view,setView]=useState(params.get('studio')==='1'?'studio':'overview'),[session,setSession]=useState(null),[checking,setChecking]=useState(true);
- const [signup,setSignup]=useState(params.get('signup')==='1'),[form,setForm]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const [registration,setRegistration]=useState(false),[subscriptions,setSubscriptions]=useState([]),[workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState('');
- const [connections,setConnections]=useState([]),[projects,setProjects]=useState([]),[loading,setLoading]=useState(false);
- const [threads,setThreads]=useState([]),[activeThread,setActiveThread]=useState(''),[messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[sending,setSending]=useState(false);
- const [installPrompt,setInstallPrompt]=useState(null);const box=useRef(null);
- const signed=!!session,developer=signed&&session.account_type==='developer';
- const signal=(txt,failed=false)=>{setNotice(failed?'':txt);setError(failed?txt:'')};
- const refresh=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r)}catch{setSession(null)}finally{setChecking(false)}},[]);
- useEffect(()=>{refresh();api('/api/public/rawi/status').then(x=>setRegistration(!!x.registration_enabled)).catch(()=>setRegistration(false));const saved=e=>{e.preventDefault();setInstallPrompt(e)};window.addEventListener('beforeinstallprompt',saved);return()=>window.removeEventListener('beforeinstallprompt',saved)},[refresh]);
- useEffect(()=>{if(!developer)return;Promise.all([api('/api/admin/erp/workspaces'),api('/api/admin/my-subscription')]).then(([w,s])=>{const data=w.data||[];setWorkspaces(data);setWorkspace(prev=>data.some(x=>x.id===prev)?prev:data[0]?.id||'');setSubscriptions(s.data||[])}).catch(e=>signal(e.message,true))},[developer]);
- const apiBase=workspace?'/api/admin/developer/w/'+encodeURIComponent(workspace):'';
- useEffect(()=>{if(!developer||!apiBase)return;setLoading(true);Promise.all([api(apiBase+'/connections'),api(apiBase+'/implementations'),api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace))]).then(([c,p,t])=>{setConnections(c.data||[]);setProjects(p.data||[]);setThreads(t.data||[])}).catch(e=>signal(e.message,true)).finally(()=>setLoading(false))},[developer,apiBase]);
- useEffect(()=>{setActiveThread('');setMessages([])},[workspace]);
- useEffect(()=>{box.current?.scrollTo({top:box.current.scrollHeight,behavior:'smooth'})},[messages,sending,view]);
+ const {lang,setLang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
+ const [view,setView]=useState('chats'),[session,setSession]=useState(null),[checking,setChecking]=useState(true);
+ const [signup,setSignup]=useState(false),[form,setForm]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [registration,setRegistration]=useState(false),[workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState(''),[subscriptions,setSubscriptions]=useState([]);
+ const [threads,setThreads]=useState([]),[historyOpen,setHistoryOpen]=useState(false),[activeThread,setActiveThread]=useState('');
+ const [messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[sending,setSending]=useState(false),[installPrompt,setInstallPrompt]=useState(null),[installInfo,setInstallInfo]=useState(false);
+ const scroll=useRef(null),composer=useRef(null);
+ const developer=!!session&&session.account_type==='developer';
+ const refresh=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);return r}catch{setSession(null);return null}finally{setChecking(false)}},[]);
+ useEffect(()=>{refresh();api('/api/public/rawi/status').then(r=>setRegistration(!!r.registration_enabled)).catch(()=>setRegistration(false));
+  const onInstall=e=>{e.preventDefault();setInstallPrompt(e)};window.addEventListener('beforeinstallprompt',onInstall);
+  return()=>window.removeEventListener('beforeinstallprompt',onInstall)
+ },[refresh]);
+ useEffect(()=>{if(!developer){setWorkspaces([]);setWorkspace('');setSubscriptions([]);setThreads([]);return}
+  Promise.all([api('/api/admin/erp/workspaces'),api('/api/admin/my-subscription')]).then(([w,s])=>{
+   const xs=w.data||[];setWorkspaces(xs);setWorkspace(old=>xs.some(x=>x.id===old)?old:xs[0]?.id||'');
+   setSubscriptions(s.data||[])
+  }).catch(e=>setError(e.message))
+ },[developer]);
+ useEffect(()=>{if(!developer||!workspace){setThreads([]);return}
+  api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(r=>setThreads(r.data||[])).catch(e=>setError(e.message))
+ },[developer,workspace]);
+ useEffect(()=>{setMessages([]);setActiveThread('');setHistoryOpen(false)},[workspace]);
+ useEffect(()=>{if(messages.length)scroll.current?.scrollTo({top:scroll.current.scrollHeight,behavior:'smooth'})},[messages,sending]);
+ useEffect(()=>{if(view==='chats'&&window.matchMedia?.('(pointer:fine)').matches)composer.current?.focus({preventScroll:true})},[view,checking]);
+ const navigate=key=>{setError('');setHistoryOpen(false);setView(key)};
+ const fresh=()=>{setMessages([]);setActiveThread('');setQuestion('');navigate('chats')};
+ const selectTab=key=>key==='new'?fresh():navigate(key);
  const authenticate=async e=>{e.preventDefault();setBusy(true);setError('');try{
-  const endpoint=signup?'/api/admin/register':'/api/admin/login';
-  await api(endpoint,{method:'POST',body:JSON.stringify(signup?{...form,account_type:'developer'}:{email:form.email,password:form.password})});
-  await refresh();
-  setForm(initial);
- }catch(e){signal(e.message,true)}finally{setBusy(false)}};
- const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);setConnections([]);setProjects([]);setThreads([]);setMessages([]);setWorkspace('')};
- const send=async e=>{e?.preventDefault?.();if(!developer||!workspace||!question.trim()||sending)return;const txt=question.trim();setQuestion('');setSending(true);setError('');setMessages(m=>[...m,{role:'user',content:txt}]);try{
-  const r=await api('/api/admin/chat/send',{method:'POST',body:JSON.stringify({question:txt,thread_id:activeThread||null,workspace_id:workspace})});
-  setMessages(m=>[...m,{role:'assistant',content:r.answer}]);if(r.thread_id)setActiveThread(r.thread_id);
-  api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(t=>setThreads(t.data||[])).catch(()=>{});
- }catch(e){setMessages(m=>m.slice(0,-1));setQuestion(txt);signal(e.message,true)}finally{setSending(false)}};
- const openThread=async id=>{setActiveThread(id);setView('assistant');setError('');try{const r=await api('/api/admin/chat/threads/'+id);setMessages(r.data||[])}catch(e){signal(e.message,true)}};
- const install=async()=>{if(installPrompt){await installPrompt.prompt();await installPrompt.userChoice;setInstallPrompt(null)}else signal(L('من قائمة المتصفح اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.','Use your browser menu to install the app or add it to the home screen.'))};
- const remaining=subscriptions.find(s=>s.workspace_id===workspace),go=(key)=>{setView(key);setError('');setNotice('')};
- return <div className="rd-app" dir={lang==='ar'?'rtl':'ltr'}>
-  <header className="rd-header"><a className="rd-brand" href="/developer/" aria-label="RAWI Developer"><img src="/rawi-developer-mark.svg" alt=""/><span>RAWI <strong>Developer</strong><small>{L('بيئة تطوير الأنظمة','Systems development workspace')}</small></span></a><div className="rd-head-actions"><span className="rd-odoo-badge">Odoo <Check size={13}/></span><button type="button" onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'EN':'AR'}</button><button type="button" onClick={install} aria-label={L('تثبيت تطبيق المطورين','Install developer app')}><Download size={18}/></button></div></header>
-  {!checking&&!developer&&<main className="rd-entry"><div className="rd-intro"><div className="rd-label"><Code2 size={16}/> RAWI DEVELOPER / ODOO</div><h1>{L('طوّر أنظمة أعمالك بذكاء.','Build business systems intelligently.')}</h1><p>{L('تطبيق راوي للمطورين مستقل عن راوي Enterprise. حاليًا متخصص في ربط قواعد Odoo وتشخيصها وتوليد الموديولات وإدارة التنفيذ.','An independent developer application focused today on Odoo connections, diagnostics, addon generation and implementation workflows.')}</p><div className="rd-feature-grid"><div><Database size={22}/>{L('اتصالات Odoo آمنة','Secure Odoo connections')}</div><div><Wrench size={22}/>{L('تشخيص وتحليل','Diagnostics')}</div><div><Code2 size={22}/>{L('توليد موديولات','Addon builder')}</div><div><Bot size={22}/>{L('مساعد متخصص','Engineering AI')}</div></div></div>
-  {signed&&!developer?<section className="rd-auth"><LockKeyhole size={30}/><h2>{L('هذا حساب Enterprise','Enterprise account')}</h2><p>{L('مساحة Developers تطبيق مستقل. سجل بحساب مخصص للمطورين.','Developers is a separate app. Sign in with a Developer account.')}</p><button onClick={logout}>{L('تسجيل الخروج','Sign out')}</button></section>:<section className="rd-auth"><div className="rd-auth-mark"><img src="/rawi-developer-mark.svg" alt=""/></div><h2>{signup?L('إنشاء حساب مطوّر','Create Developer account'):L('دخول راوي للمطورين','Developer sign in')}</h2><p>{L('للمطورين المتخصصين في Odoo حاليًا.','Currently optimized for Odoo developers.')}</p><form onSubmit={authenticate}>{signup&&<><label>{L('الاسم','Name')}<input required minLength={2} value={form.name} onChange={e=>setForm(x=>({...x,name:e.target.value}))}/></label><label>{L('اسم الفريق','Team name')}<input required minLength={2} value={form.organization} onChange={e=>setForm(x=>({...x,organization:e.target.value}))}/></label></>}<label>{L('البريد الإلكتروني','Email')}<input required type="email" autoComplete="username" value={form.email} onChange={e=>setForm(x=>({...x,email:e.target.value}))}/></label><label>{L('كلمة المرور','Password')}<input required type="password" minLength={signup?12:1} autoComplete={signup?'new-password':'current-password'} value={form.password} onChange={e=>setForm(x=>({...x,password:e.target.value}))}/></label>{error&&<p role="alert" className="rd-error">{error}</p>}{signup&&!registration&&<p role="status" className="rd-warning">{L('التسجيل غير مفعّل حتى تكتمل إعدادات الأمان للإنتاج.','Registration is not yet enabled in the production environment.')}</p>}<button disabled={busy||(signup&&!registration)} type="submit">{busy?L('جارٍ التنفيذ...','Please wait...'):signup?L('إنشاء حساب Developers','Create Developer account'):L('تسجيل الدخول','Sign in')}</button></form><button className="rd-text-button" onClick={()=>{setSignup(x=>!x);setError('')}}>{signup?L('عندك حساب؟ سجّل دخولك','Already registered? Sign in'):L('ليس لديك حساب مطوّر؟ إنشاء حساب','New to Developers? Sign up')}</button></section>}</main>}
-  {!checking&&developer&&<div className="rd-layout"><aside className="rd-sidebar"><div className="rd-sidebar-top"><img src="/rawi-developer-mark.svg" alt=""/><div><strong>RAWI Developer</strong><small>ODOO WORKSPACE</small></div></div><nav>{menu.map(([key,ar,en,Icon])=><button key={key} className={view===key?'active':''} onClick={()=>go(key)}><Icon size={19}/>{L(ar,en)}</button>)}</nav><div className="rd-sidebar-foot"><div>{session.email}</div><button onClick={logout}><LogOut size={17}/>{L('خروج','Sign out')}</button></div></aside>
-  <main className="rd-main"><div className="rd-title"><div><small>RAWI DEVELOPER / {view.toUpperCase()}</small><h1>{L(menu.find(x=>x[0]===view)?.[1],menu.find(x=>x[0]===view)?.[2])}</h1></div><label>{L('مساحة العمل','Workspace')}<select value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label></div>
-  {error&&<p role="alert" className="rd-error">{error}</p>}{notice&&<p role="status" className="rd-notice" onClick={()=>setNotice('')}>{notice}</p>}
-  {view==='overview'&&<><div className="rd-overview-hero"><span><Activity size={16}/>{L('بيئة التطوير','Developer control center')}</span><h2>{L('كل أدوات تطوير Odoo في مساحة واحدة','Your Odoo engineering workspace')}</h2><p>{L('التوصيلات هنا تتم بصلاحيات حسابك. الفحوصات للقراءة فقط، وتوليد الموديول لا يثبته على سيرفر العميل.','Only authorized Odoo connections are accessible. Diagnostics are read-only; generating an addon does not deploy it.')}</p><button onClick={()=>go('studio')}><Code2 size={16}/>{L('افتح أدوات Odoo','Open Odoo Studio')}</button></div><div className="rd-stats"><Stat icon={Database} name={L('قواعد مرتبطة','Odoo databases')} value={loading?'—':connections.length}/><Stat icon={ShieldCheck} name={L('اتصالات مجرّبة بنجاح','Verified connections')} value={connections.filter(c=>c.last_status==='ok').length}/><Stat icon={FolderKanban} name={L('مشروعات تنفيذ','Implementation projects')} value={projects.length}/><Stat icon={MessageCircle} name={L('رسائل AI متبقية','Remaining AI messages')} value={remaining?.messages_remaining??0}/></div><div className="rd-panels"><section><h3><Database size={18}/>{L('اتصالات أودو','Odoo connections')}</h3>{connections.map(c=><div className="rd-list-item" key={c.id}><strong>{c.label}</strong><small>{c.database_name} · {c.odoo_version||c.api_version}</small><span>{c.last_status}</span></div>)}{!connections.length&&<p>{L('ابدأ بربط قاعدة Odoo من مساحة المطور.','Start by connecting an Odoo database in the developer studio.')}</p>}<button onClick={()=>go('studio')}>{L('إدارة الاتصالات','Manage connections')} <ChevronLeft size={16}/></button></section><section><h3><FolderKanban size={18}/>{L('مشاريع التنفيذ','Implementation pipeline')}</h3>{projects.map(p=><div className="rd-list-item" key={p.id}><strong>{p.title}</strong><small>{p.client_name} · {p.phase}</small><span>{p.status}</span></div>)}{!projects.length&&<p>{L('لا يوجد مشروع تنفيذ بعد.','No implementation projects yet.')}</p>}</section></div></>}
-  {view==='studio'&&<RawiDevelopers key={workspace} selectedWorkspace={workspace} notify={txt=>signal(txt)}/>}
-  {view==='assistant'&&<section className="rd-chat"><div className="rd-chat-history"><div><h3><MessageCircle size={17}/>{L('سجل المحادثات','Conversations')}</h3><button onClick={()=>{setMessages([]);setActiveThread('')}}><Plus size={16}/>{L('جديدة','New')}</button></div>{threads.map(t=><button key={t.id} className={activeThread===t.id?'active':''} onClick={()=>openThread(t.id)}>{t.title}</button>)}</div><div className="rd-chat-main"><div className="rd-chat-window" ref={box}>{!messages.length&&<div className="rd-chat-empty"><Bot size={37}/><h2>{L('اسأل راوي عن تطوير Odoo','Ask RAWI about Odoo engineering')}</h2><p>{L('تصميم موديولات، تشخيص RPC، مراجعة XML وPython وخطة Implementation. الإجابات لا تنفذ تغييرات تلقائيًا.','Addon design, RPC diagnostics, XML/Python review and implementation planning. Answers never silently deploy changes.')}</p></div>}{messages.map((m,i)=><div key={i} className={'rd-message '+m.role}><strong>{m.role==='assistant'?'RAWI Developer':L('أنت','You')}</strong><p>{m.content}</p></div>)}{sending&&<div className="rd-message assistant">{L('جارٍ التحليل...','Analyzing...')}</div>}</div><form className="rd-chat-compose" onSubmit={send}><textarea required value={question} maxLength={2500} rows={2} placeholder={L('اكتب سؤالك البرمجي عن أودو...','Ask an Odoo development question...')} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(e)}}}/><button disabled={sending||!question.trim()||!workspace} type="submit" aria-label={L('إرسال','Send')}><Send size={20}/></button></form></div></section>}
-  {view==='account'&&<section className="rd-account"><img src="/rawi-developer-mark.svg" alt=""/><h2>{session.email}</h2><p>{L('حساب مطور مستقل — Odoo هو التكامل الفعّال حاليًا.','Independent Developer account — Odoo is the currently enabled integration.')}</p>{subscriptions.map(s=><div key={s.workspace_id}><span>{s.workspace_name}</span><strong>{s.plan_name||'—'} · {s.status||'—'} · {s.messages_remaining||0} {L('رسالة متبقية','messages remaining')}</strong></div>)}<button onClick={logout}><LogOut size={17}/>{L('تسجيل الخروج','Sign out')}</button></section>}
-  </main></div>}
-  {checking&&<main className="rd-check">{L('جارٍ التحقق من الجلسة...','Checking session...')}</main>}
- </div>;
+  const path=signup?'/api/admin/register':'/api/admin/login';
+  await api(path,{method:'POST',body:JSON.stringify(signup?{...form,account_type:'developer'}:{email:form.email,password:form.password})});
+  const identity=await refresh();
+  if(identity?.account_type!=='developer')throw Error('Developer session not available');
+  setForm(initial);setSignup(false);setView('chats')
+ }catch(e){setError(e.message)}finally{setBusy(false)}};
+ const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);setWorkspaces([]);setThreads([]);setWorkspace('');fresh()};
+ const send=async e=>{e?.preventDefault?.();if(!question.trim()||sending)return;
+  if(!developer||!workspace){setView('account');return}
+  const q=question.trim();setQuestion('');setError('');setSending(true);setMessages(m=>[...m,{role:'user',content:q}]);
+  try{
+   const r=await api('/api/admin/chat/send',{method:'POST',body:JSON.stringify({question:q,thread_id:activeThread||null,workspace_id:workspace})});
+   setMessages(m=>[...m,{role:'assistant',content:r.answer}]);
+   if(r.thread_id)setActiveThread(r.thread_id);
+   api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(x=>setThreads(x.data||[])).catch(()=>{})
+  }catch(e){setMessages(m=>m.slice(0,-1));setQuestion(q);setError(e.message)}finally{setSending(false)}
+ };
+ const openThread=async id=>{setHistoryOpen(false);setView('chats');setError('');
+  try{const r=await api('/api/admin/chat/threads/'+id);setActiveThread(id);setMessages(r.data||[])}catch(e){setError(e.message)}
+ };
+ const deleteThread=async id=>{try{await api('/api/admin/chat/threads/'+id,{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(activeThread===id)fresh()}catch(e){setError(e.message)}};
+ const install=async()=>{if(installPrompt){try{await installPrompt.prompt();await installPrompt.userChoice;setInstallPrompt(null)}catch(e){setError(e.message)}}else setInstallInfo(true)};
+ return <div className="rd-app rd-chat-first" dir={lang==='ar'?'rtl':'ltr'}>
+  <main className={'rd-primary rd-primary-'+view}>
+   {view==='chats'&&<section className="rd-chat-page">
+    <div className="rd-chat-tools">
+     {developer&&<><button type="button" onClick={()=>setHistoryOpen(v=>!v)} aria-label={L('المحادثات السابقة','Previous chats')}><Menu size={18}/></button>
+      {workspaces.length>0&&<select aria-label={L('مساحة العمل','Workspace')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}</>}
+     <button className="rd-download" type="button" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={18}/><span>{L('تنزيل التطبيق','Install app')}</span></button>
+    </div>
+    {historyOpen&&developer&&<div className="rd-history-layer"><aside className="rd-history-panel"><div className="rd-history-header"><strong>{L('المحادثات','Chats')}</strong><button onClick={()=>setHistoryOpen(false)} aria-label={L('إغلاق','Close')}><X size={19}/></button></div><button onClick={fresh}><Plus size={16}/>{L('جديدة','New')}</button>{threads.map(t=><div className="rd-history-item" key={t.id}><button onClick={()=>openThread(t.id)}>{t.title}</button><button onClick={()=>deleteThread(t.id)} aria-label={L('حذف','Delete')}><Trash2 size={15}/></button></div>)}</aside><button className="rd-history-dismiss" aria-label={L('إغلاق','Close')} onClick={()=>setHistoryOpen(false)}/></div>}
+    <div className="rd-chat-stream" ref={scroll} aria-live="polite">
+     {!messages.length&&<div className="rd-chat-greeting"><div className="rd-identity"><img src="/rawi-developer-mark.svg" alt="RAWI Developer"/><strong>RAWI <span>Developer</span></strong></div><h1>{L('كيف أستطيع مساعدتك اليوم؟','How can I help you today?')}</h1></div>}
+     {messages.map((m,i)=><article key={i} className={'rd-message '+m.role}>{m.role==='assistant'&&<img src="/rawi-developer-mark.svg" alt="RAWI"/>}<p>{m.content}</p></article>)}
+     {sending&&<p className="rd-processing">{L('جارٍ المعالجة…','Processing…')}</p>}
+    </div>
+    {error&&<p className="rd-error" role="alert">{error}</p>}
+    <form className="rd-composer" onSubmit={send}><textarea ref={composer} rows={1} maxLength={2500} value={question} onChange={e=>setQuestion(e.target.value)} placeholder={L('اسأل راوي…','Ask RAWI…')} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(e)}}}/><button type="submit" disabled={!question.trim()||sending} aria-label={L('إرسال','Send')}><Send size={20}/></button></form>
+   </section>}
+   {view==='studio'&&(developer&&workspace?<section className="rd-studio-shell"><div className="rd-studio-tools"><h1>Odoo</h1><select aria-label={L('مساحة العمل','Workspace')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></div><RawiDevelopers key={workspace} selectedWorkspace={workspace} notify={x=>setError(x)}/></section>:<section className="rd-access-shortcut"><button type="button" onClick={()=>navigate('account')}>{L('حسابي','My Account')}</button></section>)}
+   {view==='account'&&(developer?<section className="rd-account"><img src="/rawi-developer-mark.svg" alt="RAWI Developer"/><h2>{session.email}</h2>{subscriptions.map(s=><div key={s.workspace_id}><span>{s.workspace_name}</span><strong>{s.plan_name||'—'} · {s.status||'—'} · {s.messages_remaining||0}</strong></div>)}<button onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'English':'العربية'}</button><button onClick={logout}><LogOut size={16}/>{L('تسجيل الخروج','Sign out')}</button></section>:
+    <section className="rd-auth rd-account-entry"><img src="/rawi-developer-mark.svg" alt="RAWI Developer" className="rd-entry-mark"/><h2>{signup?L('إنشاء حساب','Create account'):L('تسجيل الدخول','Sign in')}</h2><form onSubmit={authenticate}>{signup&&<><label>{L('الاسم','Name')}<input minLength={2} required value={form.name} onChange={e=>setForm(x=>({...x,name:e.target.value}))}/></label><label>{L('الفريق','Team')}<input minLength={2} required value={form.organization} onChange={e=>setForm(x=>({...x,organization:e.target.value}))}/></label></>}<label>{L('البريد الإلكتروني','Email')}<input type="email" autoComplete="username" required value={form.email} onChange={e=>setForm(x=>({...x,email:e.target.value}))}/></label><label>{L('كلمة المرور','Password')}<input type="password" autoComplete={signup?'new-password':'current-password'} minLength={signup?12:1} required value={form.password} onChange={e=>setForm(x=>({...x,password:e.target.value}))}/></label>{error&&<p className="rd-error" role="alert">{error}</p>}<button disabled={busy||(signup&&!registration)} type="submit">{signup?L('إنشاء حساب','Create account'):L('دخول','Sign in')}</button></form><button className="rd-text-button" type="button" onClick={()=>{setSignup(v=>!v);setError('')}}>{signup?L('تسجيل الدخول','Sign in'):L('إنشاء حساب','Create account')}</button><button className="rd-language" type="button" onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'English':'العربية'}</button></section>)}
+  </main>
+  <nav className="rd-bottom-nav" aria-label={L('التنقل الرئيسي','Main navigation')}>{tabs.map(([id,ar,en,Icon])=><button key={id} type="button" onClick={()=>selectTab(id)} className={view===id?'selected':''} aria-current={view===id?'page':undefined}><Icon size={id==='new'?26:21}/><span>{L(ar,en)}</span></button>)}</nav>
+  {installInfo&&<div className="rd-install-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setInstallInfo(false)}}><section className="rd-install-dialog" role="dialog" aria-modal="true"><button onClick={()=>setInstallInfo(false)} aria-label={L('إغلاق','Close')}><X size={20}/></button><h2>{L('تنزيل RAWI Developer','Install RAWI Developer')}</h2><p>{L('من قائمة المتصفح اختر تثبيت التطبيق.','Choose Install app in the browser menu.')}</p></section></div>}
+ </div>
 }
