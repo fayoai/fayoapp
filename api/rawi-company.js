@@ -17,7 +17,7 @@ const businessInput=z.object({workspace_id:z.string().uuid(),name:z.string().tri
 export function installRawiCompany(app,{centralDb,env,query}){
  async function modelProviders(c,sql){
   let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
-  if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
+  if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.1-8b-instruct-fp8',binding:env(c).AI}];
   return providers;
  }
  async function design(c,sql,company,language='ar'){
