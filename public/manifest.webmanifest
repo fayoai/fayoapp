@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "RAWI ERP | راوي",
-  "short_name": "RAWI ERP",
-  "description": "RAWI ERP — private AI-powered business operations",
+  "name": "نظام راوي",
+  "short_name": "نظام راوي",
+  "description": "نظام راوي لإدارة أعمال الشركات بالذكاء الاصطناعي",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -35,8 +35,8 @@
   ],
   "shortcuts": [
     {
-      "name": "RAWI ERP",
-      "short_name": "ERP",
+      "name": "نظام راوي",
+      "short_name": "راوي",
       "url": "/",
       "icons": [
         {
