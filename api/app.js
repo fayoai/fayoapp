@@ -17,6 +17,7 @@ import {installRawiTeam} from './rawi-team.js';
 import {attachTenantDb} from './tenant-runtime.js';
 import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './neon-tenant-databases.js';
 import {migrateTenantBatch} from './tenant-migrations.js';
+import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailReady} from './rawi-email-verification.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -35,7 +36,7 @@ function originOK(c){const origin=c.req.header('origin');if(!origin)return true;
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
 function signupReady(settings){
- try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&!!settings.CONNECTOR_ENCRYPTION_KEY&&!!neonTenantConfig(settings)}catch{return false}
+ try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&!!settings.CONNECTOR_ENCRYPTION_KEY&&mailReady(settings)&&!!neonTenantConfig(settings)}catch{return false}
 }
 app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:false}));
 app.get('/api/health',async c=>{
@@ -48,26 +49,53 @@ app.get('/api/health',async c=>{
 app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN,ownerEmail=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();if(env(c).MIF_APP_SURFACE==='enterprise')return fail(c,404,'Not found');if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap))||!ownerEmail||v.data.email.toLowerCase()!==ownerEmail)return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins WHERE lower(email)=$1',[ownerEmail]);if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
 // Customer accounts are independent from the platform operator's OpenAI settings.
 app.post('/api/admin/register',async c=>{
- const sql=centralDb(c),key=secret(c),settings=env(c);
- const surface=loginSurface(c);
+ const sql=centralDb(c),settings=env(c),surface=loginSurface(c);
  if(surface!=='enterprise')return fail(c,404,'Not found');
- if(!signupReady(settings))return fail(c,503,'Secure production registration is not enabled');
+ if(!signupReady(settings))return fail(c,503,'Email verification is not configured for registration');
  const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
-  name:z.string().trim().min(2).max(160),
-  account_type:z.literal('enterprise')});
- const validated=schema.safeParse(await parse(c));
- if(!validated.success)return fail(c,400,'Invalid account registration');
- const user=validated.data;
- if(user.account_type!==surface)return fail(c,403,'Application account mismatch');
- const ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP');
+  name:z.string().trim().min(2).max(160),account_type:z.literal('enterprise')});
+ const v=schema.safeParse(await parse(c));if(!v.success)return fail(c,400,'Invalid account registration');
+ const user=v.data,email=user.email.trim().toLowerCase(),ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP');
  if(!ip)return fail(c,403,'Unable to verify registration source');
- let allowed;try{allowed=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration')}
- catch{return fail(c,503,'Registration rate limit unavailable')}
- if(!allowed.allowed)return fail(c,429,'Too many registration attempts');
- let trial,plan;try{trial=evaluationSettings(settings);plan=await ensureEvaluationPlan(sql,query,trial,surface)}
- catch{return fail(c,503,'The account plan is unavailable')}
+ let allowed;try{allowed=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration',email)}
+ catch{return fail(c,503,'Registration protection is unavailable')}
+ if(!allowed.allowed)return fail(c,429,'Too many requests. Try again later');
+ const exists=await query(sql,'SELECT 1 FROM admins WHERE email=$1 LIMIT 1',[email]);
+ if(exists.length)return fail(c,409,'Email is already registered');
+ const code=createSixDigitCode(),codeHash=await hashVerificationCode(settings.SESSION_SECRET,email,code);
  const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt);
- const email=user.email.trim().toLowerCase();
+ const pending=await query(sql,`INSERT INTO rawi_pending_signups(email,full_name,password_hash,salt,code_hash,expires_at)
+  VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')
+  ON CONFLICT(email) DO UPDATE SET full_name=EXCLUDED.full_name,password_hash=EXCLUDED.password_hash,
+   salt=EXCLUDED.salt,code_hash=EXCLUDED.code_hash,attempts=0,sent_at=now(),expires_at=EXCLUDED.expires_at
+  WHERE rawi_pending_signups.sent_at<now()-interval '60 seconds'
+  RETURNING email`,[email,user.name,passwordHash,salt,codeHash]);
+ if(!pending.length)return fail(c,429,'Please wait one minute before requesting another code');
+ try{await deliverVerificationCode(settings,email,code)}
+ catch(e){console.error('RAWI verification email delivery failed',e?.message);
+  await query(sql,'DELETE FROM rawi_pending_signups WHERE email=$1 AND code_hash=$2',[email,codeHash]).catch(()=>{});
+  return fail(c,503,'Could not send verification email. Please try again later')}
+ return c.json({ok:true,email,verification_required:true,expires_in_seconds:600},202);
+});
+app.post('/api/admin/verify-email',async c=>{
+ const sql=centralDb(c),settings=env(c),surface=loginSurface(c);
+ if(surface!=='enterprise')return fail(c,404,'Not found');
+ if(!sql||!secret(c))return fail(c,503,'Email verification unavailable');
+ const v=z.object({email:z.email().max(180),code:z.string().regex(/^\\d{6}$/)}).safeParse(await parse(c));
+ if(!v.success)return fail(c,400,'Enter a valid 6-digit verification code');
+ const email=v.data.email.toLowerCase(),hash=await hashVerificationCode(settings.SESSION_SECRET,email,v.data.code);
+ const pending=await query(sql,`DELETE FROM rawi_pending_signups
+  WHERE email=$1 AND code_hash=$2 AND expires_at>now() AND attempts<5
+  RETURNING full_name,password_hash,salt`,[email,hash]);
+ if(!pending.length){
+  await query(sql,`UPDATE rawi_pending_signups SET attempts=attempts+1
+   WHERE email=$1 AND expires_at>now() AND attempts<5 AND code_hash<>$2`,[email,hash]);
+  return fail(c,400,'Invalid or expired verification code');
+ }
+ let trial,plan;
+ try{trial=evaluationSettings(settings);plan=await ensureEvaluationPlan(sql,query,trial,surface)}
+ catch{return fail(c,503,'Account plan is unavailable')}
+ const user=pending[0];
  const statement=`WITH account AS(
   INSERT INTO admins(email,password_hash,salt)
   SELECT $1,$2,$3 WHERE (SELECT count(*) FROM admins WHERE created_at>now()-interval '24 hours')<15
@@ -90,32 +118,32 @@ app.post('/api/admin/register',async c=>{
   SELECT id,$5,$8,$9,
    'rawi_'||CASE WHEN $5='developer' THEN 'd' ELSE 'e' END||'_'||replace(id::text,'-',''),'allocating'
   FROM workspace RETURNING workspace_id,database_name
+ ), company AS(
+  INSERT INTO rawi_company_profiles(workspace_id) SELECT id FROM workspace RETURNING workspace_id
  )
  SELECT account.id,account.email,registry.workspace_id,registry.database_name FROM account
  JOIN workspace ON workspace.owner_id=account.id
  JOIN membership ON membership.workspace_id=workspace.id
  JOIN subscription ON subscription.workspace_id=workspace.id
  JOIN profile ON profile.admin_id=account.id
- JOIN registry ON registry.workspace_id=workspace.id`;
- const rows=await query(sql,statement,[email,passwordHash,salt,user.name.slice(0,150),surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
- if(!rows.length)return fail(c,409,'Email is already registered or daily signup limit reached');
+ JOIN registry ON registry.workspace_id=workspace.id
+ JOIN company ON company.workspace_id=workspace.id`;
+
+ const rows=await query(sql,statement,[email,user.password_hash,user.salt,user.full_name.slice(0,150),surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
+ if(!rows.length)return fail(c,409,'Account already exists or daily signup limit reached');
  const record=rows[0];
- // An uninitialized customer database must never accept ERP writes.
- try{
-  await createNeonTenantDatabase(settings,record.workspace_id,surface);
+ try{await createNeonTenantDatabase(settings,record.workspace_id,surface);
   await query(sql,`UPDATE mif_tenant_databases SET status='created',updated_at=now()
-   WHERE workspace_id=$1 AND status='allocating'`,[record.workspace_id]);
- }catch(e){
-  console.error('Neon account database creation failed',e?.message);
-  await query(sql,`UPDATE mif_tenant_databases SET status='failed',last_error=$2,updated_at=now()
-   WHERE workspace_id=$1`,[record.workspace_id,'Neon allocation unavailable']).catch(()=>{});
- }
+   WHERE workspace_id=$1 AND status='allocating'`,[record.workspace_id])
+ }catch(e){console.error('RAWI account tenant allocation failed',e?.message);
+  await query(sql,`UPDATE mif_tenant_databases SET status='failed',last_error='Tenant allocation pending',updated_at=now()
+   WHERE workspace_id=$1`,[record.workspace_id]).catch(()=>{})}
  const token=await new SignJWT({email:record.email}).setProtectedHeader({alg:'HS256'})
   .setSubject(record.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(surface))
-  .setIssuedAt().setExpirationTime('8h').sign(key);
+  .setIssuedAt().setExpirationTime('8h').sign(secret(c));
  setCookie(c,sessionCookieFor(surface),token,{httpOnly:true,sameSite:'Strict',
   secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});
- return c.json({ok:true,email:record.email,workspace_id:record.workspace_id,provisioning:'pending'},202);
+ return c.json({ok:true,email:record.email,workspace_id:record.workspace_id,company_setup_required:true},201);
 });
 app.get('/api/admin/tenant/status',async c=>{
  const surface=loginSurface(c),sql=centralDb(c);
@@ -160,7 +188,7 @@ app.post('/api/admin/login',async c=>{const sql=db(c),key=secret(c);if(!sql||!ke
  }
  const token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(loginSurface(c))).setIssuedAt().setExpirationTime('8h').sign(key);setCookie(c,sessionCookieFor(loginSurface(c)),token,{httpOnly:true,sameSite:'Strict',secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});return c.json({ok:true,email:row.email})});
 app.use('/api/admin/*',async(c,next)=>{
- if(['login','bootstrap','register'].includes(c.req.path.split('/').pop()))return next();
+ if(['login','bootstrap','register','verify-email'].includes(c.req.path.split('/').pop()))return next();
  const key=secret(c);
  if(!key)return fail(c,503,'Authentication unavailable');
  const token=getCookie(c,sessionCookieFor(loginSurface(c)));
