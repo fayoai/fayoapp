@@ -183,9 +183,41 @@ export function installAiErp(app,{db,env,query}){
   let count=0;for(const x of mapped){
    await query(g.sql,"INSERT INTO erp_contacts(workspace_id,kind,name,email,phone,external_source,external_id) VALUES($1,'customer',$2,$3,$4,$5,$6) ON CONFLICT(workspace_id,external_source,external_id) WHERE external_source<>'' AND external_id<>'' DO UPDATE SET name=EXCLUDED.name,email=EXCLUDED.email,phone=EXCLUDED.phone,updated_at=now()",[g.id,x.name,x.email,x.phone,provider,x.id]);count++;
   }
-  await query(g.sql,'UPDATE erp_integrations SET last_checked_at=now(),last_error=$1 WHERE workspace_id=$2 AND provider=$3',['',g.id,provider]);
-  return c.json({ok:true,imported:count,provider});
+  let invoiceCount=0,invoiceWarning='';
+  try{
+   let invoiceUrl,options={method:'GET',headers:{Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(18000)};
+   if(provider==='odoo'){
+    invoiceUrl=root+'/json/2/account.move/search_read';
+    options={...options,method:'POST',headers:{...options.headers,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({domain:[['move_type','=','out_invoice']],fields:['id','name','partner_id','amount_total','invoice_date','state'],limit:100})};
+   }else if(provider==='erpnext'){
+    invoiceUrl=root+'/api/resource/Sales%20Invoice?fields='+encodeURIComponent(JSON.stringify(['name','customer','grand_total','posting_date','status']))+'&limit_page_length=100';
+    options.headers.Authorization='token '+secret;
+   }else{
+    invoiceUrl=root+'/books/v3/invoices?organization_id='+encodeURIComponent(rec.configuration.organization_id)+'&per_page=100';
+    options.headers.Authorization='Zoho-oauthtoken '+secret;
+   }
+   const response=await fetch(invoiceUrl,options);
+   if(!response.ok)throw Error('Invoice API not authorized');
+   const doc=await response.json();
+   const raw=provider==='odoo'?(Array.isArray(doc)?doc:doc.result||[]):provider==='erpnext'?(doc.data||[]):(doc.invoices||[]);
+   for(const invoice of raw.slice(0,100)){
+    const externalId=String(provider==='odoo'?invoice.id:provider==='erpnext'?invoice.name:invoice.invoice_id||'');
+    if(!externalId)continue;
+    const name=String(provider==='odoo'?invoice.name:provider==='erpnext'?invoice.name:invoice.invoice_number||'').slice(0,160);
+    const partner=String(provider==='odoo'?(Array.isArray(invoice.partner_id)?invoice.partner_id[1]:''):provider==='erpnext'?invoice.customer:invoice.customer_name||'').slice(0,160);
+    const amount=Number(provider==='odoo'?invoice.amount_total:provider==='erpnext'?invoice.grand_total:invoice.total)||0;
+    if(!Number.isFinite(amount)||amount<0||amount>1e12)continue;
+    const rawDate=provider==='odoo'?invoice.invoice_date:provider==='erpnext'?invoice.posting_date:invoice.date;
+    const date=typeof rawDate==='string'&&/^\d{4}-\d\d-\d\d$/.test(rawDate)?rawDate:null;
+    const status=String(provider==='odoo'?invoice.state:invoice.status||'').slice(0,80);
+    await query(g.sql,"INSERT INTO erp_external_invoices(workspace_id,provider,external_id,invoice_number,customer_name,total_amount,status,invoice_date) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(workspace_id,provider,external_id) DO UPDATE SET invoice_number=EXCLUDED.invoice_number,customer_name=EXCLUDED.customer_name,total_amount=EXCLUDED.total_amount,status=EXCLUDED.status,invoice_date=EXCLUDED.invoice_date,updated_at=now()",[g.id,provider,externalId,name,partner,amount,status,date]);
+    invoiceCount++;
+   }
+  }catch{invoiceWarning='Invoice access unavailable; customers were synchronized'}
+  await query(g.sql,'UPDATE erp_integrations SET last_checked_at=now(),last_error=$1 WHERE workspace_id=$2 AND provider=$3',[invoiceWarning,g.id,provider]);
+  return c.json({ok:true,imported:count,invoices:invoiceCount,warning:invoiceWarning,provider});
  });
+ app.get('/api/admin/erp/w/:workspace/external-invoices',c=>list(c,'erp_external_invoices','updated_at DESC'));
  app.get('/api/admin/erp/w/:workspace/messages',c=>list(c,'erp_ai_messages'));
  app.post('/api/admin/erp/w/:workspace/ask',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;
