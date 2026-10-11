@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {notifyMifInquiry} from './mif-notifications.js';
 const name=z.string().trim().min(2).max(160);
 const id=z.string().uuid();
 const error=(c,status,message)=>c.json({ok:false,error:message},status);
@@ -25,8 +26,16 @@ export function installMifWebsite(app,{db,env,query}){
     expires_at=CASE WHEN mif_site_rate_limits.expires_at<now() THEN now()+interval '1 hour' ELSE mif_site_rate_limits.expires_at END RETURNING count`,[key]);
   if(Number(a[0]?.count)>6)return error(c,429,'Too many inquiries from this source');
   const x=data.data;
-  await query(sql,'INSERT INTO mif_site_inquiries(name,email,phone,company,product_code,message) VALUES($1,$2,$3,$4,$5,$6)',[x.name,x.email,x.phone,x.company,x.product_code,x.message]);
-  return c.json({ok:true},201);
+  const rows=await query(sql,'INSERT INTO mif_site_inquiries(name,email,phone,company,product_code,message) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[x.name,x.email,x.phone,x.company,x.product_code,x.message]);
+  if(!rows.length)return error(c,503,'Unable to save website enquiry');
+  const savedId=rows[0].id;
+  const send=async()=>{
+    const delivery=await notifyMifInquiry(env(c),x);
+    if(delivery.status==='not_configured')return;
+    await query(sql,'UPDATE mif_site_inquiries SET notification_status=$1,notified_at=CASE WHEN $1=$2 THEN now() ELSE NULL END WHERE id=$3',[delivery.status,'sent',savedId]).catch(()=>{});
+  };
+  try{c.executionCtx.waitUntil(send())}catch{await send()}
+  return c.json({ok:true,id:savedId},201);
  });
  // Owner-only APIs stay protected even if the marketing website is public.
  app.use('/api/admin/mif/*',async(c,next)=>{
