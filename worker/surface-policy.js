@@ -14,7 +14,7 @@ export function surfacePolicy(surface,path,method='GET',links={}){
  if(isAsset(path))return null;
  if(surface==='mif'){
   if(path==='/'||path==='/index.html')return {status:302,location:'/mif'};
-  if(path==='/owner-setup')return {status:302,location:'/mif/owner-setup'};
+  if(path==='/owner-setup'||path==='/mif/owner-setup')return {status:302,location:'/admin/setup'};
   if(path==='/mif/console'||is(path,'/mif/console'))return {status:302,location:'/admin'+path.slice('/mif/console'.length)};
   if(is(path,'/admin'))return null;
   if(path==='/enterprise')return links.enterprise?{status:302,location:links.enterprise+'/'}:{status:404};
