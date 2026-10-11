@@ -33,10 +33,9 @@ test('MIF follow-up event history is private to the platform operator',async()=>
  const {app}=setup(false),r=await app.request('http://localhost/api/admin/mif/inquiries/'+uid+'/events',{},{PLATFORM_OWNER_EMAIL:'owner@example.com'});
  assert.equal(r.status,403);
 });
-test('RAWI Enterprise and RAWI Developer original logos remain unchanged',()=>{
- const original=readFileSync(new URL('../public/rawi-mark.svg',import.meta.url),'utf8');
- const developer=readFileSync(new URL('../public/rawi-developer-mark.svg',import.meta.url),'utf8');
- assert.match(original,/fill="#e35a0e"/);assert.match(developer,/fill="#080808"/);assert.match(developer,/fill="#ffd21a"/);
+test('RAWI ERP uses only its approved blue and white application mark',()=>{
+ const mark=readFileSync(new URL('../public/rawi-erp-mark.svg',import.meta.url),'utf8');
+ assert.match(mark,/fill="#2166e8"/);assert.match(mark,/fill="#ffffff"/);
 });
 test('RAWI signup selects plan only after account type is parsed',()=>{
  const source=readFileSync(new URL('./app.js',import.meta.url),'utf8'),p=source.indexOf("const user=validated.data;"),e=source.indexOf('ensureEvaluationPlan(sql,query,trial,surface)');
