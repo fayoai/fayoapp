@@ -28,3 +28,12 @@ test('Signup is independent of optional encrypted AI connector credentials',()=>
  assert.doesNotMatch(readiness,/CONNECTOR_ENCRYPTION_KEY/);
  assert.match(providers,/unseal\(p\.encrypted_key,env\.CONNECTOR_ENCRYPTION_KEY\)/);
 });
+
+test('Email signup reports stable worker hashing revision without exposing private diagnostic traces',()=>{
+ const app=read('api/app.js'),flow=read('.github/workflows/deploy.yml');
+ assert.match(app,/password_kdf_iterations:PASSWORD_HASH_ITERATIONS/);
+ assert.doesNotMatch(app,/X-Rawi-Probe|internal-diag/);
+ assert.match(flow,/status\.password_kdf_iterations===100000/);
+ assert.doesNotMatch(flow,/Diagnose registration backend with disposable invalid-domain address/);
+ assert.match(flow,/group: mif-smart-platform-production-deploy/);
+});

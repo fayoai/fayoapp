@@ -87,11 +87,7 @@ app.post('/api/admin/register',async c=>{
  return c.json({ok:true,email,verification_required:true,expires_in_seconds:600},202);
  }catch(e){
   console.error('RAWI registration failed in '+stage,e?.message);
-  let debug=null;
-  if(email.endsWith('@example.invalid')&&c.req.header('X-Rawi-Probe')===await hashVerificationCode(settings.SESSION_SECRET,email,'internal-diag')){
-   debug={type:String(e?.name||'Unknown').slice(0,60),reason:String(e?.message||'Unknown').slice(0,180)};
-  }
-  return c.json({ok:false,error:'Registration is temporarily unavailable',code:'SIGNUP_'+stage.toUpperCase(),...(debug?{debug}:{})},503);
+  return c.json({ok:false,error:'Registration is temporarily unavailable',code:'SIGNUP_'+stage.toUpperCase()},503);
  }
 });
 app.post('/api/admin/verify-email',async c=>{

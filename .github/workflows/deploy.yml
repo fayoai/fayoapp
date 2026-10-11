@@ -127,46 +127,15 @@ jobs:
             const response=await fetch(target,{signal:AbortSignal.timeout(12000),headers:{'Cache-Control':'no-cache'}});
             if(!response.ok)throw Error('RAWI status HTTP '+response.status);
             status=await response.json();
-            if(status.ok&&status.registration_enabled===true)break;
+            if(status.ok&&status.registration_enabled===true&&status.password_kdf_iterations===100000)break;
            }catch(e){console.log('Registration check attempt '+(i+1)+': '+e.message)}
            if(i<4)await new Promise(resolve=>setTimeout(resolve,2500));
           }
-          if(!status?.ok||status.registration_enabled!==true){
+          if(!status?.ok||status.registration_enabled!==true||status.password_kdf_iterations!==100000){
            console.error('::error::RAWI registration is not active in the deployed Cloudflare Worker. Review DATABASE_URL, SESSION_SECRET, Neon API provisioning and email sender settings. AI connector encryption is optional for signup.');
            process.exit(1);
           }
-          console.log('RAWI email-code registration is enabled in the deployed Enterprise Worker.');
-          NODE
-      - name: Diagnose registration backend with disposable invalid-domain address
-        shell: bash
-        env:
-          MIF_SESSION_SECRET: ${{ secrets.MIF_SESSION_SECRET }}
-        run: |
-          node --input-type=module <<'NODE'
-          import {randomBytes,randomUUID,createHash} from 'node:crypto';
-          const email='rawi-test-'+randomUUID()+'@example.invalid';
-          const password='A1!'+randomBytes(20).toString('base64url');
-          try{
-            let revision;
-            for(let i=0;i<15;i++){
-              const res=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/public/rawi/status',{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(10000)});
-              const status=await res.json();
-              revision=status.password_kdf_iterations;
-              if(revision===100000)break;
-              console.log('Waiting for latest RAWI Worker KDF revision, current='+(revision??'legacy'));
-              if(i<14)await new Promise(resolve=>setTimeout(resolve,4000));
-            }
-            if(revision!==100000)throw Error('Deployed Worker still uses old password hashing');
-            const signature=createHash('sha256').update(process.env.MIF_SESSION_SECRET+'|rawi-email-otp|'+email+'|internal-diag').digest('hex');
-            const r=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/admin/register',{
-              method:'POST',headers:{'Content-Type':'application/json','X-Rawi-Probe':signature},
-              body:JSON.stringify({name:'Diagnostic Check',email,password,account_type:'enterprise',language:'en'}),
-              signal:AbortSignal.timeout(20000)
-            });
-            const data=await r.json();
-            console.log('Disposable registration smoke: HTTP '+r.status+' code='+(data.code||'none')+' error='+(data.error||'none')+(data.debug?' diagnostic='+JSON.stringify(data.debug):''));
-            if(r.status===202)console.log('::warning::The disposable request was accepted; no real user mailbox exists for example.invalid.');
-          }catch(e){console.log('Disposable registration smoke could not run: '+e.message)}
+          console.log('RAWI email-code registration and compatible password hashing confirmed on the deployed Enterprise Worker.');
           NODE
       - name: Verify real production domain when configured
         shell: bash
