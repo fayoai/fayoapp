@@ -39,3 +39,10 @@
 .rd-app .rawi-dev .rawi-dev-check .passed{color:#97790a}
 .rd-app .rawi-dev-success{background:#fff8df;border-color:#ecdba4;color:#645112}
 .rd-app .rawi-dev-hero>div:first-child>span,.rd-app .rawi-dev-hero-aside svg{color:#ffd21a}
+
+.rd-app .rawi-dev-ai-planner{border:1px solid #e8dda0;background:#fffcef;border-radius:13px;padding:18px;margin:18px 0;display:grid;gap:10px}
+.rd-app .rawi-dev-ai-planner h3{font-size:14px;color:#3e3517;display:flex;gap:9px;align-items:center;margin:0}
+.rd-app .rawi-dev-ai-planner textarea{width:100%;min-height:100px;background:#fff;border-color:#e4ddb6;line-height:1.9}
+.rd-app .rawi-dev-ai-planner button{display:inline-flex;align-items:center;gap:8px;justify-content:center;border:1px solid #151515;background:#151515;color:#ffd21a;border-radius:9px;padding:12px 17px;font-weight:820;font-size:12px;justify-self:start}
+.rd-app .rawi-dev-ai-planner button:disabled{opacity:.5}
+@media(max-width:600px){.rd-app .rawi-dev-ai-planner{padding:13px}.rd-app .rawi-dev-ai-planner button{width:100%}}
