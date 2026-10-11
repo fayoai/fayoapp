@@ -129,5 +129,5 @@
 @media(max-height:550px){.mif-bottom-nav{height:68px}.mif-bottom-item.new .mif-bottom-icon{width:52px;height:52px}.mif-body-chats{height:calc(100dvh - 68px)}.mif-chat-scroll{padding-bottom:5px}.mif-composer textarea{min-height:30px}}
 @media(prefers-reduced-motion:reduce){.mif-app *, .mif-app *::before, .mif-app *::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 .rawi-auth-split{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.mif-chat-page>.rawi-login-compact{align-self:center;margin:auto auto 10px;max-height:calc(100dvh - 225px);box-shadow:0 6px 18px #193b7008}
+.mif-chat-scroll>.rawi-login-compact{flex:none;align-self:center;margin:clamp(12px,4vh,36px) auto 15px;max-height:none;width:min(100%,425px);box-shadow:0 6px 18px #193b7008}
 @media(max-width:420px){.rawi-auth-split{grid-template-columns:1fr}.mif-bottom-item{font-size:9px}.mif-bottom-item .mif-bottom-icon{width:32px}.rawi-auth-brand strong{font-size:14px}}
