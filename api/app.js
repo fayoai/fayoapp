@@ -19,6 +19,7 @@ import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './ne
 import {migrateTenantBatch} from './tenant-migrations.js';
 import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailReady} from './rawi-email-verification.js';
 import {installRawiCompany} from './rawi-company.js';
+import {passwordHash} from './auth-password.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -31,7 +32,7 @@ export const sessionAudienceFor=surface=>({mif:'mif-console',enterprise:'rawi-en
 const fail=(c,status,message)=>c.json({ok:false,error:message},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
 const loginData=z.object({email:z.email().max(180),password:z.string().min(1).max(200)});
-async function hashed(password,salt){const key=await crypto.subtle.importKey('raw',encoder.encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:encoder.encode(salt),iterations:220000,hash:'SHA-256'},key,256);return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,'0')).join('')}
+const hashed=passwordHash;
 async function equal(a,b){const x=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(a)));const y=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(b)));return x.every((n,i)=>n===y[i])}
 function originOK(c){const origin=c.req.header('origin');if(!origin)return true;try{const src=new URL(origin),dst=new URL(c.req.url);return src.origin===dst.origin||(['localhost','127.0.0.1'].includes(src.hostname)&&['localhost','127.0.0.1'].includes(dst.hostname))}catch{return false}}
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
@@ -67,8 +68,10 @@ app.post('/api/admin/register',async c=>{
  if(exists.length)return fail(c,409,'Email is already registered');
  stage='otp_generation';
  const code=createSixDigitCode(),codeHash=await hashVerificationCode(settings.SESSION_SECRET,email,code);
+ stage='salt_generation';
+ const salt=crypto.randomUUID();
  stage='password_hash';
- const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt);
+ const passwordHash=await hashed(user.password,salt);
  stage='pending_record';
  const pending=await query(sql,`INSERT INTO rawi_pending_signups(email,full_name,password_hash,salt,code_hash,expires_at)
   VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')
