@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {createNeonTenantDatabase,tenantDatabaseName,neonTenantConfig} from './neon-tenant-databases.js';
 import {migrateTenantBatch} from './tenant-migrations.js';
+import {hashInvite,newInviteToken} from './rawi-invitations.js';
 import {seal} from './ai-erp.js';
 import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
 const uuid=z.string().uuid();
@@ -77,6 +78,25 @@ export function installPlatformSaas(app,{db,env,query}){
   const rows=await query(db(c),'UPDATE mif_subscription_plans SET title=$1,cycle=$2,price_halalas=$3,message_limit=$4,active=$5 WHERE id=$6 RETURNING id',[x.title,x.cycle,x.price_halalas,x.message_limit,x.active,c.req.param('id')]);
   return rows.length?c.json({ok:true}):failed(c,404,'Plan not found');
  });
+ app.post('/api/admin/platform/invitations',async c=>{
+  const input=z.object({
+   email:z.email().max(180),application:z.enum(['enterprise','developer']),
+   expires_in_days:z.number().int().min(1).max(14).default(7)
+  }).safeParse(await payload(c));
+  if(!input.success)return failed(c,400,'Invalid invitation');
+  const settings=env(c);
+  if(!settings.SESSION_SECRET||settings.SESSION_SECRET.length<32)return failed(c,503,'Invitation signing is not configured');
+  const token=newInviteToken(),digest=await hashInvite(token,settings.SESSION_SECRET);
+  const email=input.data.email.trim().toLowerCase(),appType=input.data.application;
+  const existing=await query(db(c),'SELECT id FROM admins WHERE lower(email)=$1',[email]);
+  if(existing.length)return failed(c,409,'An account with that email already exists');
+  const created=await query(db(c),`INSERT INTO mif_tenant_invitations(email,application,token_hash,invited_by,expires_at)
+   VALUES($1,$2,$3,$4,now()+($5::int*interval '1 day'))
+   RETURNING id,expires_at`,[email,appType,digest,c.get('adminId'),input.data.expires_in_days]);
+  return c.json({ok:true,id:created[0].id,email,application:appType,expires_at:created[0].expires_at,invitation:token},201);
+ });
+ app.get('/api/admin/platform/invitations',async c=>c.json({ok:true,data:await query(db(c),
+  'SELECT id,email,application,expires_at,used_at,created_at FROM mif_tenant_invitations ORDER BY created_at DESC LIMIT 200')}));
  app.get('/api/admin/platform/tenants',async c=>c.json({ok:true,data:await query(db(c),`SELECT w.id,w.name,w.created_at,a.email owner_email,COALESCE(ap.account_type,'enterprise') application,s.plan_id,s.status subscription_status,s.messages_used,s.period_starts_at,s.period_ends_at,p.title plan_title,p.message_limit,d.status database_status,d.database_name FROM erp_workspaces w JOIN admins a ON a.id=w.owner_id LEFT JOIN rawi_account_profiles ap ON ap.admin_id=a.id LEFT JOIN mif_tenant_subscriptions s ON s.workspace_id=w.id LEFT JOIN mif_subscription_plans p ON p.id=s.plan_id LEFT JOIN mif_tenant_databases d ON d.workspace_id=w.id ORDER BY w.created_at DESC LIMIT 500`)}));
  app.get('/api/admin/platform/tenant-databases',async c=>{
   const sql=db(c);
