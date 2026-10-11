@@ -70,7 +70,7 @@ export default function RawiDeveloperApp(){
  </main>;
  return <div className="rawi-dev-app rawi-dev-shell">
   <aside className="rawi-dev-sidebar">
-   <a className="rawi-dev-logo" href="/developers"><img src={image} alt="RAWI Developers"/><div><strong>RAWI <span>DEV</span></strong><small>MIF SMART / ENGINEERING</small></div></a>
+   <a className="rawi-dev-logo" href="/developers/"><img src={image} alt="RAWI Developers"/><div><strong>RAWI <span>DEV</span></strong><small>MIF SMART / ENGINEERING</small></div></a>
    <div className="rawi-dev-menu-label">{L('مساحة العمل','WORKSPACE')}</div>
    <nav aria-label={L('التنقل','Navigation')}>{navigation.map(([key,ar,en,Icon])=><button key={key} className={tab===key?'active':''} onClick={()=>setTab(key)}><Icon size={18}/><span>{L(ar,en)}</span></button>)}</nav>
    <div className="rawi-dev-sidebar-bottom"><div><ShieldCheck size={16}/>{L('صلاحيات منفصلة ومحمية','Separated, secured access')}</div><button onClick={signout}><LogOut size={17}/>{L('تسجيل الخروج','Sign out')}</button></div>
