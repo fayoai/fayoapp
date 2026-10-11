@@ -16,11 +16,16 @@ test('RAWI ERP chat and sign in have approved interaction and account-only downl
  const s=read('src/MifSmartShell.jsx');
  assert.match(s,/function RawiGreeting/);
  assert.match(s,/كيف أقدر أساعدك اليوم؟/);
- assert.match(s,/className="rawi-composer-actions"/);
+ assert.match(s,/className="mif-composer"/);
+ assert.match(s,/className="rawi-send"/);
+ assert.doesNotMatch(s,/className="rawi-composer-actions"/);
  assert.match(s,/onInput=\{e=>/);
  assert.match(s,/className="rawi-auth-tabs"/);
  assert.match(s,/className="rawi-account-form"/);
  assert.match(s,/className="rawi-auth-bottom"/);
+ assert.match(s,/installed&&/);
+ assert.doesNotMatch(s,/form\.invitation/);
+ assert.match(s,/const authPanel=/);
  assert.match(s,/className="rawi-install-in-account"/);
  assert.doesNotMatch(s,/<header className="mif-topbar"/);
 });
