@@ -28,3 +28,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify real production domain when configured
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MIF_SITE_ORIGIN: ${{ vars.MIF_SITE_ORIGIN }}
+        run: |
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ACCOUNT_ID" && -n "$MIF_SITE_ORIGIN" ]]; then
+            npm run smoke:public -- "$MIF_SITE_ORIGIN"
+          else
+            echo "Production smoke skipped: no permanent Cloudflare account/domain is configured"
+          fi

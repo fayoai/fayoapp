@@ -11,6 +11,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "deploy": "npm run build && wrangler deploy",
     "check": "npm run test && npm run build",
+    "smoke:public": "node scripts/smoke-public.mjs",
     "mobile:add:android": "npx cap add android",
     "mobile:add:ios": "npx cap add ios",
     "mobile:sync": "npm run build && npx cap sync",
