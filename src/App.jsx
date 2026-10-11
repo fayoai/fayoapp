@@ -14,7 +14,7 @@ export async function api(path,options={}){
  return value;
 }
 export default function App(){
- const [lang,setLang]=useState(()=>initialLanguage(window.location.pathname.startsWith('/mif')?'mif_lang':'rawi_lang'));
- useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';const isMif=window.location.pathname.startsWith('/mif');try{localStorage.setItem(isMif?'mif_lang':'rawi_lang',lang)}catch{}if(!isMif){const title=lang==='ar'?'نظام راوي':'Rawi ERP';document.title=title;const link=document.querySelector('link[rel="manifest"]');if(link)link.href=lang==='ar'?'/manifest.webmanifest':'/manifest.en.webmanifest';const apple=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(apple)apple.content=title}},[lang]);
- return <SiteContext.Provider value={{lang,setLang,mode:'live'}}>{window.location.pathname.startsWith('/mif')?<MifCompany/>:<MifSmartShell/>}</SiteContext.Provider>;
+ const [lang,setLang]=useState(()=>initialLanguage((window.location.pathname.startsWith('/mif')||window.location.pathname.startsWith('/admin'))?'mif_lang':'rawi_lang'));
+ useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';const isMif=window.location.pathname.startsWith('/mif')||window.location.pathname.startsWith('/admin');try{localStorage.setItem(isMif?'mif_lang':'rawi_lang',lang)}catch{}if(!isMif){const title=lang==='ar'?'نظام راوي':'Rawi ERP';document.title=title;const link=document.querySelector('link[rel="manifest"]');if(link)link.href=lang==='ar'?'/manifest.webmanifest':'/manifest.en.webmanifest';const apple=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(apple)apple.content=title}},[lang]);
+ return <SiteContext.Provider value={{lang,setLang,mode:'live'}}>{(window.location.pathname.startsWith('/mif')||window.location.pathname.startsWith('/admin'))?<MifCompany/>:<MifSmartShell/>}</SiteContext.Provider>;
 }

@@ -15,9 +15,11 @@ export function surfacePolicy(surface,path,method='GET',links={}){
  if(surface==='mif'){
   if(path==='/'||path==='/index.html')return {status:302,location:'/mif'};
   if(path==='/owner-setup')return {status:302,location:'/mif/owner-setup'};
+  if(path==='/mif/console'||is(path,'/mif/console'))return {status:302,location:'/admin'+path.slice('/mif/console'.length)};
+  if(is(path,'/admin'))return null;
   if(path==='/enterprise')return links.enterprise?{status:302,location:links.enterprise+'/'}:{status:404};
-  if(!is(path,'/mif')&&path!=='/sitemap.xml')return {status:404};
+  if(!is(path,'/mif')&&!is(path,'/admin')&&path!=='/sitemap.xml')return {status:404};
  }
- if(surface==='enterprise'&&(is(path,'/mif')||path==='/owner-setup'||path==='/sitemap.xml'))return {status:404};
+ if(surface==='enterprise'&&(is(path,'/admin')||is(path,'/mif')||path==='/owner-setup'||path==='/sitemap.xml'))return {status:404};
  return null;
 }

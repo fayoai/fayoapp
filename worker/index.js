@@ -3,7 +3,7 @@ import app from '../api/app.js';
 import {neon} from '@neondatabase/serverless';
 import {runErpSchedule} from '../api/ai-erp.js';
 import {getCanonicalOrigin,seoForPage,sitemapXML} from './mif-seo.js';
-const companyPage=path=>path==='/mif'||path==='/mif/'||path.startsWith('/mif/');
+const companyPage=path=>path==='/mif'||path==='/mif/'||path.startsWith('/mif/')||path==='/admin'||path.startsWith('/admin/');
 export default {
  async fetch(request,env,ctx){
   const url=new URL(request.url);
@@ -32,7 +32,7 @@ export default {
    const landing=new URL('/',request.url);
    const assets=await env.ASSETS.fetch(new Request(landing,request));
    const canonical=getCanonicalOrigin(env),isCanonical=!!canonical&&url.origin===canonical;
-   const meta=seoForPage(url.pathname),robots=isCanonical&&meta.index?'index,follow':'noindex,nofollow';
+   const meta=seoForPage(url.pathname),robots=url.pathname==='/admin'||url.pathname.startsWith('/admin/')?'noindex,nofollow':isCanonical&&meta.index?'index,follow':'noindex,nofollow';
    if(!(assets.headers.get('content-type')||'').includes('text/html'))return assets;
    return new HTMLRewriter()
     .on('meta[name="robots"]',{element(el){el.setAttribute('content',robots)}})
