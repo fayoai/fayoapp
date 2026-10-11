@@ -1,4 +1,14 @@
-# MIF Smart — إم آي إف سمارت | v3.0
+# MIF Smart AI ERP | v4.0
+
+A bilingual AI-first business workspace combining contacts, invoices, invoice design, scheduling, stored business knowledge and optional OpenAI with approved Odoo, ERPNext, Zoho and email integrations. The existing storefront is retained. MIF Smart AI ERP is the flagship product.
+
+**Important distinction:** the ERP application and API are implemented in source; real customer access and external integration require a persistent Cloudflare deployment with secrets, active Neon connection, admin setup and valid provider credentials. Generic knowledge must not be mistaken for verified live data. This project is not claimed to be the first AI ERP in the world.
+
+For details, see [AI_ERP_SETUP_AR.md](AI_ERP_SETUP_AR.md).
+
+---
+
+# MIF Smart AI ERP — إم آي إف سمارت | v4.0
 
 **Commerce-first ERP/SaaS platform and installable cross-device experience.**
 
