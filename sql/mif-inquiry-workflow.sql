@@ -23,3 +23,20 @@ CREATE TABLE IF NOT EXISTS rawi_account_profiles(
  account_type text NOT NULL CHECK(account_type IN ('enterprise','developer')),
  created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- AI-authored workspace repositories: tenant-owned typed record values.
+-- Append only, preserving migration checkpoint ordering for live customer databases.
+CREATE TABLE IF NOT EXISTS rawi_dynamic_records(
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL REFERENCES erp_workspaces(id) ON DELETE CASCADE,
+ repository_key text NOT NULL,
+ values_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+ stage text NOT NULL DEFAULT '',
+ source_thread_id uuid REFERENCES mif_chat_threads(id) ON DELETE SET NULL,
+ created_by uuid NOT NULL REFERENCES admins(id),
+ updated_by uuid NOT NULL REFERENCES admins(id),
+ created_at timestamptz NOT NULL DEFAULT now(),
+ updated_at timestamptz NOT NULL DEFAULT now(),
+ CHECK(jsonb_typeof(values_json)='object')
+);
+CREATE INDEX IF NOT EXISTS rawi_dynamic_records_workspace_repository ON rawi_dynamic_records(workspace_id,repository_key,updated_at DESC);
