@@ -23,7 +23,7 @@ export default function AiErpWorkspace({notify=()=>{}}){
  const perform=async(request,success)=>{setBusy(true);setError('');try{const result=await request();notify(success||L('تم الحفظ','Saved'));return result}catch(e){setError(e.message);notify(e.message,true);return null}finally{setBusy(false)}};
  const getWorkspaces=()=>api('/api/admin/erp/workspaces').then(r=>{setWorkspaces(r.data||[]);if(!workspace&&r.data?.length)setWorkspace(r.data[0].id)}).catch(e=>setError(e.message));
  useEffect(()=>{getWorkspaces()},[]);useEffect(()=>{const found=workspaces.find(w=>w.id===workspace);if(found)setProfile({legal_name:found.legal_name||'',vat_number:found.vat_number||'',address:found.address||'',phone:found.phone||''})},[workspace,workspaces]);
- const fetchTab=async()=>{if(!workspace||operational.has(tab))return;try{
+ const fetchTab=async()=>{if(!workspace||operational.has(tab)||tab==='emails'||tab==='organization')return;try{
   const key=tab==='assistant'?'messages':tab==='integrations'?'integrations':tab;
   if(tab==='overview'){const r=await api(base+'/overview');setOverview(r.data||{});return}
   if(tab==='invoices'){const [i,t,c]=await Promise.all([api(base+'/invoices'),api(base+'/templates'),api(base+'/contacts')]);setInvoices(i.data||[]);setTemplates(t.data||[]);setContacts(c.data||[]);return}
