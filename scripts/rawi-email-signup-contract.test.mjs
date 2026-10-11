@@ -19,3 +19,12 @@ test('Company fields and inline send button are present in the responsive onboar
  assert.ok(form.indexOf('rawi-composer-toolbar')>=0);
  assert.ok(form.indexOf('rawi-composer-toolbar')<form.indexOf('className="rawi-send"'));
 });
+
+test('Signup is independent of optional encrypted AI connector credentials',()=>{
+ const api=read('api/app.js'),providers=read('api/ai-router.js');
+ const readiness=api.slice(api.indexOf('function signupReady(settings){'),api.indexOf("app.get('/api/public/rawi/status'"));
+ assert.ok(readiness.includes('mailReady(settings)'));
+ assert.ok(readiness.includes('neonTenantConfig(settings)'));
+ assert.doesNotMatch(readiness,/CONNECTOR_ENCRYPTION_KEY/);
+ assert.match(providers,/unseal\(p\.encrypted_key,env\.CONNECTOR_ENCRYPTION_KEY\)/);
+});
