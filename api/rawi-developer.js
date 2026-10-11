@@ -93,7 +93,7 @@ export async function checkOdoo(connection,credential){
  }catch{out.checks.push({code:'scheduled_actions',status:'warning',detail:'Scheduled actions require additional read privileges'})}
  return out;
 }
-export function installRawiDeveloper(app,{db,env,query}){
+export function installRawiDeveloper(app,{db,env,query,centralDb=db}){
  async function gate(c,write=false){
   const sql=db(c),workspace=c.req.param('workspace'),actor=c.get('adminId');
   if(!sql)return {error:fail(c,503,'Database not connected')};
@@ -126,7 +126,7 @@ export function installRawiDeveloper(app,{db,env,query}){
    const prompt=`Design a BASIC INSTALLABLE Odoo addon specification for Odoo ${v.data.odoo_version}, based on this user request: ${v.data.description}. Return ONLY raw valid JSON, without markdown, in this exact schema:
     {"technical_name":"lowercase_underscored_id","display_name":"Human readable title","model_name":"short_lowercase_underscored_name","odoo_version":"${v.data.odoo_version}","fields":[{"name":"snake_case_field","label":"Field Label","type":"Char"}]}
     Allowed field types ONLY Char,Text,Integer,Float,Boolean,Date,Datetime. 1-12 safe nonreserved fields; do not include "name" because it is built in. Use only lowercase letters, numbers and underscores for technical identifiers. No Python/XML/code snippets or unrequested external API calls. The resulting ZIP is a scaffold for review, NOT deployed software.`;
-   const response=await routeAI(prompt,await getAIProviders(g.sql,env(c),query),[],'','developer');
+   const response=await routeAI(prompt,await getAIProviders(centralDb(c),env(c),query),[],'','developer');
    const text=String(response.answer||'').trim().replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim();
    const found=text.match(/\{[\s\S]*\}/);if(!found)throw new Error('AI did not produce a structured Odoo addon proposal');
    const parsed=moduleInput.safeParse(JSON.parse(found[0]));
