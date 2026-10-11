@@ -24,9 +24,9 @@ const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
 const db=c=>c.get('tenantSQL')||centralDb(c);
 const query=(sql,text,args=[])=>sql.query(text,args);
 const secret=c=>{const s=env(c).SESSION_SECRET;return s?.length>=32?encoder.encode(s):null};
-const loginSurface=c=>['mif','enterprise','developer'].includes(env(c).MIF_APP_SURFACE)?env(c).MIF_APP_SURFACE:'mif';
-export const sessionCookieFor=surface=>({mif:'mif_session',enterprise:'rawi_enterprise_session',developer:'rawi_developer_session'}[surface]||'mif_session');
-export const sessionAudienceFor=surface=>({mif:'mif-console',enterprise:'rawi-enterprise',developer:'rawi-developer'}[surface]||'mif-console');
+const loginSurface=c=>['mif','enterprise'].includes(env(c).MIF_APP_SURFACE)?env(c).MIF_APP_SURFACE:'mif';
+export const sessionCookieFor=surface=>({mif:'mif_session',enterprise:'rawi_enterprise_session'}[surface]||'mif_session');
+export const sessionAudienceFor=surface=>({mif:'mif-console',enterprise:'rawi-enterprise'}[surface]||'mif-console');
 const fail=(c,status,message)=>c.json({ok:false,error:message},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
 const loginData=z.object({email:z.email().max(180),password:z.string().min(1).max(200)});
@@ -38,24 +38,24 @@ app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('
 function signupReady(settings){
  try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&!!settings.CONNECTOR_ENCRYPTION_KEY&&!!neonTenantConfig(settings)}catch{return false}
 }
-app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:true}));
+app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:false}));
 app.get('/api/health',async c=>{
  const kind=env(c).MIF_APP_SURFACE;
- const service=kind==='developer'?'RAWI Developer':kind==='enterprise'?'RAWI Enterprise':'MIF Smart';
+ const service=kind==='enterprise'?'RAWI ERP':'MIF Smart';
  const sql=db(c);if(!sql)return c.json({ok:false,service,database:'not_configured'},503);
  try{await query(sql,'SELECT 1');return c.json({ok:true,service,database:'connected'})}
  catch{return c.json({ok:false,service,database:'unavailable'},503)}
 });
-app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN,ownerEmail=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();if(env(c).MIF_APP_SURFACE==='enterprise'||env(c).MIF_APP_SURFACE==='developer')return fail(c,404,'Not found');if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap))||!ownerEmail||v.data.email.toLowerCase()!==ownerEmail)return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins WHERE lower(email)=$1',[ownerEmail]);if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
+app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN,ownerEmail=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();if(env(c).MIF_APP_SURFACE==='enterprise')return fail(c,404,'Not found');if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap))||!ownerEmail||v.data.email.toLowerCase()!==ownerEmail)return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins WHERE lower(email)=$1',[ownerEmail]);if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
 // Customer accounts are independent from the platform operator's OpenAI settings.
 app.post('/api/admin/register',async c=>{
  const sql=centralDb(c),key=secret(c),settings=env(c);
  const surface=loginSurface(c);
- if(!['enterprise','developer'].includes(surface))return fail(c,404,'Not found');
+ if(surface!=='enterprise')return fail(c,404,'Not found');
  if(!signupReady(settings))return fail(c,503,'Secure production registration is not enabled');
  const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
   name:z.string().trim().min(2).max(160),organization:z.string().trim().min(2).max(150),
-  account_type:z.enum(['enterprise','developer']),invitation:z.string().regex(/^[0-9a-f]{64}$/i)});
+  account_type:z.literal('enterprise'),invitation:z.string().regex(/^[0-9a-f]{64}$/i)});
  const validated=schema.safeParse(await parse(c));
  if(!validated.success)return fail(c,400,'Invalid account registration');
  const user=validated.data;
@@ -164,7 +164,7 @@ app.post('/api/admin/login',async c=>{const sql=db(c),key=secret(c);if(!sql||!ke
  if(surface==='mif'){
   const owner=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
   if(!owner||row.email.toLowerCase()!==owner)return fail(c,403,'This sign-in is reserved for MIF Smart management');
- }else if(surface==='enterprise'||surface==='developer'){
+ }else if(surface==='enterprise'){
   const profiles=await query(sql,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[row.id]);
   if(profiles[0]?.account_type!==surface)return fail(c,403,'This account belongs to the other RAWI application');
  }
@@ -180,7 +180,7 @@ app.use('/api/admin/*',async(c,next)=>{
  catch{return fail(c,401,'Session expired')}
  c.set('adminId',payload.sub);
  const central=centralDb(c),surface=env(c).MIF_APP_SURFACE;
- if(surface==='enterprise'||surface==='developer'){
+ if(surface==='enterprise'){
   if(!central)return fail(c,503,'Central Neon database is not connected');
   try{
    const profiles=await query(central,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[payload.sub]);
