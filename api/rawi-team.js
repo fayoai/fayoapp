@@ -23,10 +23,21 @@ export function installRawiTeam(app,{db,query}){
  app.post('/api/admin/erp/w/:workspace/members',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
   const v=input.safeParse(await parse(c));if(!v.success)return bad(c,400,'Invalid team member');
-  const x=v.data,rows=await query(g.sql,`INSERT INTO erp_memberships(workspace_id,admin_id,role)
-  SELECT $1,id,$3 FROM admins WHERE email=$2
-  ON CONFLICT(workspace_id,admin_id) DO NOTHING RETURNING admin_id`,[g.w,x.email.trim().toLowerCase(),x.role]);
-  return rows.length?c.json({ok:true},201):bad(c,409,'User not found or already belongs to this organization. Ask them to register first.');
+  const x=v.data,central=c.get('centralSQL');
+  if(!central)return bad(c,503,'Central identity provider unavailable');
+  const email=x.email.trim().toLowerCase();
+  const users=await query(central,`SELECT a.id,a.email FROM admins a
+   JOIN rawi_account_profiles p ON p.admin_id=a.id AND p.account_type='enterprise'
+   WHERE lower(a.email)=$1 LIMIT 1`,[email]);
+  if(!users.length)return bad(c,404,'This user must have an existing RAWI ERP account');
+  const user=users[0];
+  // Tenant databases never store customer passwords. Authentication stays centralized.
+  await query(g.sql,`INSERT INTO admins(id,email,password_hash,salt)
+   VALUES($1,$2,'local-password-disabled','local-auth-disabled')
+   ON CONFLICT(id) DO NOTHING`,[user.id,user.email]);
+  const rows=await query(g.sql,`INSERT INTO erp_memberships(workspace_id,admin_id,role)
+   VALUES($1,$2,$3) ON CONFLICT(workspace_id,admin_id) DO NOTHING RETURNING admin_id`,[g.w,user.id,x.role]);
+  return rows.length?c.json({ok:true},201):bad(c,409,'User already belongs to this organization');
  });
  app.patch('/api/admin/erp/w/:workspace/members/:member',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
