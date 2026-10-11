@@ -81,7 +81,9 @@ export function installMifChat(app,{db,env,query}){
  });
  app.get('/api/admin/chat/threads',async c=>{
   const sql=db(c);if(!sql)return fail(c,503,'Storage is not connected');
-  const data=await query(sql,'SELECT id,title,created_at,updated_at FROM mif_chat_threads WHERE owner_id=$1 ORDER BY updated_at DESC LIMIT 100',[c.get('adminId')]);
+  const workspace=c.req.query('workspace_id');
+   if(workspace&&!uuid.safeParse(workspace).success)return fail(c,400,'Invalid workspace');
+   const data=await query(sql,'SELECT id,title,workspace_id,created_at,updated_at FROM mif_chat_threads WHERE owner_id=$1 AND ($2::uuid IS NULL OR workspace_id=$2) ORDER BY updated_at DESC LIMIT 100',[c.get('adminId'),workspace||null]);
   return c.json({ok:true,data});
  });
  app.get('/api/admin/chat/threads/:id',async c=>{
