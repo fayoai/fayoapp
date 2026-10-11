@@ -16,7 +16,8 @@ test('Single chat input has one visual border, no nested brand bar, and stays ov
  assert.match(css,/\.mif-chat-page>\.mif-composer\{grid-row:3;align-self:end;justify-self:center;width:min\(100%,620px\)/);
  assert.match(ui,/<form className="mif-composer" onSubmit=\{ask\}>\s*<div className="mif-composer-field">/);
  assert.match(ui,/<div className="rawi-composer-toolbar">/);
- assert.match(ui,/<\/div>\s*<button type="submit" className="rawi-send"/);
+ assert.match(ui,/<button type="submit" className="rawi-send"/);
+ assert.match(ui,/<\/button>\s*<\/div>\s*<\/div>\s*<\/form>/);
 
  assert.match(ui,/e\.key==='Enter'&&!e\.shiftKey&&!e\.nativeEvent\?\.isComposing&&e\.keyCode!==229/);
  assert.match(css,/\.mif-composer-field\{flex:1;min-width:0/);
@@ -32,7 +33,7 @@ test('Seven navigation tabs keep New centered and unauthenticated gated tabs dis
  assert.match(ui,/tab==='team'&&!checking&&authed&&<RawiTeamPanel/);
  assert.match(ui,/tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel/);
  assert.match(ui,/\[tab,setTab\]=useState\('new'\)/);
- assert.match(ui,/const selectTab=key=>\{if\(key==='new'\)\{startNew\(\);return\}navigate\(key\)\}/);
+ assert.match(ui,/const selectTab=key=>\{if\(session\?\.company_setup_required\)/);
  assert.match(ui,/tab==='chats'&&authed&&<section className="mif-chats-history"/);
  assert.match(ui,/!checking&&!authed&&protectedTabs\.includes\(tab\)/);
  assert.match(ui,/const authPanel=<section/);
@@ -74,7 +75,7 @@ test('Account sign-up has exactly name, email and password and backend derives t
  assert.doesNotMatch(auth,/form\.organization|L\('الشركة'/);
  assert.match(ui,/const initialLogin=\{name:'',email:'',password:'',account_type:'enterprise'\}/);
  assert.doesNotMatch(api,/organization:z\.string/);
- assert.match(api,/user\.name\.slice\(0,150\)/);
+ assert.match(api,/user\.full_name\.slice\(0,150\)/);
 });
 test('Fresh RAWI greeting sits in the middle while the single message composer remains at the bottom',()=>{
  const css=read('src/mif-smart-shell.css'),ui=read('src/MifSmartShell.jsx');
