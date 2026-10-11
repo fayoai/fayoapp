@@ -13,6 +13,12 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run check
+      - name: Migrate verified signup database tables
+        env:
+          MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
+        run: |
+          if [[ -z "$MIF_DATABASE_URL" ]]; then echo '::error::MIF_DATABASE_URL required for company signup migration'; exit 1; fi
+          node scripts/migrate-rawi-email-company.mjs
       - name: Verify Cloudflare deployment credentials
         shell: bash
         env:
@@ -38,6 +44,8 @@ jobs:
           MIF_SITE_ORIGIN: ${{ vars.MIF_SITE_ORIGIN }}
           MIF_REGISTRATION_ENABLED: ${{ vars.MIF_REGISTRATION_ENABLED }}
           MIF_PUBLIC_CHAT_ENABLED: ${{ vars.MIF_PUBLIC_CHAT_ENABLED }}
+          MIF_RESEND_API_KEY: ${{ secrets.MIF_RESEND_API_KEY }}
+          MIF_EMAIL_FROM: ${{ vars.MIF_EMAIL_FROM }}
         run: |
           set -euo pipefail
           SECRET_FILE="${RUNNER_TEMP}/mif-worker-secrets.json"
@@ -55,7 +63,9 @@ jobs:
             MIF_NEON_ORG_ID:'NEON_ORG_ID',
             MIF_SITE_ORIGIN:'SITE_ORIGIN',
             MIF_REGISTRATION_ENABLED:'REGISTRATION_ENABLED',
-            MIF_PUBLIC_CHAT_ENABLED:'PUBLIC_CHAT_ENABLED'
+            MIF_PUBLIC_CHAT_ENABLED:'PUBLIC_CHAT_ENABLED',
+            MIF_RESEND_API_KEY:'RESEND_API_KEY',
+            MIF_EMAIL_FROM:'EMAIL_FROM'
           };
           const values=Object.fromEntries(
             Object.entries(names).filter(([source])=>!!process.env[source]).map(([source,target])=>[target,process.env[source]])
