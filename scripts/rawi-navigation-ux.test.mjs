@@ -38,7 +38,7 @@ test('Team and notifications read real authorized company records; membership mu
  assert.match(panels,/workspaceId/);
  assert.match(panels,/api\(base\+'\/tasks'\)/);
  assert.match(panels,/api\(base\+'\/activities'\)/);
- assert.match(panels,/\+'/members'\)/);
+ assert.ok(panels.includes("+'/members')"));
  assert.match(server,/const central=c\.get\('centralSQL'\)/);
  assert.match(server,/JOIN rawi_account_profiles/);
  assert.match(server,/query\(central,`INSERT INTO erp_memberships/);
