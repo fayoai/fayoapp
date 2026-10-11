@@ -67,6 +67,8 @@ jobs:
               npx wrangler deploy --config "$config"
             fi
           done
+      - name: Test three deployed Worker boundaries
+        run: npm run smoke:surfaces
       - name: Verify real production domain when configured
         shell: bash
         env:

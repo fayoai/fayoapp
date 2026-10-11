@@ -18,7 +18,8 @@
     "desktop:install": "npm --prefix apps/desktop install",
     "desktop:run": "npm --prefix apps/desktop start",
     "mobile:prepare:enterprise": "node scripts/prepare-native.mjs",
-    "mobile:icons": "node scripts/native-icons.mjs"
+    "mobile:icons": "node scripts/native-icons.mjs",
+    "smoke:surfaces": "node scripts/smoke-surfaces.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",
