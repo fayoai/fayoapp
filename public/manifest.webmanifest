@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "RAWI | راوي AI ERP",
-  "short_name": "RAWI",
-  "description": "RAWI — Independent AI-powered business ERP",
+  "name": "RAWI ERP | راوي",
+  "short_name": "RAWI ERP",
+  "description": "RAWI ERP — private AI-powered business operations",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,8 +10,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#fffaf6",
-  "theme_color": "#e35a0e",
+  "background_color": "#f7faff",
+  "theme_color": "#2166e8",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
@@ -21,13 +21,13 @@
   ],
   "icons": [
     {
-      "src": "/rawi-mark.svg",
+      "src": "/rawi-erp-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/rawi-mark.svg",
+      "src": "/rawi-erp-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
@@ -35,12 +35,12 @@
   ],
   "shortcuts": [
     {
-      "name": "RAWI",
-      "short_name": "RAWI",
+      "name": "RAWI ERP",
+      "short_name": "ERP",
       "url": "/",
       "icons": [
         {
-          "src": "/rawi-mark.svg",
+          "src": "/rawi-erp-mark.svg",
           "sizes": "any",
           "type": "image/svg+xml"
         }

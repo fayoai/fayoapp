@@ -317,3 +317,27 @@
 /* No sample records or preview screens appear as operational customer data. */
 .mif-app .rawi-need-account{min-height:calc(100dvh - 165px);display:flex;align-items:flex-start;justify-content:center;padding-top:36px}
 .mif-app .rawi-need-account button{display:flex;align-items:center;gap:9px;background:#e35a0e;color:#fff;border:0;border-radius:12px;min-height:46px;padding:11px 20px;font-weight:750}
+
+/* RAWI ERP: approved stable blue/white brand, chat-first interaction, five-part bottom navigation. */
+.mif-app{--mif-accent:#2166e8;--rawi-blue:#2166e8;color:#1c2940}
+.mif-app .mif-body-chats{padding-top:8px}
+.mif-app .mif-chat-scroll.is-empty{justify-content:flex-start;align-items:stretch;padding-top:8px}
+.mif-app .mif-welcome-message{align-self:stretch;max-width:100%;margin-top:3px}
+.mif-app .mif-welcome-message img,.mif-app .mif-bubble.assistant>img,.mif-app .mif-rawi-brand img{background:#2166e8;border-radius:14px}
+.mif-app .mif-welcome-message>div{padding:3px 4px;line-height:1.7}
+.mif-app .mif-welcome-message strong{color:#2166e8;font-size:13px;font-weight:850}
+.mif-app .mif-welcome-message p{font-size:clamp(19px,2.7vw,24px);font-weight:650;line-height:1.9;margin:6px 0 0}
+.mif-app .mif-writing-caret{height:1.15em;border-inline-start:2px solid #2166e8;display:inline-block;margin-inline-start:3px;vertical-align:middle;animation:rawi-erp-caret 850ms step-end infinite}
+@keyframes rawi-erp-caret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.mif-app .mif-writing-caret{animation:none;display:none}}
+.mif-app .mif-composer button,.mif-app .mif-bottom-item.new .mif-bottom-icon{background:#2166e8;border-color:#2166e8;color:#fff}
+.mif-app .mif-composer:focus-within{border-color:#2166e8;box-shadow:0 9px 28px #2166e81c}
+.mif-app .mif-bottom-item.active,.mif-app .mif-bottom-item.new .mif-bottom-label{color:#2166e8}
+.mif-app .mif-bottom-item.new .mif-bottom-icon{width:66px;height:66px;margin-top:-30px;box-shadow:0 9px 25px #2166e849;border:5px solid #fff}
+.mif-app .mif-bottom-item.new .mif-bottom-label{font-weight:850}
+.mif-app .mif-account-avatar{background:#eef4ff;color:#2166e8}
+.mif-app .mif-account-detail button,.mif-app .mif-login-page .mif-auth-switch{color:#2166e8;background:transparent}
+.mif-app .rawi-account-form button{background:#2166e8;color:#fff}
+.mif-app .rawi-install-in-account{display:inline-flex;justify-content:center;align-items:center;gap:9px;min-height:45px;width:100%;border:1px solid #bdcef0;border-radius:12px;color:#2166e8;background:#f7faff;font-weight:800;margin-top:14px;padding:10px}
+.mif-app .mif-access-gate p{display:none}
+@media(max-width:620px){.mif-app .mif-chat-scroll.is-empty{padding-top:5px}.mif-app .mif-welcome-message p{font-size:19px}.mif-app .mif-bottom-item.new .mif-bottom-icon{height:65px;width:65px}}
