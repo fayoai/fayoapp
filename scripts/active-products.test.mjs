@@ -35,7 +35,8 @@ test('RAWI ERP approved blue chat layout and account-only installation are froze
  assert.match(brand,/fill="#2166e8"/);
  assert.match(brand,/<path fill="#ffffff"/);
  assert.equal(pwa.theme_color,'#2166e8');
- assert.equal(pwa.short_name,'RAWI ERP');
+ assert.equal(pwa.short_name,'نظام راوي');
+ assert.equal(JSON.parse(read('public/manifest.en.webmanifest')).short_name,'Rawi ERP');
  assert.match(source,/function RawiGreeting/);
  assert.match(source,/كيف أقدر أساعدك اليوم؟/);
  assert.match(source,/setInterval/);
