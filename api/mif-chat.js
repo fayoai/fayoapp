@@ -62,6 +62,44 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
   return c.json({ok:true,configured:!!rows.length,model:v.data.model});
  });
 
+ app.post('/api/chat/transcribe',async c=>{
+  const settings=env(c),sql=db(c);
+  if(!sql||settings.PUBLIC_CHAT_ENABLED!=='true'||!settings.SESSION_SECRET)return fail(c,503,'Voice transcription is not configured');
+  const ip=c.req.header('CF-Connecting-IP')||'';
+  if(!ip)return fail(c,403,'Unable to verify visitor request');
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(settings.SESSION_SECRET+'|public-chat|'+(settings.MIF_APP_SURFACE||'mif')+'|'+ip));
+  const visitorKey=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+  const limitSql="INSERT INTO mif_guest_usage(client_key,bucket,hits,expires_at) VALUES($1,$2,1,now()+$3::interval) ON CONFLICT(client_key,bucket) DO UPDATE SET hits=CASE WHEN mif_guest_usage.expires_at<=now() THEN 1 ELSE mif_guest_usage.hits+1 END,expires_at=CASE WHEN mif_guest_usage.expires_at<=now() THEN now()+$3::interval ELSE mif_guest_usage.expires_at END RETURNING hits";
+  try{
+   const perMinute=await query(sql,limitSql,[visitorKey,'minute','1 minute']);
+   if((perMinute[0]?.hits||0)>6)return fail(c,429,'Too many voice requests');
+   const perDay=await query(sql,limitSql,[visitorKey,'day','1 day']);
+   if((perDay[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
+  }catch{return fail(c,503,'Voice request protection is unavailable')}
+  if(Number(c.req.header('content-length')||0)>1650000)return fail(c,413,'Audio recording is too large');
+  let body;try{body=await c.req.formData()}catch{return fail(c,400,'Invalid recording')}
+  const audio=body.get('audio');
+  if(!audio||typeof audio.arrayBuffer!=='function'||audio.size<150||audio.size>1500000)return fail(c,400,'Invalid recording size');
+  const mime=String(audio.type||'').split(';')[0];
+  const extensions={'audio/webm':'webm','audio/mp4':'m4a','audio/ogg':'ogg','audio/mpeg':'mp3','audio/wav':'wav'};
+  if(!extensions[mime])return fail(c,415,'Audio recording format is unsupported');
+  const providers=await getAIProviders(centralDb(c),settings,query);
+  const openai=providers.find(p=>p.code==='openai'&&p.key);
+  if(!openai)return fail(c,503,'Voice transcription requires an enabled OpenAI provider');
+  const upload=new FormData();
+  upload.set('model','gpt-4o-mini-transcribe');
+  upload.set('file',audio,'rawi-voice.'+extensions[mime]);
+  try{
+   const result=await fetch('https://api.openai.com/v1/audio/transcriptions',{
+    method:'POST',headers:{Authorization:'Bearer '+openai.key},body:upload,signal:AbortSignal.timeout(30000)
+   });
+   if(!result.ok)return fail(c,result.status===429?429:502,'Speech recognition is temporarily unavailable');
+   const data=await result.json();
+   const transcript=String(data.text||'').trim().slice(0,2500);
+   return transcript?c.json({ok:true,text:transcript}):fail(c,502,'Could not understand the recording');
+  }catch{return fail(c,502,'Speech recognition is temporarily unavailable')}
+ });
+
  app.post('/api/chat/public',async c=>{
   if(Number(c.req.header('content-length')||0)>3600000)return fail(c,413,'Attachments are too large');
    const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
