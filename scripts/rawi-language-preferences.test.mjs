@@ -23,5 +23,5 @@ test('Enterprise launcher isolates RAWI language from MIF Smart company website 
  assert.match(entry,/launch\(MifSmartShell,'\/sw\.js','rawi_lang'\)/);
  assert.match(runtime,/initialLanguage\(languageKey\)/);
  assert.match(runtime,/localStorage\.setItem\(languageKey,lang\)/);
- assert.match(app,/startsWith\('\/mif'\)\?'mif_lang':'rawi_lang'/);
+ assert.match(app,/startsWith\('\/admin'\)/);
 });

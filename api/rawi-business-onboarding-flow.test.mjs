@@ -45,7 +45,7 @@ test('Onboarding UI previews analysis and operations rearranges existing departm
  assert.match(jsx,/setTimeout\(analyze,1100\)/);
  assert.match(jsx,/className="rawi-business-departments"/);
  assert.match(workspaceUI,/\/api\/admin\/company\/workspace-plan\//);
- assert.match(workspaceUI,/Recommended for your business/);
+ assert.match(workspaceUI,/Work repositories/);
  assert.match(workspaceUI,/businessPlan\.summary/);
 });
 

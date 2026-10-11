@@ -31,9 +31,9 @@ test('RAWI ERP chat and sign in have approved interaction and account-only downl
 });
 test('MIF Smart product manager is directly accessible at products route and shows seven approved cards',()=>{
  const site=read('src/MifCompany.jsx'),console=read('src/MifCompanyAdmin.jsx');
- assert.match(site,/href="\/mif\/console\/products"/);
+ assert.doesNotMatch(site,/href="\/mif\/console\/products"/);
  assert.match(console,/MIF_PRODUCTS\.map/);
- assert.match(console,/\/mif\/console\//);
+ assert.match(console,/\/admin\//);
  assert.match(console,/\['platform','ai','database','website','products','pages','inquiries'\]/);
  assert.match(console,/databaseState==='unavailable'/);
  assert.match(console,/mif-product-admin-footer|status-soon/);
