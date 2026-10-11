@@ -23,7 +23,7 @@ export const blueprintSchema=z.object({
 }).strict();
 
 export function validateGeneratedBlueprint(value){
- const parsed=blueprintSchema.safeParse(value);
+ const parsed=blueprintSchema.safeParse(value&&typeof value==='object'?(({version,source,...draft})=>draft)(value):value);
  if(!parsed.success)return null;
  const plan=parsed.data,ids=new Set(plan.repositories.map(r=>r.key));
  if(ids.size!==plan.repositories.length)return null;
