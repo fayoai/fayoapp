@@ -24,7 +24,7 @@
  .erp-shell>.erp-head{grid-column:2;grid-row:1;min-width:0}
  .erp-shell>.erp-nav{grid-column:1;grid-row:1 / span 20;display:flex;flex-direction:column;gap:4px;padding:14px;background:#fff;border:1px solid #e6e9e7;border-radius:16px;box-shadow:0 8px 32px #282d3010;position:sticky;top:91px;max-height:calc(100vh - 108px);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
  .erp-nav button{width:100%;min-height:43px;padding:10px 12px;flex:0 0 auto;border-color:transparent;border-radius:9px;background:transparent;color:#46535a;font-size:12px;font-weight:700;text-align:start}
- .erp-nav button:hover{background:#edf8f5;border-color:#ffe8d7;color:#ab440b}
+ .erp-nav button:hover{background:#fff7f1;border-color:#ffe8d7;color:#ab440b}
  .erp-nav button.active{background:#e35a0e;color:#fff;border-color:#e35a0e;box-shadow:0 7px 14px #e35a0e22}
  .erp-nav-group{display:block;font-size:10px;font-weight:800;letter-spacing:.2px;color:#899499;padding:11px 9px 4px}
  .erp-shell>:not(.erp-head):not(.erp-nav){grid-column:2;min-width:0}
@@ -43,10 +43,10 @@
 }
 
 .erp-head{background:linear-gradient(110deg,#242a2e,#34302c);border-color:#282d30;box-shadow:0 13px 25px #282d3012}
-.erp-nav button{color:#536a6f;border-color:#e0eae6}.erp-nav button.active{background:#e35a0e;border-color:#e35a0e;box-shadow:0 5px 18px #e35a0e23}
+.erp-nav button{color:#536a6f;border-color:#eae4de}.erp-nav button.active{background:#e35a0e;border-color:#e35a0e;box-shadow:0 5px 18px #e35a0e23}
 .erp-panel{border-color:#e3ebe8;box-shadow:0 4px 20px #282d3009}
 .erp-panel input:focus-visible,.erp-panel select:focus-visible,.erp-panel textarea:focus-visible{outline-color:#e35a0e}
-.erp-shell .erp-launch-logo{background:#e8f6f3}
+.erp-shell .erp-launch-logo{background:#fff4e8}
 
 /* RAWI ERP — consistent form hierarchy and orange, without changing any workflow. */
 .erp-shell{color:#2b343a;max-width:1560px}
