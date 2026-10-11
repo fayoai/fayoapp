@@ -1,4 +1,7 @@
 name: Deploy MIF Smart to Cloudflare
+concurrency:
+  group: mif-smart-platform-production-deploy
+  cancel-in-progress: false
 on:
   workflow_dispatch:
   push:
@@ -144,6 +147,16 @@ jobs:
           const email='rawi-test-'+randomUUID()+'@example.invalid';
           const password='A1!'+randomBytes(20).toString('base64url');
           try{
+            let revision;
+            for(let i=0;i<15;i++){
+              const res=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/public/rawi/status',{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(10000)});
+              const status=await res.json();
+              revision=status.password_kdf_iterations;
+              if(revision===100000)break;
+              console.log('Waiting for latest RAWI Worker KDF revision, current='+(revision??'legacy'));
+              if(i<14)await new Promise(resolve=>setTimeout(resolve,4000));
+            }
+            if(revision!==100000)throw Error('Deployed Worker still uses old password hashing');
             const signature=createHash('sha256').update(process.env.MIF_SESSION_SECRET+'|rawi-email-otp|'+email+'|internal-diag').digest('hex');
             const r=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/admin/register',{
               method:'POST',headers:{'Content-Type':'application/json','X-Rawi-Probe':signature},
