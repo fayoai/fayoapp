@@ -1,7 +1,7 @@
 {
   "name": "mif-smart-platform",
   "private": true,
-  "version": "7.0.0",
+  "version": "7.1.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"node --watch api/dev-server.mjs\" \"vite --host 0.0.0.0\"",

@@ -121,8 +121,20 @@ export function installMifChat(app,{db,env,query}){
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
-  const stats=await query(sql,"SELECT w.name,(SELECT COUNT(*) FROM erp_contacts WHERE workspace_id=w.id)::int contacts,(SELECT COUNT(*) FROM erp_invoices WHERE workspace_id=w.id)::int invoices,(SELECT COUNT(*) FROM erp_tasks WHERE workspace_id=w.id AND status='pending')::int pending_tasks FROM erp_workspaces w WHERE w.id=$1",[claim[0].workspace_id]);
   let result;try{
+   // Tenant-scoped aggregates only. No raw contacts, private messages, payment credentials or other organizations.
+   const stats=await query(sql,`SELECT w.name,
+   (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=w.id) contacts,
+   (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id) invoices,
+   (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id AND status='issued' AND due_on<CURRENT_DATE) overdue_invoices,
+   (SELECT coalesce(sum(total_halalas),0)::bigint FROM erp_invoices WHERE workspace_id=w.id AND status='issued') open_invoice_halalas,
+   (SELECT count(*)::int FROM erp_tasks WHERE workspace_id=w.id AND status='pending') pending_tasks,
+   (SELECT count(*)::int FROM erp_stock WHERE workspace_id=w.id AND quantity<=5) low_stock,
+   (SELECT count(*)::int FROM rawi_opportunities WHERE workspace_id=w.id AND status='open') open_opportunities,
+   (SELECT count(*)::int FROM erp_projects WHERE workspace_id=w.id AND status='active') active_projects,
+   (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
+   (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
+   FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
    result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000));
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});

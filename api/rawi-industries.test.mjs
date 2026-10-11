@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Hono} from 'hono';
+import {activityInput,installRawiActivities} from './rawi-activities.js';
+import {recommendBusinessActions,installRawiInsights} from './rawi-insights.js';
+const w='11111111-1111-4111-8111-111111111111';
+function setup(role){const app=new Hono(),queries=[];app.use('/api/admin/*',async(c,next)=>{c.set('adminId',w);await next()});const query=async(_,sql,args=[])=>{queries.push({sql,args});if(sql.startsWith('SELECT role FROM erp_memberships'))return role?[{role}]:[];return []};installRawiActivities(app,{db:()=>({}),query});installRawiInsights(app,{db:()=>({}),query});return {app,queries}}
+test('Advanced activity schemas reject invalid business data',()=>{assert.equal(activityInput.safeParse({sector:'../etc',title:'Broken'}).success,false);assert.equal(activityInput.safeParse({sector:'retail',title:'Valid job',details:{bad:{executable:true}}}).success,false)});
+test('Unauthorized organization records are not exposed through insights or activities',async()=>{const {app}=setup(null);for(const route of ['insights','activities']){const response=await app.request('http://localhost/api/admin/erp/w/'+w+'/'+route);assert.equal(response.status,404)}});
+test('Read-only organization members cannot create work orders',async()=>{const {app}=setup('viewer');const response=await app.request('http://localhost/api/admin/erp/w/'+w+'/activities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sector:'services',title:'Work order'})});assert.equal(response.status,403)});
+test('Action recommendations are based on verified data rather than invented values',()=>{const r=recommendBusinessActions({invoices_due:2,stock_low:3,tasks_due:0,crm_open:0});assert.deepEqual(r.map(x=>x.id),['receivables','stock']);assert.equal(recommendBusinessActions({})[0].id,'ready')});
