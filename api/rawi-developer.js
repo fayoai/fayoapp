@@ -151,6 +151,7 @@ export function installRawiDeveloper(app,{db,env,query}){
   const id=c.req.param('id');
   const linked=await query(g.sql,'SELECT 1 FROM rawi_implementation_projects WHERE workspace_id=$1 AND connection_id=$2 LIMIT 1',[g.workspace,id]);
   if(linked.length)return fail(c,409,'This Odoo database is linked to implementation projects. Reassign their connection before deleting it.');
+  await query(g.sql,'DELETE FROM rawi_odoo_diagnostics WHERE workspace_id=$1 AND connection_id=$2',[g.workspace,id]);
   const rows=await query(g.sql,'DELETE FROM rawi_odoo_connections WHERE id=$1 AND workspace_id=$2 RETURNING id',[id,g.workspace]);
   return rows.length?c.json({ok:true}):fail(c,404,'Connection not found');
  });
@@ -207,10 +208,16 @@ export function installRawiDeveloper(app,{db,env,query}){
  app.patch('/api/admin/developer/w/:workspace/implementations/:id',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
   if(!uuid.safeParse(c.req.param('id')).success)return fail(c,400,'Invalid implementation');
-  const v=z.object({phase:implementationInput.shape.phase,status:implementationInput.shape.status}).safeParse(await parse(c));
-  if(!v.success)return fail(c,400,'Invalid implementation status');
-  const x=v.data,rows=await query(g.sql,`UPDATE rawi_implementation_projects SET phase=$1,status=$2,updated_at=now()
-   WHERE workspace_id=$3 AND id=$4 RETURNING id`,[x.phase,x.status,g.workspace,c.req.param('id')]);
-  return rows.length?c.json({ok:true}):fail(c,404,'Implementation not found');
+  const raw=await parse(c),v=z.object({phase:implementationInput.shape.phase.optional(),status:implementationInput.shape.status.optional(),connection_id:uuid.nullable().optional()}).safeParse(raw);
+  if(!v.success||!Object.keys(v.data).length)return fail(c,400,'Invalid implementation update');
+  const x=v.data,hasConnection=Object.prototype.hasOwnProperty.call(x,'connection_id');
+  const rows=await query(g.sql,`UPDATE rawi_implementation_projects SET
+    phase=COALESCE($1::text,phase),status=COALESCE($2::text,status),
+    connection_id=CASE WHEN $3::boolean THEN $4::uuid ELSE connection_id END,updated_at=now()
+    WHERE workspace_id=$5 AND id=$6
+    AND ($4::uuid IS NULL OR EXISTS(SELECT 1 FROM rawi_odoo_connections WHERE workspace_id=$5 AND id=$4))
+    RETURNING id`,
+    [x.phase||null,x.status||null,hasConnection,x.connection_id||null,g.workspace,c.req.param('id')]);
+  return rows.length?c.json({ok:true}):fail(c,404,'Project not found or Odoo connection belongs to another organization');
  });
 }
