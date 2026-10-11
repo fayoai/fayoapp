@@ -129,7 +129,7 @@ export function installAiErp(app,{db,env,query}){
  });
  app.get('/api/admin/erp/w/:workspace/integrations',async c=>{
   const g=await gate(c);if(g.err)return g.err;
-  const rows=await query(g.sql,'SELECT provider,label,base_url,configuration,enabled,last_checked_at,last_error,encrypted_secret<>\\'\\' AS has_secret FROM erp_integrations WHERE workspace_id=$1 ORDER BY provider',[g.id]);
+  const rows=await query(g.sql,'SELECT provider,label,base_url,configuration,enabled,last_checked_at,last_error,(length(encrypted_secret)>0) AS has_secret FROM erp_integrations WHERE workspace_id=$1 ORDER BY provider',[g.id]);
   return c.json({ok:true,data:rows,openai_env:!!env(c).OPENAI_API_KEY,email_env:!!env(c).RESEND_API_KEY});
  });
  app.put('/api/admin/erp/w/:workspace/integrations/:provider',async c=>{
