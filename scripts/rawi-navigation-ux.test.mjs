@@ -40,7 +40,8 @@ test('Login is compact, no invitation input, and PWA installation button is not 
  assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini"/);
  assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account"/);
  assert.match(css,/\.mif-login-page\{width:min\(100%,365px\)/);
- assert.match(css,/\.mif-login-page\{[^}]*border:0;border-radius:0;background:transparent;box-shadow:none/);
+ assert.match(css,/\.mif-login-page\{[^}]*border:1px solid var\(--rawi-border\);border-radius:20px;background:#fff/);
+ assert.match(css,/\.mif-body\.mif-body-auth\{[^}]*display:flex;align-items:center;justify-content:center/);
  assert.match(css,/\.rawi-install-in-account\{[^}]*width:auto;/);
 });
 test('Team and notifications read real authorized company records; membership must be registered in central and tenant DB',()=>{
@@ -52,4 +53,24 @@ test('Team and notifications read real authorized company records; membership mu
  assert.match(server,/const central=c\.get\('centralSQL'\)/);
  assert.match(server,/JOIN rawi_account_profiles/);
  assert.match(server,/query\(central,`INSERT INTO erp_memberships/);
+});
+
+test('Account sign-up has exactly name, email and password and backend derives the workspace name',()=>{
+ const ui=read('src/MifSmartShell.jsx'),api=read('api/app.js');
+ const auth=ui.slice(ui.indexOf('const authPanel='),ui.indexOf(' return <div className="mif-app"'));
+ assert.match(auth,/signup&&<label>\{L\('الاسم'/);
+ assert.match(auth,/L\('البريد الإلكتروني'/);
+ assert.match(auth,/L\('كلمة المرور'/);
+ assert.doesNotMatch(auth,/form\.organization|L\('الشركة'/);
+ assert.match(ui,/const initialLogin=\{name:'',email:'',password:'',account_type:'enterprise'\}/);
+ assert.doesNotMatch(api,/organization:z\.string/);
+ assert.match(api,/user\.name\.slice\(0,150\)/);
+});
+test('Fresh RAWI greeting sits in the middle while the single message composer remains at the bottom',()=>{
+ const css=read('src/mif-smart-shell.css'),ui=read('src/MifSmartShell.jsx');
+ assert.match(css,/\.mif-chat-scroll\.is-empty\{[^}]*align-items:center;justify-content:center/);
+ assert.match(css,/\.mif-welcome-message\{[^}]*width:fit-content;max-width:100%;align-self:center/);
+ assert.match(css,/\.mif-welcome-message p\{[^}]*margin:0/);
+ assert.match(ui,/<RawiGreeting lang=\{lang\}\/>/);
+ assert.equal((ui.match(/className="mif-composer"/g)||[]).length,1);
 });
