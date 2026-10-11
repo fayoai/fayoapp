@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Link,useLocation} from 'react-router-dom';
 import {Activity,ArrowUpLeft,ArrowLeft,Boxes,BrainCircuit,CheckCircle2,ChevronLeft,Command,CreditCard,ExternalLink,FileText,Globe2,HardDrive,Layers3,Mail,MessageSquareText,MonitorSmartphone,Network,Package,Send,ServerCog,ShieldCheck,ShoppingBag,Sparkles,Workflow,Zap} from 'lucide-react';
 import {offers,cycleLabels} from '../api/commerce-model.js';
+import {adviseProducts} from '../api/product-advisor.js';
 import {useSite,tr} from './App.jsx';
 import './ai-portal.css';
 
@@ -19,6 +20,8 @@ function getGuidance(question,lang){
  const q=question.toLowerCase().normalize('NFKC');
  const l=(ar,en)=>tr(lang,ar,en);
  const found=(sku)=>offers.find(x=>x.sku===sku);
+ const recommendations=adviseProducts(question).map(x=>found(x.sku)).filter(Boolean);
+ if(recommendations.length>1)return {text:l('وفقًا لاحتياجك، هذه حلول متكاملة من منتجاتنا الفعلية. افتح كل منتج لمعرفة النطاق وخيارات التسعير قبل الطلب.','Your needs span multiple offerings. Here are matching products from our actual catalogue; review each scope and quotation options.'),items:recommendations,links:[{to:'/store',label:l('عرض كل المنتجات','View all products')}]};
  const product=(sku,ar,en)=>({text:l(ar,en),items:[found(sku)],links:[{to:'/store/'+found(sku).slug,label:l('استعرض المنتج','View product')},{to:'/store',label:l('كل المنتجات','All products')}]});
  if(isMatch(q,/تثبيت|تنزيل|تحميل التطبيق|جوال|موبايل|اندرويد|ايفون|ويندوز|ماك|linux|install|desktop|android|iphone|ipad|windows|macos/))return {text:l('التطبيق متاح كتجربة قابلة للتثبيت على الجوال والكمبيوتر عبر المتصفحات المدعومة. من صفحة التطبيقات ستجد تعليمات كل نظام.', 'Install the web app on supported mobile and desktop browsers. Visit Apps for platform-specific steps.'),links:[{to:'/apps',label:l('تثبيت التطبيق','Install the app')}]};
  if(isMatch(q,/دفع|اشتراك|شهري|سنوي|ربع سنوي|نصف سنوي|مرة واحدة|سعر|billing|payment|monthly|quarterly|yearly|subscription|price/))return {text:l('تقدر تختار الدفع مرة واحدة أو شهري أو ربع سنوي أو نصف سنوي أو سنوي، حسب المنتج. السعر وطرق الدفع المتاحة بيظهروا في صفحة المنتج، والدفع يتفعل فقط بعد اعتماد السعر وربط البوابة.', 'Billing options are one time, monthly, quarterly, half yearly and yearly, depending on the product. Available payment methods appear at checkout once pricing and the payment gateway are configured.'),links:[{to:'/store',label:l('افتح المتجر','Open store')},{to:'/orders',label:l('متابعة الطلبات','Track orders')}]};

@@ -47,3 +47,9 @@ See [MOBILE_DESKTOP_AR.md](MOBILE_DESKTOP_AR.md) for PWA/Electron/Capacitor, sig
 - Checkout and admin are not production-live until Neon, Moyasar and Cloudflare deployment are configured and their real integration tests succeed.
 
 **GitHub safety:** this code is committed to `fayoai/fayoapp` branch `mif-smart-platform`. `Desktop` remains unchanged. Do not merge it into the FAYO Desktop binary branch.
+
+## Launch readiness (production)
+
+The Commerce console opens on **Launch readiness**, showing verified settings without exposing credentials. Products and quote flows are scoped; published prices and module releases are not generated from demo values. AI product guidance is deterministic and transparent until a separately secured model integration is configured.
+
+Cloudflare deploys should be run from the dedicated `mif-smart-platform` branch. Permanent production operation requires ownership of a Cloudflare account, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, Cloudflare Worker secrets `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_BOOTSTRAP_TOKEN`, `SITE_ORIGIN`, the approved payment provider key and an R2 `MODULE_FILES` binding for paid ZIP downloads. A `--temporary` preview is not production and has a time-limited claim window. Never commit secrets or Neon connection strings. Automated SaaS/Odoo provisioning and recurring card billing remain out of scope until real backends are integrated and tested.

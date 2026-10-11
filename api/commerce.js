@@ -49,6 +49,49 @@ export function installCommerce(app,{db,env,query}){
   return new Response(object.body,{headers:{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="'+sku+'.zip"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
  });
  app.post('/api/commerce/moyasar',async c=>{const data=await body(c),id=data.id||data.invoice?.id||data.data?.id;if(!uuid.safeParse(id).success)return error(c,400,'Invalid invoice');const sql=db(c);if(!sql)return error(c,503,'Database offline');const rows=await query(sql,'SELECT * FROM commerce_orders WHERE invoice_id=$1',[id]);if(!rows.length)return error(c,404,'Unknown invoice');try{await verify(c,rows[0]);return c.json({ok:true})}catch{return error(c,503,'Could not independently verify payment')}});
+
+ app.get('/api/admin/commerce/readiness',async c=>{
+  const sql=db(c);
+  if(!sql)return error(c,503,'Database not connected');
+  const [pricing,modules,adminRows,settings]=await Promise.all([
+   query(sql,"SELECT count(*)::int n FROM commerce_prices WHERE active=true AND amount IS NOT NULL"),
+   query(sql,"SELECT count(*)::int n FROM commerce_modules WHERE published=true AND r2_key IS NOT NULL"),
+   query(sql,"SELECT count(*)::int n FROM admins"),
+   query(sql,"SELECT key,value FROM site_settings WHERE key IN('contact','billing')")
+  ]);
+  const opts=Object.fromEntries(settings.map(s=>[s.key,s.value]));
+  const conf=env(c),contacts=opts.contact||{},billing=opts.billing||{};
+  const originOk=(()=>{try{return new URL(conf.SITE_ORIGIN).protocol==='https:'}catch{return false}})();
+  const flags={
+   administrator:adminRows[0]?.n>0,
+   contacts:Boolean(contacts.email?.trim()||contacts.phone?.trim()),
+   pricing:(pricing[0]?.n||0)>0,
+   payment:originOk&&/^sk_live_/.test(conf.MOYASAR_SECRET_KEY||''),
+   bank:Boolean(billing.iban&&billing.beneficiary),
+   moduleStorage:Boolean(conf.MODULE_FILES),
+   moduleReleases:(modules[0]?.n||0)>0,
+   webOrigin:originOk,
+   automatedProvisioning:false
+  };
+  const checks=[
+   ['administrator','مدير النظام','Administrator account','إعداد مدير آمن للوصول إلى لوحة الإدارة','Configure an administrator login'],
+   ['contacts','بيانات التواصل','Contact details','أضف بريدًا أو رقمًا حقيقيًا للطلبات','Publish a customer email or phone'],
+   ['pricing','الأسعار المعتمدة','Approved prices','انشر أسعار المنتجات القابلة للشراء أو استخدم عروض الأسعار','Publish approved purchase prices or use quotations'],
+   ['payment','الدفع المباشر','Live online payments','اربط Moyasar بمفتاح إنتاج ودومين HTTPS','Connect a live Moyasar key and HTTPS domain'],
+   ['bank','التحويل البنكي','Bank transfer','أضف حسابًا بنكيًا معتمدًا إذا أردت التحويل','Configure verified bank transfer details if offered'],
+   ['moduleStorage','تخزين الموديولات','Module storage','اربط R2 خاصًا لتسليم ملفات ZIP','Bind a private R2 bucket for module ZIP delivery'],
+   ['moduleReleases','الإضافات المنشورة','Published add-ons','ارفع ملفات الموديولات وتحقق من التوافق ثم انشرها','Upload, verify and publish compatible add-on ZIPs'],
+   ['webOrigin','دومين HTTPS','HTTPS domain','عيّن SITE_ORIGIN على رابط تشغيل دائم وآمن','Set SITE_ORIGIN to a permanent HTTPS origin'],
+   ['automatedProvisioning','التسليم التلقائي للمنصات','Automated provisioning','توصيل منصات SaaS يتطلب محرك تشغيل وتحقق منفصلًا','SaaS provisioning needs a separate validated provisioner']
+  ].map(([id,title_ar,title_en,action_ar,action_en])=>({id,title_ar,title_en,action_ar,action_en,ready:flags[id]}));
+  return c.json({ok:true,data:{checks,summary:{
+   publishedPriceTerms:pricing[0]?.n||0,
+   publishedModules:modules[0]?.n||0,
+   quotationBackendReady:true,
+   paymentBackendReady:flags.payment&&flags.pricing,
+   fullyAutomatedDelivery:false
+  }}});
+ });
  // Commerce admin routes are added after the pre-existing /api/admin/* auth middleware.
  app.get('/api/admin/commerce/prices',async c=>c.json({ok:true,data:await query(db(c),'SELECT sku,cycle,amount,active FROM commerce_prices ORDER BY sku,cycle')}));
  app.put('/api/admin/commerce/prices/:sku/:cycle',async c=>{const {sku,cycle}=c.req.param(),v=await body(c);if(!cycles.includes(cycle)||!(offers.some(p=>p.sku===sku&&p.cycles.includes(cycle))||(await query(db(c),'SELECT 1 FROM commerce_modules WHERE sku=$1',[sku])).length))return error(c,400,'Invalid product');const parsed=z.object({amount:z.number().min(0).max(10000000).nullable(),active:z.boolean()}).safeParse(v);if(!parsed.success||parsed.data.active&&parsed.data.amount==null)return error(c,400,'Invalid price');await query(db(c),'INSERT INTO commerce_prices(sku,cycle,amount,active) VALUES($1,$2,$3,$4) ON CONFLICT(sku,cycle) DO UPDATE SET amount=$3,active=$4,updated_at=now()',[sku,cycle,parsed.data.amount,parsed.data.active]);return c.json({ok:true})});
