@@ -22,6 +22,7 @@ function AccountGate({L,onLogin}){return <section className="mif-access-gate"><i
 export default function MifSmartShell(){
  const {lang,setLang}=useSite(),L=(a,e)=>tr(lang,a,e);
  const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState(()=>{const x=new URLSearchParams(window.location.search).get('view');return ['chats','operations','schedule','account','integrations'].includes(x)?x:'chats'}),[ownerSetup,setOwnerSetup]=useState(()=>window.location.pathname==='/owner-setup'),[authOpen,setAuthOpen]=useState(()=>window.location.pathname==='/owner-setup'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false);
+ const [workspaces,setWorkspaces]=useState([]),[workspaceId,setWorkspaceId]=useState('');
  const [threads,setThreads]=useState([]),[active,setActive]=useState(''),[messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[asking,setAsking]=useState(false),[chatError,setChatError]=useState(''),[showHistory,setShowHistory]=useState(false);
  const [installPrompt,setInstallPrompt]=useState(null),[installOpen,setInstallOpen]=useState(false),[installing,setInstalling]=useState(false);
  const [integrationOpen,setIntegrationOpen]=useState(false),[notice,setNotice]=useState('');
@@ -29,7 +30,11 @@ export default function MifSmartShell(){
  const device=useMemo(platform,[]),authed=!!session;
  const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false)};window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
- useEffect(()=>{if(!authed){setThreads([]);setActive('');setMessages([]);return;}api('/api/admin/chat/threads').then(r=>setThreads(r.data||[])).catch(()=>{})},[authed]);
+ useEffect(()=>{if(!authed){setWorkspaces([]);setWorkspaceId('');return}api('/api/admin/erp/workspaces').then(r=>{const list=r.data||[];setWorkspaces(list);setWorkspaceId(prev=>list.some(w=>w.id===prev)?prev:(list[0]?.id||''))}).catch(()=>setWorkspaces([]))},[authed]);
+ useEffect(()=>{if(!authed){setThreads([]);setActive('');setMessages([]);return}
+  if(!workspaceId){setThreads([]);return}
+  api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(r=>setThreads(r.data||[])).catch(()=>{})
+ },[authed,workspaceId]);
  useEffect(()=>{areaRef.current?.scrollTo({top:areaRef.current.scrollHeight,behavior:'smooth'})},[messages,asking,tab]);
  useEffect(()=>{const handler=()=>{const url=new URL(window.location.href);setTab(['chats','operations','schedule','account','integrations'].includes(url.searchParams.get('view'))?url.searchParams.get('view'):'chats')};window.addEventListener('popstate',handler);return()=>window.removeEventListener('popstate',handler)},[]);
  const navigate=key=>{setIntegrationOpen(false);setChatError('');setShowHistory(false);setTab(key);const url=new URL(window.location.href);url.searchParams.set('view',key);window.history.pushState({},'',url)};
@@ -44,9 +49,9 @@ export default function MifSmartShell(){
   const ctl=new AbortController();requestRef.current=ctl;
   try{
    const endpoint=authed?'/api/admin/chat/send':'/api/chat/public';
-   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(authed?{thread_id:active||null,question:text}:{question:text})});
+   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(authed?{thread_id:active||null,workspace_id:workspaceId||null,question:text}:{question:text})});
    if(ctl.signal.aborted)return;
-   if(r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads').then(t=>setThreads(t.data||[])).catch(()=>{})}
+   if(r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(t=>setThreads(t.data||[])).catch(()=>{})}
    setMessages(m=>[...m,{role:'assistant',content:r.answer,at:new Date().toISOString()}]);
   }catch(err){if(ctl.signal.aborted)return;setMessages(m=>m.slice(0,-1));setQuestion(text);setChatError(err.message)}finally{setAsking(false);requestRef.current=null}
  };
@@ -63,7 +68,7 @@ export default function MifSmartShell(){
   </header>
   <main className={'mif-body mif-body-'+tab}>
    {tab==='chats'&&<section className="mif-chat-page">
-    {authed&&<button className="mif-history-toggle" onClick={()=>setShowHistory(v=>!v)}><Menu size={17}/>{L('محادثاتي','My chats')}{threads.length>0&&<span>{threads.length}</span>}</button>}
+    {authed&&<div className="rawi-chat-tools"><button className="mif-history-toggle" onClick={()=>setShowHistory(v=>!v)}><Menu size={17}/>{L('محادثاتي','My chats')}{threads.length>0&&<span>{threads.length}</span>}</button>{workspaces.length>0&&<label className="rawi-workspace-picker">{L('المؤسسة','Organization')}<select aria-label={L('المؤسسة النشطة','Active organization')} value={workspaceId} onChange={e=>{setWorkspaceId(e.target.value);setActive('');setMessages([]);setChatError('')}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}</div>}
     {showHistory&&authed&&<div className="mif-history-overlay"><div className="mif-history-panel"><div className="mif-history-head"><strong>{L('المحادثات','Conversations')}</strong><button onClick={()=>setShowHistory(false)} aria-label={L('إغلاق','Close')}><X size={19}/></button></div><button className="mif-history-new" onClick={startNew}><Plus size={16}/>{L('محادثة جديدة','New conversation')}</button>{threads.length?threads.map(t=><div className="mif-history-item" key={t.id}><button onClick={()=>openThread(t.id)}>{t.title}</button><button title={L('حذف المحادثة','Delete chat')} onClick={()=>deleteThread(t.id)}><Trash2 size={15}/></button></div>):<p>{L('لا توجد محادثات محفوظة بعد.','No saved conversations yet.')}</p>}</div><button className="mif-history-dismiss" aria-label="Close" onClick={()=>setShowHistory(false)}/></div>}
     <div className={'mif-chat-scroll'+(!messages.length?' is-empty':'')} ref={areaRef} aria-live="polite">
      {!messages.length?<div className="mif-chat-welcome"><div className="mif-rawi-brand"><img src="/rawi-mark.svg" alt="RAWI"/><div><strong>RAWI <span>راوي</span></strong><small>{L('مساعدك الذكي لإدارة الأعمال','Your AI business assistant')}</small></div></div><h1>{L('إيه اللي نقدر ننجزه النهارده؟','What can we accomplish today?')}</h1><p>{L('اسأل راوي عن أعمالك، واستكشف العمليات والجدول من نفس التطبيق.','Ask RAWI about your work, and explore operations and calendar in one app.')}</p></div>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-mark.svg" alt="RAWI"/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-mark.svg" alt="RAWI"/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
