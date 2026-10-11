@@ -1,4 +1,5 @@
 import {seal,unseal} from './ai-erp.js';
+import {getAIProviders,routeAI} from './ai-router.js';
 import {z} from 'zod';
 const uuid=z.string().uuid();
 const input=z.object({question:z.string().trim().min(1).max(2500)});
@@ -64,7 +65,7 @@ export function installMifChat(app,{db,env,query}){
   const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
   // Guest chat is anonymous but rate-limited atomically using tenant-owned PostgreSQL.
   const sql=db(c),cfg=env(c);
-  if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED==='false')return fail(c,503,'MIF Smart conversations are not configured yet');
+  if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED!=='true')return fail(c,503,'MIF Smart conversations are not configured yet');
   const ip=c.req.header('CF-Connecting-IP')||'';
   if(!ip)return fail(c,403,'Unable to verify visitor request');
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cfg.SESSION_SECRET+'|public-chat|'+ip));
@@ -76,7 +77,7 @@ export function installMifChat(app,{db,env,query}){
    const day=await query(sql,sqlLimit,[key,'day','1 day']);
    if((day[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
   }catch{return fail(c,503,'Public chat protection is temporarily unavailable')}
-  try{return c.json({ok:true,answer:await respondWithOwnerKey(v.data.question,{...env(c),...await platformCredentials(db(c),env(c),query)})})}catch(e){return fail(c,e.status||502,e.message)}
+  try{const result=await routeAI(v.data.question,await getAIProviders(sql,cfg,query));return c.json({ok:true,answer:result.answer})}catch(e){return fail(c,e.status||502,e.message)}
  });
  app.get('/api/admin/chat/threads',async c=>{
   const sql=db(c);if(!sql)return fail(c,503,'Storage is not connected');
@@ -108,7 +109,21 @@ export function installMifChat(app,{db,env,query}){
    history.reverse();
   }
   const stats=await query(sql,"SELECT w.name, (SELECT COUNT(*) FROM erp_contacts WHERE workspace_id=w.id)::int contacts, (SELECT COUNT(*) FROM erp_invoices WHERE workspace_id=w.id)::int invoices, (SELECT COUNT(*) FROM erp_tasks WHERE workspace_id=w.id AND status='pending')::int pending_tasks FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 ORDER BY w.created_at LIMIT 3",[user]);
-  let answer;try{answer=await respondWithOwnerKey(v.data.question,{...env(c),...await platformCredentials(sql,env(c),query)},history,JSON.stringify({workspaces:stats}).slice(0,3000))}catch(e){return fail(c,e.status||502,e.message)}
+  // Every billable request reserves tenant quota atomically, even under concurrency.
+  const claim=await query(sql,`UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
+   FROM erp_memberships m,mif_subscription_plans p WHERE m.workspace_id=s.workspace_id
+   AND m.admin_id=$1 AND p.id=s.plan_id AND p.active=true
+   AND s.status IN ('trial','active') AND s.period_ends_at>now()
+   AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user]);
+  if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
+  let result;try{
+   result=await routeAI(v.data.question,await getAIProviders(sql,env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000));
+  }catch(e){
+   await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
+   return fail(c,e.status||502,e.message);
+  }
+  const answer=result.answer;
+  await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[claim[0].workspace_id,user,result.provider,result.model,result.input_tokens,result.output_tokens]);
   if(!id){
    const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title) VALUES($1,$2) RETURNING id',[user,v.data.question.slice(0,95)]);
    id=created[0].id;
