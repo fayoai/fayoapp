@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {validateRemote,seal,unseal} from './ai-erp.js';
-import {buildOdooModule} from './rawi-module-builder.js';
+import {buildOdooModule,moduleInput} from './rawi-module-builder.js';
+import {getAIProviders,routeAI} from './ai-router.js';
 import {listDeveloperPlatforms} from './rawi-platform-registry.js';
 const uuid=z.string().uuid();
 const fail=(c,status,error)=>c.json({ok:false,error},status);
@@ -111,6 +112,32 @@ export function installRawiDeveloper(app,{db,env,query}){
   return c.json({ok:true,data:listDeveloperPlatforms(),note:'Only Odoo is implemented and enabled'});
  });
  const view="id,label,base_url,database_name,api_version,login,(length(encrypted_credential)>0) has_credential,odoo_version,last_status,last_tested_at,last_summary,created_at";
+ app.post('/api/admin/developer/w/:workspace/modules/plan',async c=>{
+  const g=await gate(c,true);if(g.error)return g.error;
+  const v=z.object({description:z.string().trim().min(12).max(1500),odoo_version:z.enum(['17','18','19','20'])}).safeParse(await parse(c));
+  if(!v.success)return fail(c,400,'Describe the Odoo module and target version');
+  const actor=c.get('adminId'),reservation=await query(g.sql,`UPDATE mif_tenant_subscriptions s
+   SET messages_used=messages_used+1,updated_at=now()
+   FROM mif_subscription_plans p WHERE s.workspace_id=$1 AND p.id=s.plan_id
+   AND p.application='developer' AND p.active=true AND s.status IN ('trial','active')
+   AND s.period_ends_at>now() AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[g.workspace]);
+  if(!reservation.length)return fail(c,402,'Activate a RAWI Developer plan with remaining AI usage');
+  try{
+   const prompt=`Design a BASIC INSTALLABLE Odoo addon specification for Odoo ${v.data.odoo_version}, based on this user request: ${v.data.description}. Return ONLY raw valid JSON, without markdown, in this exact schema:
+    {"technical_name":"lowercase_underscored_id","display_name":"Human readable title","model_name":"short_lowercase_underscored_name","odoo_version":"${v.data.odoo_version}","fields":[{"name":"snake_case_field","label":"Field Label","type":"Char"}]}
+    Allowed field types ONLY Char,Text,Integer,Float,Boolean,Date,Datetime. 1-12 safe nonreserved fields; do not include "name" because it is built in. Use only lowercase letters, numbers and underscores for technical identifiers. No Python/XML/code snippets or unrequested external API calls. The resulting ZIP is a scaffold for review, NOT deployed software.`;
+   const response=await routeAI(prompt,await getAIProviders(g.sql,env(c),query),[],'','developer');
+   const text=String(response.answer||'').trim().replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim();
+   const found=text.match(/\{[\s\S]*\}/);if(!found)throw new Error('AI did not produce a structured Odoo addon proposal');
+   const parsed=moduleInput.safeParse(JSON.parse(found[0]));
+   if(!parsed.success||parsed.data.odoo_version!==v.data.odoo_version)throw new Error('AI proposal failed module safety validation; please revise the request');
+   await query(g.sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[g.workspace,actor,response.provider,response.model,response.input_tokens,response.output_tokens]);
+   return c.json({ok:true,proposal:parsed.data,provider:response.provider,model:response.model,requires_staging_review:true});
+  }catch(e){
+   await query(g.sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[g.workspace]).catch(()=>{});
+   return fail(c,422,e.message||'AI module proposal could not be generated');
+  }
+ });
  app.post('/api/admin/developer/w/:workspace/modules/build',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
   let bytes,technical;
