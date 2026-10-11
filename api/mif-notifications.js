@@ -1,7 +1,7 @@
 import {z} from 'zod';
 const email=z.email().max(180);
 export async function notifyMifInquiry(env={},lead={}){
- const from=String(env.MAIL_FROM||'').trim(),formatted=/^([^<>\\r\\n]{1,100}) <([^<>\\r\\n]+)>$/.exec(from);
+ const from=String(env.MAIL_FROM||'').trim(),formatted=/^([^<>\r\n]{1,100}) <([^<>\r\n]+)>$/.exec(from);
  const sender=email.safeParse(formatted?formatted[2]:from),recipient=email.safeParse(env.MIF_INQUIRY_NOTIFY_EMAIL);
  if(!env.RESEND_API_KEY||!sender.success||!recipient.success)return {status:'not_configured'};
  const text=['MIF Smart — New website inquiry',
