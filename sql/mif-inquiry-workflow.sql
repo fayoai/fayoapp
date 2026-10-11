@@ -15,3 +15,11 @@ CREATE INDEX IF NOT EXISTS mif_site_inquiry_events_by_lead ON mif_site_inquiry_e
 CREATE INDEX IF NOT EXISTS mif_site_inquiries_followup ON mif_site_inquiries(next_action_on) WHERE status<>'closed';
 ALTER TABLE mif_site_inquiries ADD COLUMN IF NOT EXISTS notification_status text NOT NULL DEFAULT 'not_configured' CHECK(notification_status IN('not_configured','sent','failed'));
 ALTER TABLE mif_site_inquiries ADD COLUMN IF NOT EXISTS notified_at timestamptz;
+
+-- Shared enterprise account identity is required inside isolated tenant databases.
+-- Appended to preserve all existing tenant migration checkpoint indexes.
+CREATE TABLE IF NOT EXISTS rawi_account_profiles(
+ admin_id uuid PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+ account_type text NOT NULL CHECK(account_type IN ('enterprise','developer')),
+ created_at timestamptz NOT NULL DEFAULT now()
+);
