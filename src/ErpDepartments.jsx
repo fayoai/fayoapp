@@ -58,7 +58,7 @@ export default function ErpDepartments({section,workspace,lang,notify=()=>{},rea
  const updateLine=(setter,index,key,value)=>setter(x=>({...x,lines:x.lines.map((r,i)=>i===index?{...r,[key]:value}:r)}));
  if(!mod)return null;
  return <section className="erp-core">
-  <div className="erp-core-heading"><div><small>MIF SMART / OPERATIONS</small><h2>{L(mod.ar,mod.en)}</h2></div><button onClick={load} title={L('تحديث البيانات','Refresh')}><RefreshCw size={18}/></button></div>
+  <div className="erp-core-heading"><div><small>RAWI / ERP</small><h2>{L(mod.ar,mod.en)}</h2></div><button onClick={load} title={L('تحديث البيانات','Refresh')}><RefreshCw size={18}/></button></div>
   {error&&<div className="erp-core-error" role="alert">{error}</div>}
   {section==='inventory'&&<div className="erp-core-layout">
    <div className="erp-core-column">
