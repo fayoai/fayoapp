@@ -6,8 +6,9 @@ import {adviseProducts} from '../api/product-advisor.js';
 import {useSite,tr} from './App.jsx';
 import './ai-portal.css';
 
-const productIcons={'MIF-ERP':Boxes,'MIF-CONTROL':ServerCog,'MIF-PARTNERS':Network,'MIF-MARKETING':MessageSquareText,'MIF-HOSTING':HardDrive,'MIF-MODULES':Layers3,'MIF-EMAIL':Mail};
+const productIcons={'MIF-AI-ERP':BrainCircuit,'MIF-ERP':Boxes,'MIF-CONTROL':ServerCog,'MIF-PARTNERS':Network,'MIF-MARKETING':MessageSquareText,'MIF-HOSTING':HardDrive,'MIF-MODULES':Layers3,'MIF-EMAIL':Mail};
 const prompts=[
+ {ar:'أريد منصة AI ERP لإدارة أعمالي',en:'I want an AI ERP platform',icon:BrainCircuit},
  {ar:'أريد Odoo Community المطوّر',en:'I need enhanced Odoo Community',icon:Boxes},
  {ar:'أريد إدارة نسخ عملائي',en:'Manage Odoo client instances',icon:ServerCog},
  {ar:'أريد منصة لشركاء Odoo',en:'Explore Odoo Partner SaaS',icon:Network},
@@ -20,6 +21,7 @@ function getGuidance(question,lang){
  const q=question.toLowerCase().normalize('NFKC');
  const l=(ar,en)=>tr(lang,ar,en);
  const found=(sku)=>offers.find(x=>x.sku===sku);
+ if(isMatch(q,/ai.?erp|erp.?ai|ذكاء اصطناعي.*erp|نظام.*ذكي|ai business platform/i))return {text:l('MIF Smart AI ERP يجمع العملاء والفواتير والمهام والمعرفة في مساحة واحدة، ويتيح ربط OpenAI وOdoo وERPNext وZoho.','MIF Smart AI ERP unifies contacts, invoices, tasks and knowledge with configurable OpenAI, Odoo, ERPNext and Zoho connections.'),items:[found('MIF-AI-ERP')],links:[{to:'/admin',label:l('ادخل إلى AI ERP','Open AI ERP')},{to:'/store/ai-erp',label:l('تفاصيل النظام','Product details')}]};
  const recommendations=adviseProducts(question).map(x=>found(x.sku)).filter(Boolean);
  if(recommendations.length>1)return {text:l('وفقًا لاحتياجك، هذه حلول متكاملة من منتجاتنا الفعلية. افتح كل منتج لمعرفة النطاق وخيارات التسعير قبل الطلب.','Your needs span multiple offerings. Here are matching products from our actual catalogue; review each scope and quotation options.'),items:recommendations,links:[{to:'/store',label:l('عرض كل المنتجات','View all products')}]};
  const product=(sku,ar,en)=>({text:l(ar,en),items:[found(sku)],links:[{to:'/store/'+found(sku).slug,label:l('استعرض المنتج','View product')},{to:'/store',label:l('كل المنتجات','All products')}]});
@@ -46,6 +48,7 @@ export default function AIPortal(){
  const ask=(raw)=>{const question=String(raw||draft).trim().slice(0,500);if(!question)return;setDraft('');const answer=getGuidance(question,lang);setMessages(old=>[...old.slice(-9),{id:Date.now()+Math.random(),question,answer}]);setActive('assistant')};
  const navItems=[
   {id:'overview',icon:BrainCircuit,to:'/',ar:'مساحة الذكاء',en:'Intelligence hub'},
+   {id:'erp',icon:BrainCircuit,to:'/admin',ar:'AI ERP',en:'AI ERP'},
   {id:'store',icon:ShoppingBag,to:'/store',ar:'المتجر والمنتجات',en:'Products & store'},
   {id:'orders',icon:FileText,to:'/orders',ar:'الطلبات والاشتراكات',en:'Orders & billing'},
   {id:'apps',icon:MonitorSmartphone,to:'/apps',ar:'التطبيقات والأجهزة',en:'Apps & devices'},
@@ -65,7 +68,7 @@ export default function AIPortal(){
    </aside>
    <div className="ai-primary">
     <div className="ai-kicker"><span className="ai-kicker-dot"/><span>AI-FIRST EXPERIENCE</span><span className="ai-kicker-line"/></div>
-    <div className="ai-intro"><div><h1>{L('واجهة واحدة.','One interface.')}<span>{L('كل إمكانياتك.','Every capability.')}</span></h1><p>{L('اكتب احتياجك، واستكشف منتجاتنا واشتراكاتنا وخدماتنا من مساحة عمل تفاعلية واحدة، بدون ما تضيع بين صفحات موقع تقليدي.','Describe what you need and discover every product, billing option and service from one interactive workspace.')}</p></div><div className="ai-core-symbol" aria-hidden="true"><div className="ai-core-ring"/><div className="ai-core-inner"><img src="/mif-symbol.png" alt=""/></div><span className="ai-core-node n1"/><span className="ai-core-node n2"/><span className="ai-core-node n3"/></div></div>
+    <div className="ai-intro"><div><h1>{L('AI ERP يبدأ من هنا.','AI ERP starts here.')}<span>{L('كل أعمالك بذكاء.','Your business, intelligent.')}</span></h1><p>{L('اجمع العملاء والفواتير والمهام والمعرفة والأنظمة المتصلة في AI ERP واحد، مع متجر الحلول ومساعد الأعمال المتكامل.','Unify contacts, invoicing, scheduling, knowledge and connected systems in one AI ERP, alongside the solutions store.')}</p></div><div className="ai-core-symbol" aria-hidden="true"><div className="ai-core-ring"/><div className="ai-core-inner"><img src="/mif-symbol.png" alt=""/></div><span className="ai-core-node n1"/><span className="ai-core-node n2"/><span className="ai-core-node n3"/></div></div>
     <div className="ai-workspace">
      <section className="ai-conversation" aria-label={L('المساعد التفاعلي','Interactive assistant')}>
       <div className="ai-pane-head"><div className="ai-agent"><span><img src="/mif-symbol.png" alt=""/></span><div><strong>MIF Assistant</strong><small>{L('مساعد الاستكشاف التفاعلي','Interactive product guide')}</small></div></div><div className="ai-pane-mode"><Activity size={14}/>{L('جاهز للاستكشاف','Ready to explore')}</div></div>
