@@ -13,7 +13,11 @@ test('Single chat input has one visual border, no nested brand bar, and stays ov
  assert.match(css,/\.mif-composer textarea\{[^}]*border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important/);
  assert.match(css,/\.mif-app\{height:100dvh;min-height:100dvh;max-height:100dvh;overflow:hidden/);
  assert.match(css,/\.mif-body-chats\{height:auto;min-height:0/);
- assert.match(css,/\.mif-chat-page>\.mif-composer\{grid-row:3;align-self:end/);
+ assert.match(css,/\.mif-chat-page>\.mif-composer\{grid-row:3;align-self:end;justify-self:center;width:min\(100%,620px\)/);
+ assert.match(ui,/<form className="mif-composer" onSubmit=\{ask\}><div className="mif-composer-field"><textarea/);
+ assert.match(ui,/<\/div><button type="submit" className="rawi-send"/);
+ assert.match(ui,/e\.key==='Enter'&&!e\.shiftKey&&!e\.nativeEvent\?\.isComposing&&e\.keyCode!==229/);
+ assert.match(css,/\.mif-composer-field\{flex:1;min-width:0/);
  assert.match(ui,/<img src="\/rawi-erp-mark\.svg" alt="" width="32" height="32" style=/);
  assert.match(css,/\.mif-app \.mif-login-page \.rawi-auth-heading>img\{[^}]*width:32px!important/);
 });
@@ -72,7 +76,7 @@ test('Account sign-up has exactly name, email and password and backend derives t
 });
 test('Fresh RAWI greeting sits in the middle while the single message composer remains at the bottom',()=>{
  const css=read('src/mif-smart-shell.css'),ui=read('src/MifSmartShell.jsx');
- assert.match(css,/\.mif-chat-scroll\.is-empty\{[^}]*align-items:center;justify-content:center/);
+ assert.match(css,/\.mif-chat-scroll\.is-empty\{[^}]*align-items:center;justify-content:flex-start;padding-top:/);
  assert.match(css,/\.mif-welcome-message\{[^}]*width:fit-content;max-width:100%;align-self:center/);
  assert.match(css,/\.mif-welcome-message p\{[^}]*margin:0/);
  assert.match(ui,/<RawiGreeting lang=\{lang\}\/>/);
@@ -82,4 +86,12 @@ test('Fresh RAWI greeting sits in the middle while the single message composer r
 test('A chat error stays in the scroll region, not in a fourth grid row that displaces the composer',()=>{
  const ui=read('src/MifSmartShell.jsx');
  assert.match(ui,/\{chatError&&<div className="mif-chat-error" role="alert">\{chatError\}<\/div>\}\s*<\/div>\s*<form className="mif-composer"/);
+});
+
+test('Responsive mobile menu uses smaller icons, labels and footprint without changing tab order',()=>{
+ const css=read('src/mif-smart-shell.css');
+ assert.match(css,/\.mif-bottom-nav\{height:calc\(64px \+ env\(safe-area-inset-bottom\)\)/);
+ assert.match(css,/\.mif-bottom-item\{font-size:9px;min-height:49px/);
+ assert.match(css,/\.mif-bottom-item \.mif-bottom-icon svg\{width:19px;height:19px\}/);
+ assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:46px;height:46px/);
 });
