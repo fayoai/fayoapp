@@ -177,3 +177,111 @@
 .rawi-signup-types>button svg{color:#e35a0e}.rawi-signup-types strong{font-size:13px}.rawi-signup-types small{font-size:10px;line-height:1.65;color:#657e81}
 .mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #e35a0e;outline-offset:2px}
 @media(max-width:440px){.rawi-signup-types>button{padding:12px;min-height:117px}.rawi-signup-types small{font-size:9px}}
+
+/* RAWI approved original-orange interface. Layout refinements only; logo files are untouched. */
+.mif-app{
+  --mif-accent:#e35a0e;
+  --rawi-orange:#e35a0e;
+  --rawi-orange-dark:#be4610;
+  --rawi-orange-soft:#fff1e6;
+  --rawi-border:#e7e7e3;
+  --rawi-text:#263138;
+  background:linear-gradient(180deg,#fffefd 0%,#fbfaf8 60%,#f8f7f5 100%);
+  color:var(--rawi-text);
+}
+.mif-topbar{background:#fff;border-bottom:1px solid #eae7e3;box-shadow:0 1px 9px #27221b08}
+.mif-head-control{background:#fff;border-color:#e7e3df;color:#3d4348}
+.mif-head-control:hover{background:#fff7f0;border-color:#f2c3a3}
+.mif-head-signin{background:var(--rawi-orange);border-color:var(--rawi-orange);color:#fff}
+.mif-head-signin:hover{background:var(--rawi-orange-dark);border-color:var(--rawi-orange-dark)}
+.mif-body{width:100%;max-width:1660px}
+.mif-chat-page{width:min(100%,950px);gap:7px}
+.mif-chat-welcome{padding:18px 18px 35px}
+.mif-chat-welcome h1{font-size:clamp(27px,3.4vw,40px);line-height:1.4;color:#252d32}
+.mif-chat-welcome p{font-size:13px;line-height:1.95;max-width:660px;margin-inline:auto}
+.mif-composer{background:#fff;border:1px solid #e6dfd9;border-radius:18px;box-shadow:0 10px 31px #3928190f;padding:11px}
+.mif-composer:focus-within{border-color:#e89b69;box-shadow:0 12px 34px #e35a0e1b}
+.mif-composer textarea{font-size:14px;min-width:0;line-height:1.85;color:#253037}
+.mif-composer button{background:#e35a0e;border-radius:13px}
+.mif-history-toggle{background:#fff;border-color:#ebe6e2;color:#515d62}
+.mif-history-toggle span{background:#fff0e3;color:#b34511}
+.rawi-workspace-picker select{border-color:#ebe2db;color:#634330;background:#fff}
+.rawi-head-logo>span{color:#2e3133}
+.rawi-head-logo>span small{color:#c4541b}
+.mif-chat-footnote{color:#92918e}
+.mif-dialog-wrap{padding:clamp(10px,3vw,24px);background:#16191bc2;backdrop-filter:blur(7px)}
+.mif-dialog{
+  width:min(100%,540px);
+  max-height:min(860px,calc(100dvh - 24px));
+  padding:clamp(21px,3.6vw,36px);
+  border-radius:22px;
+  border:1px solid #eee6df;
+  background:#fff;
+  box-shadow:0 28px 80px #19161538;
+  gap:12px;
+  scrollbar-width:thin;
+}
+.mif-dialog>img{width:60px;height:60px;margin:0 auto;object-fit:contain}
+.mif-dialog h2{font-size:clamp(21px,2.8vw,26px);line-height:1.5;margin:2px 0 4px;color:#252d30}
+.mif-dialog form{display:grid;grid-template-columns:minmax(0,1fr);gap:15px}
+.mif-dialog form label{min-width:0;display:grid;gap:8px;font-size:13px;font-weight:750;color:#35434a;line-height:1.5}
+.mif-dialog form input{
+  width:100%;
+  min-width:0;
+  height:50px;
+  border:1px solid #dedfdd;
+  border-radius:11px;
+  padding:12px 15px;
+  background:#fff;
+  color:#232f34;
+  font-size:14px;
+  transition:box-shadow .15s,border-color .15s;
+}
+.mif-dialog form input::placeholder{color:#a0a5a6}
+.mif-dialog form input:focus{outline:0;border-color:#de7d43;box-shadow:0 0 0 3px #e35a0e17}
+.mif-dialog form>button{min-height:50px;margin-top:7px;background:#e35a0e;border-radius:11px;font-size:14px;font-weight:850}
+.mif-dialog form>button:hover:not(:disabled){background:#c94d12}
+.mif-auth-switch{display:block;color:#b34b18;font-size:13px;font-weight:750;margin:0;padding:10px 5px}
+.rawi-signup-types{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 5px}
+.rawi-signup-types>button{
+  min-width:0;
+  min-height:130px;
+  padding:18px 15px;
+  background:#fcfbf9;
+  border:1px solid #e7e3de;
+  border-radius:15px;
+  box-shadow:none;
+  align-items:flex-start;
+  text-align:start;
+  color:#3a4449;
+  transition:border-color .18s,background .18s,box-shadow .18s;
+}
+.rawi-signup-types>button:hover{border-color:#e3a778;background:#fff9f3}
+.rawi-signup-types>button.selected{background:#fff1e5;border-color:#e35a0e;box-shadow:inset 0 0 0 1px #e35a0e}
+.rawi-signup-types>button svg{color:#e35a0e}
+.rawi-signup-types>button strong{font-size:15px;line-height:1.4}
+.rawi-signup-types>button small{font-size:11px;line-height:1.65;color:#727678}
+.mif-form-error{background:#fff3f0;border:1px solid #f2d1c9;color:#a82f21;border-radius:11px;line-height:1.7}
+.mif-bottom-nav{background:#fff;border-top:1px solid #eae4de;box-shadow:0 -5px 22px #1b1b190b}
+.mif-bottom-item.active{color:#d85314}
+.mif-bottom-item.new .mif-bottom-icon{background:#e35a0e;color:#fff;border-color:#e35a0e}
+.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #d87538;outline-offset:2px}
+@media (max-width:720px){
+ .mif-body-operations,.mif-body-schedule{padding-inline:12px}
+ .mif-dialog-wrap{padding:9px;place-items:center}
+ .mif-dialog{width:min(100%,520px);max-height:calc(100dvh - 18px);padding:21px 17px;border-radius:18px;gap:10px}
+ .mif-dialog h2{font-size:21px}
+ .mif-dialog form{gap:12px}
+ .mif-dialog form input{height:47px}
+ .rawi-signup-types>button{min-height:116px;padding:13px 12px}
+ .rawi-signup-types>button strong{font-size:14px}
+ .rawi-signup-types>button small{font-size:10px}
+ .mif-chat-welcome{padding:14px 10px 25px}
+ .mif-composer{padding:8px;border-radius:16px}
+ .mif-head-control,.mif-head-signin{min-height:38px}
+}
+@media (max-width:375px){
+ .rawi-signup-types{gap:8px}
+ .rawi-signup-types>button{padding:12px 9px}
+ .rawi-signup-types>button small{font-size:9px}
+}
