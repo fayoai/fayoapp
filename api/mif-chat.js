@@ -103,9 +103,13 @@ export function installMifChat(app,{db,env,query}){
   const user=c.get('adminId');
   const rec=await query(sql,"SELECT COUNT(*)::int n FROM mif_chat_messages m JOIN mif_chat_threads t ON t.id=m.thread_id WHERE t.owner_id=$1 AND m.role='user' AND m.created_at>now()-interval '1 minute'",[user]);
   if((rec[0]?.n||0)>=12)return fail(c,429,'Too many messages; try again shortly');
-  let id=v.data.thread_id||null,history=[];
+  const selected=v.data.workspace_id||null;
+   const valid=await query(sql,'SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND ($2::uuid IS NULL OR w.id=$2) ORDER BY w.created_at LIMIT 1',[user,selected]);
+   if(!valid.length)return fail(c,404,'Select an authorized organization');
+   const workspace=valid[0].id;
+   let id=v.data.thread_id||null,history=[];
   if(id){
-   const exists=await query(sql,'SELECT id FROM mif_chat_threads WHERE id=$1 AND owner_id=$2',[id,user]);
+   const exists=await query(sql,'SELECT id FROM mif_chat_threads WHERE id=$1 AND owner_id=$2 AND workspace_id=$3',[id,user,workspace]);
    if(!exists.length)return fail(c,404,'Conversation not found');
    history=await query(sql,'SELECT role,content FROM mif_chat_messages WHERE thread_id=$1 ORDER BY created_at DESC,id DESC LIMIT 12',[id]);
    history.reverse();
