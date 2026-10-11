@@ -135,7 +135,8 @@ jobs:
            console.error('::error::RAWI registration is not active in the deployed Cloudflare Worker. Review DATABASE_URL, SESSION_SECRET, Neon API provisioning and email sender settings. AI connector encryption is optional for signup.');
            process.exit(1);
           }
-          console.log('RAWI email-code registration and compatible password hashing confirmed on the deployed Enterprise Worker.');
+          if(status.workspace_ai_available!==true){console.error('::error::RAWI Workers AI onboarding binding is unavailable in the deployed Enterprise Worker.');process.exit(1)}
+          console.log('RAWI email registration, password hashing, and Workers AI onboarding binding are ready.');
           NODE
       - name: Verify real production domain when configured
         shell: bash
