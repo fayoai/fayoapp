@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {MIF_PRODUCTS} from '../src/mif-product-catalog.js';
 import {notifyMifInquiry} from './mif-notifications.js';
 const name=z.string().trim().min(2).max(160);
 const id=z.string().uuid();
@@ -66,13 +67,19 @@ export function installMifWebsite(app,{db,env,query}){
  app.post('/api/admin/mif/products',async c=>{
   const v=product.safeParse(await read(c));if(!v.success)return error(c,400,'Invalid product');
   const p=v.data;
+  const approved=MIF_PRODUCTS.find(x=>x.code===p.code);
+  if(!approved||p.slug!==approved.slug||p.published!==approved.active)return error(c,403,'Product must match the approved MIF catalogue');
   const x=await query(db(c),'INSERT INTO mif_products(code,slug,title_ar,title_en,category,summary_ar,summary_en,description_ar,description_en,features_ar,features_en,price_halalas,published,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14) ON CONFLICT(code) DO NOTHING RETURNING id',[p.code,p.slug,p.title_ar,p.title_en,p.category,p.summary_ar,p.summary_en,p.description_ar,p.description_en,JSON.stringify(p.features_ar),JSON.stringify(p.features_en),p.price_halalas,p.published,p.sort_order]);
   return x.length?c.json({ok:true,id:x[0].id},201):error(c,409,'Product code already exists');
  });
  app.patch('/api/admin/mif/products/:id',async c=>{
   if(!id.safeParse(c.req.param('id')).success)return error(c,400,'Invalid product');
   const v=product.omit({code:true}).safeParse(await read(c));if(!v.success)return error(c,400,'Invalid product');
-  const p=v.data,rows=await query(db(c),'UPDATE mif_products SET slug=$1,title_ar=$2,title_en=$3,category=$4,summary_ar=$5,summary_en=$6,description_ar=$7,description_en=$8,features_ar=$9::jsonb,features_en=$10::jsonb,price_halalas=$11,published=$12,sort_order=$13,updated_at=now() WHERE id=$14 RETURNING id',[p.slug,p.title_ar,p.title_en,p.category,p.summary_ar,p.summary_en,p.description_ar,p.description_en,JSON.stringify(p.features_ar),JSON.stringify(p.features_en),p.price_halalas,p.published,p.sort_order,c.req.param('id')]);
+  const p=v.data;
+  const existing=await query(db(c),'SELECT code FROM mif_products WHERE id=$1',[c.req.param('id')]);
+  const approved=MIF_PRODUCTS.find(x=>x.code===existing[0]?.code);
+  if(!approved||p.slug!==approved.slug||p.published!==approved.active)return error(c,403,'Only approved product status and slug are allowed');
+  const rows=await query(db(c),'UPDATE mif_products SET slug=$1,title_ar=$2,title_en=$3,category=$4,summary_ar=$5,summary_en=$6,description_ar=$7,description_en=$8,features_ar=$9::jsonb,features_en=$10::jsonb,price_halalas=$11,published=$12,sort_order=$13,updated_at=now() WHERE id=$14 RETURNING id',[p.slug,p.title_ar,p.title_en,p.category,p.summary_ar,p.summary_en,p.description_ar,p.description_en,JSON.stringify(p.features_ar),JSON.stringify(p.features_en),p.price_halalas,p.published,p.sort_order,c.req.param('id')]);
   return rows.length?c.json({ok:true}):error(c,404,'Product not found');
  });
  app.get('/api/admin/mif/pages',async c=>c.json({ok:true,data:await query(db(c),'SELECT * FROM mif_site_pages ORDER BY slug')}));
