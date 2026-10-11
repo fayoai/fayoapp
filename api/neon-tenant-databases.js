@@ -3,8 +3,8 @@
 const safeId=/^[a-z0-9-]{1,60}$/,safeRole=/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 export function tenantDatabaseName(workspaceId,application){
  if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(workspaceId))throw Error('Invalid workspace ID');
- if(!['enterprise','developer'].includes(application))throw Error('Invalid RAWI application');
- return 'rawi_'+(application==='enterprise'?'e':'d')+'_'+workspaceId.replaceAll('-','').toLowerCase();
+ if(application!=='enterprise')throw Error('Only RAWI ERP databases are currently enabled');
+ return 'rawi_e_'+workspaceId.replaceAll('-','').toLowerCase();
 }
 export function neonTenantConfig(env){
  const project=String(env.NEON_PROJECT_ID||'');
