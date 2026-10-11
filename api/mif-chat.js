@@ -78,7 +78,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    if((day[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
   }catch{return fail(c,503,'Public chat protection is temporarily unavailable')}
   try{
-   const visitorMode=cfg.MIF_APP_SURFACE==='developer'?'developer-public':cfg.MIF_APP_SURFACE==='enterprise'?'enterprise-public':'mif-public';
+   const visitorMode=cfg.MIF_APP_SURFACE==='enterprise'?'enterprise-public':'mif-public';
    const products=visitorMode==='mif-public'?await query(sql,'SELECT code,title_ar,title_en,summary_ar,summary_en FROM mif_products WHERE published=true ORDER BY sort_order,created_at LIMIT 12'):[];
    const catalogue=JSON.stringify(products.map(p=>({code:p.code,title_ar:p.title_ar,title_en:p.title_en,summary_ar:p.summary_ar,summary_en:p.summary_en}))).slice(0,3000);
    const result=await routeAI(v.data.question,await getAIProviders(centralDb(c),cfg,query),[],catalogue,visitorMode);
@@ -129,18 +129,9 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
-  const profiles=await query(sql,'SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1',[user]);
-  const accountMode=profiles[0]?.account_type==='developer'?'developer':'enterprise';
   let result;try{
-   // Tenant-scoped aggregates only. No raw contacts, private messages, payment credentials or other organizations.
-   const developers=accountMode==='developer'?await query(sql,`SELECT
-    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1) odoo_databases,
-    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1 AND last_status='ok') verified_connections,
-    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=$1 AND last_status='failed') failed_connections,
-    (SELECT count(*)::int FROM rawi_implementation_projects WHERE workspace_id=$1 AND status='active') active_implementations,
-    (SELECT count(*)::int FROM rawi_odoo_diagnostics WHERE workspace_id=$1 AND status='error') diagnostic_errors,
-    (SELECT coalesce(jsonb_agg(row_data),'[]'::jsonb) FROM (SELECT label,api_version,odoo_version,last_status FROM rawi_odoo_connections WHERE workspace_id=$1 ORDER BY updated_at DESC LIMIT 12) row_data) connections`,[claim[0].workspace_id]):null;
-    const stats=accountMode==='developer'?developers:await query(sql,`SELECT w.name,
+   // Company-scoped ERP aggregates: RAWI never claims unverified account actions.
+    const stats=await query(sql,`SELECT w.name,
    (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=w.id) contacts,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id) invoices,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id AND status='issued' AND due_on<CURRENT_DATE) overdue_invoices,
@@ -152,7 +143,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
-   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify(accountMode==='developer'?{odoo_developer_context:developers?.[0]||{}}:{workspaces:stats}).slice(0,3000),accountMode);
+   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),'enterprise');
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
