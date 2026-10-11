@@ -132,3 +132,21 @@
 - محادثة الزائر العام تستعمل تعليمات MIF Smart، وليس تعليمات RAWI Enterprise، وتُسجل استهلاك النموذج من دون حفظ عنوان IP أو اختلاق مؤسسة عميل.
 - يمكن اختبار الاستضافة بعد تعيين الدومين النهائي: `npm run smoke:public -- https://YOUR-PRODUCTION-DOMAIN`. الفحص يختبر صفحات الموقع والتطبيقين، حالة Neon، الكتالوج، منع الدخول غير المصرح به، وخريطة الموقع. يمكن تعيين متغير مستودع GitHub `MIF_SITE_ORIGIN` لتنفيذه بعد نشر Cloudflare الموثق تلقائيًا.
 - النشر المؤقت والبناء الناجح **لا يثبتان** جاهزية الفوترة أو البريد للتحقق من الحساب أو متجر التطبيقات أو امتثال ERP. لا تُفعّل التسجيل التجاري قبل استكمال التحقق بالبريد واعتماد سياسة الخصوصية.
+
+## CI/CD: حصر أسرار Cloudflare و Neon
+
+تم إنشاء Worker رسمي باسم `mif-smart-platform` على حساب Cloudflare. نشر GitHub Actions يتطلب `CLOUDFLARE_API_TOKEN` و`CLOUDFLARE_ACCOUNT_ID` ولا يتراجع إلى رابط معاينة مؤقتة. عند إدخال أسرار التشغيل التالية في GitHub Actions Secrets، تُمرَّر أثناء النشر عبر `wrangler deploy --secrets-file` دون طباعتها في السجلات أو إدخالها في Git:
+
+| GitHub Secret | Cloudflare Worker binding |
+| --- | --- |
+| `MIF_DATABASE_URL` | `DATABASE_URL` (قاعدة MIF المركزية على Neon) |
+| `MIF_SESSION_SECRET` | `SESSION_SECRET` (نص سري عشوائي لا يقل عن 32 محرفًا) |
+| `MIF_ADMIN_BOOTSTRAP_TOKEN` | `ADMIN_BOOTSTRAP_TOKEN` (عشوائي آمن لا يقل عن 24 محرفًا) |
+| `MIF_CONNECTOR_ENCRYPTION_KEY` | `CONNECTOR_ENCRYPTION_KEY` (عشوائي آمن لا يقل عن 32 محرفًا) |
+| `MIF_PLATFORM_OWNER_EMAIL` | `PLATFORM_OWNER_EMAIL` |
+| `MIF_NEON_API_KEY` | `NEON_API_KEY` **لإنشاء قواعد العملاء بعد إكمال نظام العزل والتفعيل فقط** |
+| `MIF_NEON_ORG_ID` | `NEON_ORG_ID` في حال تطلب حساب Neon تحديد المنظمة |
+
+وعند إضافة Repository Variable باسم `MIF_SITE_ORIGIN` يتم تمريره إلى `SITE_ORIGIN` ويُستخدم لفحص موقع الإنتاج والـSEO. لا تضع أي قيمة سرية في GitHub Variables أو الكود العام.
+
+**الفصل بين قواعد العملاء:** تسجيل حساب RAWI القديم كان ينشئ Workspace منطقيًا داخل Neon المركزي؛ **هذا ليس قاعدة بيانات مستقلة**. لا تفعّل `REGISTRATION_ENABLED=true` قبل ربط Neon Management API وإنشاء قاعدة خاصة بكل عميل وتوجيه جميع قراءات وكتابات RAWI (Enterprise وDeveloper) إليها مع اختبار عدم انتقال البيانات بين العملاء. بقاء هذه الخاصية غير مفعّلة مقصود لحماية بيانات العملاء.

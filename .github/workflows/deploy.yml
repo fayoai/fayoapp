@@ -23,9 +23,45 @@ jobs:
             echo "::error::Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository Actions Secrets."
             exit 1
           fi
-      - name: Deploy MIF Smart Worker to the authenticated Cloudflare account
+      - name: Deploy MIF Smart Worker with optional server-only runtime secrets
         shell: bash
-        run: npx wrangler deploy
+        env:
+          MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
+          MIF_SESSION_SECRET: ${{ secrets.MIF_SESSION_SECRET }}
+          MIF_ADMIN_BOOTSTRAP_TOKEN: ${{ secrets.MIF_ADMIN_BOOTSTRAP_TOKEN }}
+          MIF_CONNECTOR_ENCRYPTION_KEY: ${{ secrets.MIF_CONNECTOR_ENCRYPTION_KEY }}
+          MIF_PLATFORM_OWNER_EMAIL: ${{ secrets.MIF_PLATFORM_OWNER_EMAIL }}
+          MIF_NEON_API_KEY: ${{ secrets.MIF_NEON_API_KEY }}
+          MIF_NEON_ORG_ID: ${{ secrets.MIF_NEON_ORG_ID }}
+          MIF_SITE_ORIGIN: ${{ vars.MIF_SITE_ORIGIN }}
+        run: |
+          set -euo pipefail
+          SECRET_FILE="${RUNNER_TEMP}/mif-worker-secrets.json"
+          export SECRET_FILE
+          trap 'rm -f "$SECRET_FILE"' EXIT
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from 'node:fs';
+          const names={
+            MIF_DATABASE_URL:'DATABASE_URL',
+            MIF_SESSION_SECRET:'SESSION_SECRET',
+            MIF_ADMIN_BOOTSTRAP_TOKEN:'ADMIN_BOOTSTRAP_TOKEN',
+            MIF_CONNECTOR_ENCRYPTION_KEY:'CONNECTOR_ENCRYPTION_KEY',
+            MIF_PLATFORM_OWNER_EMAIL:'PLATFORM_OWNER_EMAIL',
+            MIF_NEON_API_KEY:'NEON_API_KEY',
+            MIF_NEON_ORG_ID:'NEON_ORG_ID',
+            MIF_SITE_ORIGIN:'SITE_ORIGIN'
+          };
+          const values=Object.fromEntries(
+            Object.entries(names).filter(([source])=>!!process.env[source]).map(([source,target])=>[target,process.env[source]])
+          );
+          if(Object.keys(values).length)writeFileSync(process.env.SECRET_FILE,JSON.stringify(values),{mode:0o600});
+          console.log('Configured Worker runtime binding names: '+(Object.keys(values).join(', ')||'none; existing Worker secrets will be retained'));
+          NODE
+          if [[ -f "$SECRET_FILE" ]]; then
+            npx wrangler deploy --secrets-file "$SECRET_FILE"
+          else
+            npx wrangler deploy
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
