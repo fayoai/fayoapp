@@ -8,7 +8,7 @@ export default function MifOwnerSetup(){
   try{
    await api('/api/admin/bootstrap',{method:'POST',body:JSON.stringify(form)});
    await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})});
-   window.location.replace('/mif/console');
+   window.location.replace('/admin');
   }catch(e){setError(e.message||'Unable to create platform owner')}finally{setPending(false)}
  };
  return <section className="mif-company-login">
@@ -22,6 +22,6 @@ export default function MifOwnerSetup(){
    {error&&<p role="alert">{error}</p>}
    <button type="submit" disabled={pending}>{pending?L('جارٍ إعداد المنصة...','Initializing...'):L('إنشاء مدير المنصة','Create platform administrator')}</button>
   </form>
-  <a href="/mif/console">{L('العودة لتسجيل الدخول','Back to SaaS login')}</a>
+  <a href="/admin">{L('العودة لتسجيل الدخول','Back to SaaS login')}</a>
  </section>
 }
