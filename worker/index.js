@@ -1,7 +1,24 @@
 import app from '../api/app.js';
 import {neon} from '@neondatabase/serverless';
 import {runErpSchedule} from '../api/ai-erp.js';
+const companyPage=path=>path==='/mif'||path==='/mif/'||path.startsWith('/mif/');
 export default {
- fetch(request,env,ctx){return app.fetch(request,env,ctx)},
- async scheduled(_controller,env,ctx){if(!env.DATABASE_URL)return;const run=()=>runErpSchedule(neon(env.DATABASE_URL));ctx.waitUntil(run().catch(err=>console.error('ERP scheduled task error',err.message)))}
+ async fetch(request,env,ctx){
+  const url=new URL(request.url);
+  // Public corporate pages may be indexed; RAWI customer routes and management remain private.
+  if((request.method==='GET'||request.method==='HEAD')&&companyPage(url.pathname)&&env.ASSETS){
+   const landing=new URL('/',request.url);
+   const assets=await env.ASSETS.fetch(new Request(landing,request));
+   const robots=url.pathname.startsWith('/mif/console')?'noindex,nofollow':'index,follow';
+   if(!(assets.headers.get('content-type')||'').includes('text/html'))return assets;
+   return new HTMLRewriter()
+    .on('meta[name="robots"]',{element(el){el.setAttribute('content',robots)}})
+    .on('meta[name="description"]',{element(el){el.setAttribute('content','MIF Smart develops connected business software. RAWI AI ERP is the first product.')}})
+    .on('title',{element(el){el.setInnerContent('MIF Smart | Business Software')}})
+    .on('link[rel="icon"]',{element(el){el.setAttribute('href','/mif-app-icon.svg')}})
+    .transform(assets);
+  }
+  return app.fetch(request,env,ctx);
+ },
+ async scheduled(_controller,env,ctx){if(!env.DATABASE_URL)return;ctx.waitUntil(runErpSchedule(neon(env.DATABASE_URL)).catch(err=>console.error('RAWI task schedule error',err.message)))}
 };

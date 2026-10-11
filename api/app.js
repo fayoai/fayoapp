@@ -7,6 +7,8 @@ import {installAiErp} from './ai-erp.js';
 import {installErpCore} from './erp-core.js';
 import {installMifChat} from './mif-chat.js';
 import {installPlatformSaas} from './platform-saas.js';
+import {installMifWebsite} from './mif-website.js';
+import {installRawiAdvanced} from './rawi-advanced.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const db=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -20,7 +22,7 @@ async function equal(a,b){const x=new Uint8Array(await crypto.subtle.digest('SHA
 function originOK(c){const origin=c.req.header('origin');if(!origin)return true;try{const src=new URL(origin),dst=new URL(c.req.url);return src.origin===dst.origin||(['localhost','127.0.0.1'].includes(src.hostname)&&['localhost','127.0.0.1'].includes(dst.hostname))}catch{return false}}
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
-app.get('/api/health',async c=>{const sql=db(c);if(!sql)return c.json({ok:false,service:'MIF Smart',database:'not_configured'},503);try{await query(sql,'SELECT 1');return c.json({ok:true,service:'MIF Smart RAWI',database:'connected'})}catch{return fail(c,503,'Database unavailable')}});
+app.get('/api/health',async c=>{const sql=db(c);if(!sql)return c.json({ok:false,service:'MIF Smart',database:'not_configured'},503);try{await query(sql,'SELECT 1');return c.json({ok:true,service:'RAWI AI ERP',database:'connected'})}catch{return fail(c,503,'Database unavailable')}});
 app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN;if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap)))return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins');if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
 // Customer accounts are independent from the platform operator's OpenAI settings.
 app.post('/api/admin/register',async c=>{
@@ -37,7 +39,7 @@ app.post('/api/admin/register',async c=>{
  if(attempts[0]?.allowed!==1)return fail(c,429,'Too many account registrations; try later');
  const user=v.data,salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt),email=user.email.toLowerCase();
  // The single statement creates all account records atomically.
- const stmt="WITH account AS(INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3) ON CONFLICT(email) DO NOTHING RETURNING id,email), workspace AS(INSERT INTO erp_workspaces(name,owner_id,currency) SELECT $4,id,'SAR' FROM account RETURNING id,owner_id), member AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id), templ AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'MIF Smart' FROM workspace RETURNING id) SELECT account.id,account.email FROM account JOIN workspace ON workspace.owner_id=account.id JOIN member ON member.workspace_id=workspace.id JOIN templ ON TRUE";
+ const stmt="WITH account AS(INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3) ON CONFLICT(email) DO NOTHING RETURNING id,email), workspace AS(INSERT INTO erp_workspaces(name,owner_id,currency) SELECT $4,id,'SAR' FROM account RETURNING id,owner_id), member AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id), templ AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'RAWI' FROM workspace RETURNING id) SELECT account.id,account.email FROM account JOIN workspace ON workspace.owner_id=account.id JOIN member ON member.workspace_id=workspace.id JOIN templ ON TRUE";
  const rows=await query(sql,stmt,[email,passwordHash,salt,user.organization]);
  if(!rows.length)return fail(c,409,'Email address is already registered');
  const row=rows[0],token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience('mif-console').setIssuedAt().setExpirationTime('8h').sign(key);
@@ -52,4 +54,6 @@ installAiErp(app,{db,env,query});
 installErpCore(app,{db,env,query});
 installMifChat(app,{db,env,query});
 installPlatformSaas(app,{db,env,query});
+installMifWebsite(app,{db,env,query});
+installRawiAdvanced(app,{db,query});
 export default app;

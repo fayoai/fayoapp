@@ -3,7 +3,7 @@ import { neon } from '@neondatabase/serverless';
 const url=process.env.DATABASE_URL;
 if(!url) throw new Error('DATABASE_URL is required.');
 const sql=neon(url);
-const schema=readFileSync(new URL('../sql/auth.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/ai-erp.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/erp-core.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-chat.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-platform.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-guest.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-saas.sql',import.meta.url),'utf8');
+const schema=readFileSync(new URL('../sql/auth.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/ai-erp.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/erp-core.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-chat.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-platform.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-guest.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-saas.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/mif-website.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/rawi-advanced.sql',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../sql/rawi-chat-isolation.sql',import.meta.url),'utf8');
 // Neon HTTP executes one statement per query; split at semicolons that are outside strings.
 let buf='',quote=false, statements=[];
 for(let i=0;i<schema.length;i++) {

@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "MIF Smart",
-  "short_name": "MIF Smart",
-  "description": "MIF Smart — Intelligent conversations and business operations",
+  "name": "RAWI | راوي AI ERP",
+  "short_name": "RAWI",
+  "description": "RAWI — Independent AI-powered business ERP",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,8 +10,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#151f24",
-  "theme_color": "#e35a0e",
+  "background_color": "#292253",
+  "theme_color": "#6556e8",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
@@ -21,13 +21,13 @@
   ],
   "icons": [
     {
-      "src": "/mif-app-icon.svg",
+      "src": "/rawi-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/mif-app-icon.svg",
+      "src": "/rawi-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
@@ -35,12 +35,12 @@
   ],
   "shortcuts": [
     {
-      "name": "MIF Smart",
-      "short_name": "MIF Smart",
+      "name": "RAWI",
+      "short_name": "RAWI",
       "url": "/",
       "icons": [
         {
-          "src": "/mif-app-icon.svg",
+          "src": "/rawi-mark.svg",
           "sizes": "any",
           "type": "image/svg+xml"
         }

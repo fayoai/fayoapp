@@ -3,14 +3,18 @@ import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
 import path from 'node:path';
 const root=process.cwd(),read=p=>readFileSync(path.join(root,p),'utf8');
-test('MIF Smart brand is the only user facing product name',()=>{
+test('RAWI is the independent client application and MIF Smart retains corporate ownership',()=>{
  const manifest=JSON.parse(read('public/manifest.webmanifest'));
- assert.equal(manifest.name,'MIF Smart');
+ assert.equal(manifest.short_name,'RAWI');
+ assert.match(manifest.name,/RAWI/);
  assert.equal(manifest.start_url,'/');
  assert.equal(manifest.display,'standalone');
- assert.ok(manifest.icons.every(i=>i.src==='/mif-app-icon.svg'));
+ assert.ok(manifest.icons.every(i=>i.src==='/rawi-mark.svg'));
+ assert.match(read('src/MifCompany.jsx'),/mif-logo.svg/);
+ assert.match(read('src/MifCompany.jsx'),/mif\/products/);
+ assert.match(read('src/App.jsx'),/MifCompany/);
  assert.ok(manifest.icons.every(i=>existsSync(path.join(root,'public',i.src.slice(1)))));
- assert.doesNotMatch(read('index.html'),/AI ERP|MIF ERP/);
+ assert.doesNotMatch(read('index.html'),/MIF ERP|MIF Smart AI ERP/);
 });
 test('Chat-first app has exactly five bottom navigation actions',()=>{
  const shell=read('src/MifSmartShell.jsx'),app=read('src/App.jsx');
@@ -20,7 +24,9 @@ test('Chat-first app has exactly five bottom navigation actions',()=>{
  assert.match(shell,/mif-bottom-nav/);
  assert.match(shell,/authed&&/);
  assert.match(shell,/beforeinstallprompt/);
- assert.match(shell,/mif-logo.svg/);
+ assert.match(shell,/rawi-mark.svg/);
+ assert.doesNotMatch(shell,/mif-logo.svg/);
+ assert.match(shell,/\/mif\/console/);
  assert.doesNotMatch(shell,/MIF Smart AI ERP|Odoo Community|<CommerceStore/);
 });
 test('Only installed applications are offered for download',()=>{
