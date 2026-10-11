@@ -1,3 +1,4 @@
+import {surfacePolicy} from './surface-policy.js';
 import app from '../api/app.js';
 import {neon} from '@neondatabase/serverless';
 import {runErpSchedule} from '../api/ai-erp.js';
@@ -7,6 +8,8 @@ const developerPage=path=>path==='/developer'||path==='/developer/';
 export default {
  async fetch(request,env,ctx){
   const url=new URL(request.url);
+  const boundary=surfacePolicy(env.MIF_APP_SURFACE,url.pathname,request.method,{enterprise:env.RAWI_ENTERPRISE_ORIGIN,developer:env.RAWI_DEVELOPER_ORIGIN});
+  if(boundary){if(boundary.location)return Response.redirect(new URL(boundary.location,url),boundary.status);return new Response('Not found',{status:boundary.status,headers:{'Cache-Control':'no-store'}})}
   if(url.pathname==='/sitemap.xml'){
    const canonical=getCanonicalOrigin(env);
    if(!canonical||url.origin!==canonical||!env.DATABASE_URL)return new Response('Not found',{status:404,headers:{'Cache-Control':'no-store'}});

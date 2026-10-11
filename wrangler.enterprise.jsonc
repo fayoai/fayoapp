@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rawi-enterprise",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-11",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "MIF_APP_SURFACE": "enterprise"
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/",
+      "/api/*",
+      "/developer",
+      "/developer/*",
+      "/mif",
+      "/mif/*",
+      "/owner-setup",
+      "/sitemap.xml"
+    ]
+  }
+}

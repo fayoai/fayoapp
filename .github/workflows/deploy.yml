@@ -23,7 +23,7 @@ jobs:
             echo "::error::Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository Actions Secrets."
             exit 1
           fi
-      - name: Deploy MIF Smart Worker with optional server-only runtime secrets
+      - name: Deploy independent Enterprise, Developer and MIF SaaS Workers
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -59,11 +59,14 @@ jobs:
           if(Object.keys(values).length)writeFileSync(process.env.SECRET_FILE,JSON.stringify(values),{mode:0o600});
           console.log('Configured Worker runtime binding names: '+(Object.keys(values).join(', ')||'none; existing Worker secrets will be retained'));
           NODE
-          if [[ -f "$SECRET_FILE" ]]; then
-            npx wrangler deploy --secrets-file "$SECRET_FILE"
-          else
-            npx wrangler deploy
-          fi
+          for config in wrangler.enterprise.jsonc wrangler.developer.jsonc wrangler.jsonc; do
+            echo "Deploying independently configured Worker: $config"
+            if [[ -f "$SECRET_FILE" ]]; then
+              npx wrangler deploy --config "$config" --secrets-file "$SECRET_FILE"
+            else
+              npx wrangler deploy --config "$config"
+            fi
+          done
       - name: Verify real production domain when configured
         shell: bash
         env:

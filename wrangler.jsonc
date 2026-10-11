@@ -21,7 +21,13 @@
       "/developer/",
       "/mif",
       "/mif/*",
-      "/sitemap.xml"
+      "/sitemap.xml",
+      "/"
     ]
+  },
+  "vars": {
+    "MIF_APP_SURFACE": "mif",
+    "RAWI_ENTERPRISE_ORIGIN": "https://rawi-enterprise.fayosaas.workers.dev",
+    "RAWI_DEVELOPER_ORIGIN": "https://rawi-developer.fayosaas.workers.dev"
   }
 }
