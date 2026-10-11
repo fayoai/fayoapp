@@ -1,14 +1,14 @@
 /* RAWI ERP — approved application stylesheet. One layout system, one blue identity. */
 :root{--rawi-blue:#2166e8;--rawi-blue-dark:#194fb9;--rawi-text:#172640;--rawi-muted:#697d99;--rawi-border:#e2eaf5;--rawi-bg:#f8fbff}
 .mif-app,.mif-app *{box-sizing:border-box}
-.mif-app{min-height:100dvh;background:var(--rawi-bg);color:var(--rawi-text);font-family:'IBM Plex Sans Arabic','DM Sans',system-ui,sans-serif;display:flex;flex-direction:column}
+.mif-app{height:100dvh;min-height:100dvh;max-height:100dvh;overflow:hidden;background:var(--rawi-bg);color:var(--rawi-text);font-family:'IBM Plex Sans Arabic','DM Sans',system-ui,sans-serif;display:flex;flex-direction:column}
 .mif-app button,.mif-app input,.mif-app textarea,.mif-app select{font:inherit}
 .mif-app button{cursor:pointer}
 .mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid var(--rawi-blue);outline-offset:3px}
 .mif-app button:disabled{cursor:not-allowed}
-.mif-body{width:100%;max-width:1500px;margin:0 auto;flex:1;min-height:0;padding:25px clamp(16px,3vw,46px) calc(116px + env(safe-area-inset-bottom))}
-.mif-body-chats{height:calc(100dvh - 80px - env(safe-area-inset-bottom));min-height:0;max-width:none;display:flex;overflow:hidden;padding:0 clamp(11px,3vw,30px)}
-.mif-chat-page{width:min(100%,870px);height:100%;min-height:0;flex:1;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;position:relative}
+.mif-body{width:100%;max-width:1500px;margin:0 auto calc(80px + env(safe-area-inset-bottom));flex:1 1 0;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;padding:25px clamp(16px,3vw,46px) 24px}
+.mif-body-chats{height:auto;min-height:0;max-width:none;display:flex;overflow:hidden;padding:0 clamp(11px,3vw,30px)}
+.mif-chat-page{width:min(100%,870px);height:100%;min-height:0;min-width:0;flex:1;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;position:relative}
 .rawi-chat-tools{display:flex;align-items:center;gap:9px;flex:none;min-height:46px;padding:3px 5px}
 .rawi-enterprise-tools{justify-content:flex-start}
 .rawi-setup-state{color:#1a57bf;font-size:12px;background:#edf4ff;padding:8px 12px;border-radius:10px}
@@ -39,7 +39,7 @@
 .mif-spinner{animation:rawi-spin 1s linear infinite}
 @keyframes rawi-spin{to{transform:rotate(360deg)}}
 .mif-chat-error,.mif-form-error{color:#a52e37;background:#fff2f2;border:1px solid #f4cdd3;padding:10px 13px;border-radius:11px;font-size:12px;margin:7px 0}
-.mif-composer{width:100%;min-height:58px;max-height:178px;display:flex;flex-direction:row;align-items:flex-end;gap:10px;padding:9px 11px 9px 15px;margin:0 0 9px;border:1.5px solid #d6e3f7;border-radius:19px;background:#fff;box-shadow:0 4px 18px #2143740a;transition:border-color .17s,box-shadow .17s}
+.mif-chat-page>.mif-composer{grid-row:3;align-self:end;width:100%;min-height:58px;max-height:178px;display:flex;flex-direction:row;align-items:flex-end;gap:10px;padding:9px 11px 9px 15px;margin:0 0 10px;border:1.5px solid #d6e3f7;border-radius:19px;background:#fff;box-shadow:0 4px 18px #2143740a;transition:border-color .17s,box-shadow .17s}
 .mif-composer:focus-within{border-color:var(--rawi-blue);box-shadow:0 0 0 3px #2166e817,0 12px 35px #21437412}
 .mif-composer textarea{flex:1;width:100%;min-width:0;resize:none;height:auto;min-height:35px;max-height:150px;overflow-y:auto;appearance:none;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;color:var(--rawi-text);line-height:1.75;font-size:14px;padding:6px 2px 1px;margin:0}
 .mif-composer textarea::placeholder{color:#91a0b6}
@@ -63,7 +63,7 @@
 .mif-account-detail button{border:0;border-radius:10px;padding:8px 11px;color:var(--rawi-blue);background:#edf4ff}
 .mif-login-page{width:min(100%,365px);max-height:calc(100dvh - 126px);overflow-y:auto;display:flex;flex-direction:column;gap:15px;padding:24px;margin:0 auto;border:1px solid var(--rawi-border);border-radius:20px;background:#fff;box-shadow:0 12px 35px #173f8510}
 .rawi-auth-heading{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;color:var(--rawi-text);font-size:16px;font-weight:800}
-.rawi-auth-heading img{width:34px;height:34px;object-fit:contain;flex:none}
+.mif-app .mif-login-page .rawi-auth-heading>img{display:block!important;width:32px!important;height:32px!important;max-width:32px!important;max-height:32px!important;object-fit:contain;flex:0 0 32px!important}
 .rawi-auth-heading strong{font-size:16px;font-weight:800}
 .rawi-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;border:1px solid #e4edf9;background:#f3f7fe}
 .rawi-auth-tabs button{border:0;border-radius:9px;background:transparent;color:#8291a7;min-height:36px;font-size:12px;font-weight:750}
@@ -96,8 +96,8 @@
 .mif-close{position:absolute;top:13px;inset-inline-end:13px;display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:10px;background:#edf4ff;color:var(--rawi-blue)}
 .mif-toast{position:fixed;inset:auto 18px calc(105px + env(safe-area-inset-bottom)) auto;z-index:60;display:flex;align-items:center;gap:10px;border:1px solid #d6e5fa;border-radius:12px;background:#fff;color:var(--rawi-text);padding:13px 18px;box-shadow:0 12px 30px #182c521c}
 .mif-body-operations,.mif-body-integrations,.mif-body-schedule{max-width:1500px;width:100%}
-.mif-body.mif-body-auth{height:calc(100dvh - 80px - env(safe-area-inset-bottom));min-height:0;max-width:none;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:18px 16px}
-.mif-protected-auth{width:min(100%,365px);max-height:100%;flex:none;margin:auto}
+.mif-body.mif-body-auth{height:auto;min-height:0;max-width:none;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:18px 16px}
+.mif-protected-auth{width:min(100%,365px);max-height:100%;min-width:0;flex:none;margin:auto}
 .mif-protected-auth .mif-login-page{width:100%;margin:0}
 .mif-chats-history{width:min(100%,820px);margin:12px auto;padding:0 4px;display:flex;flex-direction:column;gap:17px}
 .mif-chats-history-heading{display:flex;align-items:center;gap:11px;padding:12px 0 15px;border-bottom:1px solid var(--rawi-border);color:var(--rawi-blue)}
@@ -111,8 +111,8 @@
 .mif-chats-empty{color:var(--rawi-muted);font-size:14px;text-align:center;margin:30px auto}
 @media(min-width:900px){.mif-bottom-nav{width:min(610px,100%);left:50%;right:auto;transform:translateX(-50%);border-inline:1px solid #e4ebf7;border-radius:19px 19px 0 0}}
 @media(max-width:700px){
- .mif-body{padding:13px 12px calc(100px + env(safe-area-inset-bottom))}
- .mif-body-chats{height:calc(100dvh - 76px - env(safe-area-inset-bottom));padding:1px 9px 0}
+ .mif-body{margin-bottom:calc(76px + env(safe-area-inset-bottom));padding:13px 12px 17px}
+ .mif-body-chats{height:auto;padding:1px 9px 0}
  .mif-chat-page{width:100%;grid-template-rows:auto minmax(0,1fr) auto}
  .rawi-chat-tools{gap:5px;min-height:43px}
  .rawi-workspace-picker{font-size:10px}
@@ -131,10 +131,10 @@
  .mif-bottom-item.new .mif-bottom-icon{width:58px;height:58px}
  .mif-account{margin:12px auto;padding:22px 19px;border-radius:20px}
  .mif-login-page{padding:20px 18px;max-height:calc(100dvh - 105px)}
- .mif-body.mif-body-auth{height:calc(100dvh - 76px - env(safe-area-inset-bottom));padding:12px 14px}
+ .mif-body.mif-body-auth{height:auto;padding:12px 14px}
  .mif-bubble{max-width:95%}
 }
-@media(max-height:550px){.mif-bottom-nav{height:68px}.mif-bottom-item.new .mif-bottom-icon{width:52px;height:52px}.mif-body-chats{height:calc(100dvh - 68px)}.mif-chat-scroll{padding-bottom:5px}.mif-composer textarea{min-height:30px}}
+@media(max-height:550px){.mif-bottom-nav{height:68px}.mif-bottom-item.new .mif-bottom-icon{width:52px;height:52px}.mif-body{margin-bottom:calc(68px + env(safe-area-inset-bottom))}.mif-body-chats{height:auto}.mif-chat-scroll{padding-bottom:5px}.mif-composer textarea{min-height:30px}}
 @media(prefers-reduced-motion:reduce){.mif-app *, .mif-app *::before, .mif-app *::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 @media(max-width:420px){.mif-bottom-item{font-size:9px}.mif-bottom-item .mif-bottom-icon{width:32px}.mif-welcome-message{gap:9px}.mif-welcome-message p{font-size:17px}}
 
