@@ -31,7 +31,7 @@ test('Neon verification does not accept incorrect ownership',async()=>{
 });
 test('registration stays gated until real production credentials are configured',async()=>{
  const res=await app.request('https://app.example/api/admin/register',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.88'},body:JSON.stringify({email:'test@example.com',password:'very-long-password-abc',name:'Tester',organization:'Company',account_type:'enterprise'})},{DATABASE_URL:'postgresql://user:password@neon.example/central',SESSION_SECRET:'s'.repeat(48),REGISTRATION_ENABLED:'true',MIF_APP_SURFACE:'enterprise'});
- assert.equal(res.status,503);assert.match((await res.json()).error,/Secure production registration/);
+ assert.equal(res.status,503);assert.match((await res.json()).error,/Email verification is not configured/);
 });
 test('ERP and MIF have separate signed session audiences',()=>{
  assert.notEqual(sessionCookieFor('enterprise'),sessionCookieFor('mif'));
