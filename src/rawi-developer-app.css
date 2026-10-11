@@ -19,3 +19,23 @@
 @media(max-width:1100px){.rd-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.rd-panels{grid-template-columns:1fr}.rd-layout{grid-template-columns:205px minmax(0,1fr)}}
 @media(max-width:800px){.rd-entry{grid-template-columns:1fr;gap:20px}.rd-layout{grid-template-columns:1fr}.rd-sidebar{padding:10px;flex-direction:row;align-items:center;gap:13px}.rd-sidebar-top{display:none}.rd-sidebar nav{flex:1;flex-direction:row;overflow-x:auto;gap:5px;scrollbar-width:thin}.rd-sidebar nav button{white-space:nowrap;flex-shrink:0}.rd-sidebar-foot{margin:0;padding:0;border:0}.rd-sidebar-foot>div{display:none}.rd-sidebar-foot button{white-space:nowrap}.rd-title{flex-wrap:wrap}.rd-title label{flex:1}.rd-chat{grid-template-columns:1fr}.rd-chat-history{display:flex;align-items:center;overflow-x:auto;gap:8px;padding:9px;border-inline-end:0;border-bottom:1px solid #eee}.rd-chat-history>div{flex-shrink:0}.rd-chat-history>button{width:auto;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rd-chat-window{min-height:380px}.rd-chat-empty{min-height:340px}}
 @media(max-width:520px){.rd-header{padding:0 13px;height:65px}.rd-brand img{width:38px;height:41px}.rd-brand span{font-size:15px}.rd-brand small{font-size:9px}.rd-odoo-badge{display:none}.rd-entry{padding:25px 14px}.rd-intro h1{font-size:32px}.rd-feature-grid{gap:7px}.rd-feature-grid>div{padding:13px 9px;font-size:10px;gap:6px}.rd-feature-grid svg{width:17px}.rd-main{padding:15px 12px}.rd-sidebar nav button{min-height:40px;padding:9px}.rd-title h1{font-size:24px}.rd-title label{width:100%}.rd-stats{gap:8px}.rd-stat{padding:14px}.rd-stat strong{font-size:20px}.rd-stat small{font-size:10px}.rd-overview-hero{padding:20px}.rd-chat-window{padding:11px}.rd-message{max-width:95%}}
+
+/* The Odoo Studio section belongs exclusively to Developer; no Enterprise palette is changed. */
+.rd-app .rawi-dev-hero{background:linear-gradient(125deg,#0b0c0d,#292827);border-color:#292929;color:#fff}
+.rd-app .rawi-dev-hero p{color:#d4d2c9}
+.rd-app .rawi-dev-hero-aside{border-color:#494435}
+.rd-app .rawi-dev-workspace{border-color:#e4e2dd;background:#fff}
+.rd-app .rawi-dev-workspace button,.rd-app .rawi-dev-actions button,.rd-app .rawi-dev-panel>button,.rd-app .rawi-dev-diagnostic-pick button{color:#554709;border-color:#e9dfad;background:#fffdf4}
+.rd-app .rawi-dev-nav button.active,.rd-app .rawi-dev-nav button.active:hover{background:#ffd21a;border-color:#ffd21a;color:#121212;box-shadow:0 5px 13px #c5a21920}
+.rd-app .rawi-dev-nav button:hover:not(.active){background:#fffae4;border-color:#e7d182;color:#594613}
+.rd-app .rawi-dev-panel{border-color:#e7e6e2}
+.rd-app .rawi-dev-panel h2 svg{color:#b59514}
+.rd-app .rawi-dev form button[type=submit],.rd-app .rawi-dev form button[type=submit]:hover{background:#101112;color:#ffd21a;border-color:#101112}
+.rd-app .rawi-dev-field input:focus,.rd-app .rawi-dev-field textarea:focus,.rd-app .rawi-dev-field select:focus{border-color:#bfa72e;box-shadow:0 0 0 3px #ffd21a30}
+.rd-app .rawi-dev-status.ok{background:#fff8d5;color:#77620c}
+.rd-app .rawi-dev-modules>div>span{background:#fff8d9;color:#6b590f}
+.rd-app .rawi-dev-connection{border-color:#e5e4df;background:#fefefd}
+.rd-app .rawi-dev-field-row>button{color:#665217}
+.rd-app .rawi-dev .rawi-dev-check .passed{color:#97790a}
+.rd-app .rawi-dev-success{background:#fff8df;border-color:#ecdba4;color:#645112}
+.rd-app .rawi-dev-hero>div:first-child>span,.rd-app .rawi-dev-hero-aside svg{color:#ffd21a}
