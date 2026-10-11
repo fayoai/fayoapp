@@ -18,6 +18,7 @@ import {attachTenantDb} from './tenant-runtime.js';
 import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './neon-tenant-databases.js';
 import {migrateTenantBatch} from './tenant-migrations.js';
 import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailReady} from './rawi-email-verification.js';
+import {installRawiCompany} from './rawi-company.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -81,7 +82,7 @@ app.post('/api/admin/verify-email',async c=>{
  const sql=centralDb(c),settings=env(c),surface=loginSurface(c);
  if(surface!=='enterprise')return fail(c,404,'Not found');
  if(!sql||!secret(c))return fail(c,503,'Email verification unavailable');
- const v=z.object({email:z.email().max(180),code:z.string().regex(/^\\d{6}$/)}).safeParse(await parse(c));
+ const v=z.object({email:z.email().max(180),code:z.string().regex(/^\d{6}$/)}).safeParse(await parse(c));
  if(!v.success)return fail(c,400,'Enter a valid 6-digit verification code');
  const email=v.data.email.toLowerCase(),hash=await hashVerificationCode(settings.SESSION_SECRET,email,v.data.code);
  const pending=await query(sql,`DELETE FROM rawi_pending_signups
@@ -210,6 +211,12 @@ app.use('/api/admin/*',async(c,next)=>{
   if(routing)return fail(c,routing.status,routing.error);
  }catch(e){console.error('Customer Neon routing failed',e?.message);return fail(c,503,'Customer database unavailable')}
  c.set('centralSQL',central);
+ if(surface==='enterprise'&&!['/api/admin/me','/api/admin/logout'].includes(c.req.path)
+  &&!c.req.path.startsWith('/api/admin/company/')){
+  const pending=await query(central,`SELECT 1 FROM rawi_company_profiles p
+   JOIN erp_workspaces w ON w.id=p.workspace_id WHERE w.owner_id=$1 AND p.completed_at IS NULL LIMIT 1`,[payload.sub]);
+  if(pending.length)return fail(c,409,'Complete your company profile first');
+ }
  return next();
 });
 app.post('/api/admin/logout',c=>{deleteCookie(c,sessionCookieFor(loginSurface(c)),{path:'/'});return c.json({ok:true})});
@@ -223,7 +230,8 @@ app.get('/api/admin/my-subscription',async c=>{
  WHERE m.admin_id=$1 ORDER BY w.created_at DESC`,[c.get('adminId')]);
  return c.json({ok:true,data});
 });
-app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
+app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);const pending=await query(centralDb(c),`SELECT w.id workspace_id FROM erp_workspaces w JOIN rawi_company_profiles p ON p.workspace_id=w.id WHERE w.owner_id=$1 AND p.completed_at IS NULL LIMIT 1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,company_setup_required:pending.length>0,setup_workspace_id:pending[0]?.workspace_id||null,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
+installRawiCompany(app,{centralDb,env,query});
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
