@@ -102,6 +102,69 @@ export default function MifSmartShell(){
    setMessages(m=>[...m,{role:'assistant',content:r.answer,at:new Date().toISOString()}]);
   }catch(err){if(ctl.signal.aborted)return;setMessages(m=>m.slice(0,-1));setQuestion(question.trim());setDocuments(pendingDocs);setChatError(err.message)}finally{setAsking(false);requestRef.current=null}
  };
+ const addDocuments=async event=>{
+  const files=Array.from(event.target.files||[]);event.target.value='';
+  if(!files.length)return;
+  setChatError('');setFilesBusy(true);
+  try{
+   if(documents.length+files.length>maxDocuments)throw new Error(L('الحد الأقصى مرفقان لكل رسالة.','You can attach up to two files per message.'));
+   let bytes=documents.reduce((total,doc)=>total+doc.size,0);const batch=[];
+   for(const file of files){
+    const name=file.name.slice(0,120),extension=name.split('.').pop()?.toLowerCase(),mime_type=documentMimeByExtension[extension];
+    if(!mime_type||file.name.length>120)throw new Error(L('نوع الملف غير مدعوم.','Unsupported document format.'));
+    if(file.size<1||file.size>maxDocumentSize||bytes+file.size>maxDocumentTotal)throw new Error(L('حجم المستندات كبير. الحد 1.5 ميجابايت للملف و2.5 ميجابايت للإجمالي.','Documents are limited to 1.5 MB each and 2.5 MB total.'));
+    const raw=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Could not read document'));reader.readAsDataURL(file)});
+    const encoded=raw.slice(raw.indexOf(',')+1);if(!encoded)throw new Error(L('تعذر قراءة الملف.','Could not read document.'));
+    batch.push({name,mime_type,data:'data:'+mime_type+';base64,'+encoded,size:file.size});bytes+=file.size;
+   }
+   setDocuments(old=>[...old,...batch]);
+  }catch(error){setChatError(error.message)}finally{setFilesBusy(false)}
+ };
+ const appendTranscript=text=>setQuestion(old=>(old.trim()?old.trim()+' ':'')+text);
+ const toggleMicrophone=async()=>{
+  if(recording){
+   if(speechRef.current){speechRef.current.stop();return}
+   if(recorderRef.current?.state==='recording'){recorderRef.current.stop();return}
+  }
+  setChatError('');
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(Recognition){
+   try{
+    const speech=new Recognition();speech.lang=lang==='ar'?'ar-SA':'en-US';speech.interimResults=false;speech.continuous=false;
+    speech.onresult=event=>{const transcript=Array.from(event.results).map(result=>result[0]?.transcript||'').join(' ').trim();if(transcript)appendTranscript(transcript)};
+    speech.onerror=event=>{if(event.error!=='aborted'&&event.error!=='no-speech')setChatError(L('تعذر التعرف على الصوت. تحقق من إذن الميكروفون.','Could not recognize speech. Check microphone permission.'))};
+    speech.onend=()=>{speechRef.current=null;setRecording(false)};
+    speechRef.current=speech;speech.start();setRecording(true);return;
+   }catch{speechRef.current=null;setRecording(false)}
+  }
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setChatError(L('الميكروفون غير متاح في هذا المتصفح.','Microphone recording is not supported by this browser.'));return}
+  let stream;
+  try{
+   stream=await navigator.mediaDevices.getUserMedia({audio:true});
+   const types=['audio/webm;codecs=opus','audio/mp4','audio/ogg'];
+   const type=types.find(t=>MediaRecorder.isTypeSupported?.(t));
+   const recorder=new MediaRecorder(stream,type?{mimeType:type}:undefined),chunks=[];
+   recorderRef.current=recorder;
+   recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data)};
+   recorder.onerror=()=>setChatError(L('تعذر تسجيل الصوت.','Audio recording failed.'));
+   recorder.onstop=async()=>{
+    if(recordTimeoutRef.current)window.clearTimeout(recordTimeoutRef.current);
+    recorderRef.current=null;stream.getTracks().forEach(track=>track.stop());setRecording(false);
+    if(!chunks.length)return;
+    const audio=new Blob(chunks,{type:recorder.mimeType||type||'audio/webm'});
+    if(audio.size>1500000){setChatError(L('التسجيل كبير جدًا.','The recording is too large.'));return}
+    setTranscribing(true);
+    try{
+     const formData=new FormData();formData.append('audio',audio,'voice.webm');
+     const response=await fetch('/api/chat/transcribe',{method:'POST',credentials:'same-origin',body:formData});
+     const result=await response.json();if(!response.ok)throw new Error(result.error||'Speech transcription failed');
+     if(result.text)appendTranscript(String(result.text).slice(0,2500));
+    }catch(error){setChatError(error.message)}finally{setTranscribing(false)}
+   };
+   recorder.start();setRecording(true);
+   recordTimeoutRef.current=window.setTimeout(()=>{if(recorder.state==='recording')recorder.stop()},25000);
+  }catch(error){stream?.getTracks().forEach(track=>track.stop());setRecording(false);setChatError(L('لا يمكن استخدام الميكروفون. تحقق من أذونات المتصفح.','Microphone access is unavailable. Check browser permissions.'))}
+ };
  const install=async()=>{if(installed)return;if(installPrompt){setInstalling(true);try{await installPrompt.prompt();const result=await installPrompt.userChoice;if(result?.outcome==='accepted'){setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}}setInstallPrompt(null);setInstallOpen(false)}finally{setInstalling(false)}}else setInstallOpen(true)};
  const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
 const authPanel=<section className="mif-login-page rawi-login-compact" aria-label={L('الدخول أو إنشاء حساب','Sign in or sign up')}>
