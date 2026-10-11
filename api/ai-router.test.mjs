@@ -20,13 +20,14 @@ test('Free Groq and OpenRouter models use server-side credentials and never rece
  const saved=globalThis.fetch;const calls=[];
  globalThis.fetch=async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body),headers:opt.headers});return {ok:true,json:async()=>({choices:[{message:{content:'Free model answer'}}],usage:{prompt_tokens:12,completion_tokens:5}})}};
  try{
-  const a=await routeAI('How do I organize sales?',[{code:'groq',model:'openai/gpt-oss-20b',key:'server-private'}],[],'PRIVATE_CUSTOMER_123');
+  const a=await routeAI('How do I organize sales?',[{code:'groq',model:'openai/gpt-oss-20b',key:'server-private'}],[{role:'user',content:'SAVED_PRIVATE_HISTORY'}],'PRIVATE_CUSTOMER_123');
   const o=await routeAI('Hi',[{code:'openrouter',model:'openrouter/free',key:'server-private'}],[],'PRIVATE_CUSTOMER_123');
   assert.equal(a.provider,'groq');assert.equal(o.provider,'openrouter');
   assert.equal(a.input_tokens,12);assert.equal(o.output_tokens,5);
   assert.equal(calls[0].url,'https://api.groq.com/openai/v1/chat/completions');
   assert.equal(calls[1].url,'https://openrouter.ai/api/v1/chat/completions');
   assert.ok(calls.every(c=>!JSON.stringify(c.body).includes('PRIVATE_CUSTOMER_123')));
+  assert.ok(calls.every(c=>!JSON.stringify(c.body).includes('SAVED_PRIVATE_HISTORY')));
   assert.ok(calls.every(c=>c.headers.Authorization==='Bearer server-private'));
  }finally{globalThis.fetch=saved}
 });
