@@ -26,7 +26,7 @@ test('Signup is independent of optional encrypted AI connector credentials',()=>
  assert.ok(readiness.includes('mailReady(settings)'));
  assert.ok(readiness.includes('neonTenantConfig(settings)'));
  assert.doesNotMatch(readiness,/CONNECTOR_ENCRYPTION_KEY/);
- assert.match(providers,/unseal\(p\.encrypted_key,env\.CONNECTOR_ENCRYPTION_KEY\)/);
+ assert.match(providers,/unsealProviderSecret\(p\.encrypted_key,env\)/);
 });
 
 test('Email signup reports stable worker hashing revision without exposing private diagnostic traces',()=>{

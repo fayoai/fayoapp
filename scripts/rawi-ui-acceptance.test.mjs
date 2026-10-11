@@ -34,7 +34,7 @@ test('MIF Smart product manager is directly accessible at products route and sho
  assert.match(site,/href="\/mif\/console\/products"/);
  assert.match(console,/MIF_PRODUCTS\.map/);
  assert.match(console,/\/mif\/console\//);
- assert.match(console,/\['platform','database','website','products','pages','inquiries'\]/);
+ assert.match(console,/\['platform','ai','database','website','products','pages','inquiries'\]/);
  assert.match(console,/databaseState==='unavailable'/);
  assert.match(console,/mif-product-admin-footer|status-soon/);
 });
