@@ -86,6 +86,20 @@ export function installErpCore(app,{db,query}){
   const rows=await query(g.sql,"UPDATE erp_documents SET status=$1 WHERE id=$2 AND workspace_id=$3 AND ((status='draft' AND $1 IN('confirmed','cancelled')) OR (status='confirmed' AND $1 IN('completed','cancelled'))) RETURNING id,status",[x.data.status,c.req.param('id'),g.workspace]);
   return rows.length?c.json({ok:true,data:rows[0]}):fail(c,409,'Invalid document transition');
  });
+ app.post('/api/admin/erp/w/:workspace/core/documents/:id/invoice',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const id=c.req.param('id');if(!uid.safeParse(id).success)return fail(c,400,'Invalid sales document');
+  const docs=await query(g.sql,"SELECT * FROM erp_documents WHERE workspace_id=$1 AND id=$2 AND kind='sale' AND status IN('confirmed','completed')",[g.workspace,id]);
+  if(!docs.length)return fail(c,409,'Confirm a sales order before creating its invoice');
+  const d=docs[0];
+  const previous=await query(g.sql,'SELECT id,invoice_no FROM erp_invoices WHERE workspace_id=$1 AND source_document_id=$2',[g.workspace,id]);
+  if(previous.length)return c.json({ok:true,data:previous[0],existing:true});
+  const lines=(d.lines||[]).map(x=>({description:x.name,quantity:Number(x.quantity),unit_price:Number(x.unit_halalas)/100,amount_halalas:Number(x.total_halalas),vat_halalas:Math.round(Number(x.total_halalas)*.15)}));
+  const stmt="WITH seq AS(INSERT INTO erp_invoice_sequences(workspace_id,year,last_number) VALUES($1,EXTRACT(YEAR FROM CURRENT_DATE)::int,1) ON CONFLICT(workspace_id,year) DO UPDATE SET last_number=erp_invoice_sequences.last_number+1 RETURNING year,last_number), created AS(INSERT INTO erp_invoices(workspace_id,invoice_no,customer_id,lines,subtotal_halalas,vat_halalas,total_halalas,source_document_id,notes,currency) SELECT $1,'MIF-'||seq.year||'-'||lpad(seq.last_number::text,6,'0'),$2,$3::jsonb,$4,$5,$6,$7,$8,w.currency FROM seq JOIN erp_workspaces w ON w.id=$1 ON CONFLICT(source_document_id) DO NOTHING RETURNING id,invoice_no) SELECT * FROM created";
+  const rows=await query(g.sql,stmt,[g.workspace,d.partner_id,JSON.stringify(lines),d.subtotal_halalas,d.vat_halalas,d.total_halalas,id,'Generated from '+d.doc_no]);
+  if(!rows.length){const existing=await query(g.sql,'SELECT id,invoice_no FROM erp_invoices WHERE workspace_id=$1 AND source_document_id=$2',[g.workspace,id]);return existing.length?c.json({ok:true,data:existing[0],existing:true}):fail(c,409,'Invoice could not be created')}
+  return c.json({ok:true,data:rows[0]},201);
+ });
  app.post('/api/admin/erp/w/:workspace/core/accounts',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;const v=accountSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid account');
   const x=v.data;const rows=await query(g.sql,'INSERT INTO erp_accounts(workspace_id,code,name,type) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id,code) DO UPDATE SET name=EXCLUDED.name,type=EXCLUDED.type RETURNING *',[g.workspace,x.code,x.name,x.type]);
