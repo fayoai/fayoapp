@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Hono} from 'hono';
 import {installMifChat,respondWithOwnerKey} from './mif-chat.js';
 const user='11111111-1111-4111-8111-111111111111';
-const root=()=>{const app=new Hono();const statements=[];app.use('/api/admin/*',async(c,next)=>{c.set('adminId',user);await next()});installMifChat(app,{db:()=>({}),env:()=>({SESSION_SECRET:'a-strong-session-secret-at-least-thirty-two-characters'}),query:async(_db,sql,args=[])=>{statements.push({sql,args});return []}});return {app,statements}};
+const root=()=>{const app=new Hono();const statements=[];app.use('/api/admin/*',async(c,next)=>{c.set('adminId',user);await next()});installMifChat(app,{db:()=>({}),env:()=>({SESSION_SECRET:'a-strong-session-secret-at-least-thirty-two-characters',PUBLIC_CHAT_ENABLED:'true'}),query:async(_db,sql,args=[])=>{statements.push({sql,args});return []}});return {app,statements}};
 const send=(app,path,body)=>app.request('http://localhost'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
 test('Public chat requires an identifiable visitor',async()=>{const {app}=root();const r=await send(app,'/api/chat/public',{question:'Hello'});assert.equal(r.status,403)});
 test('Owner OpenAI credentials are not exposed to ordinary accounts',async()=>{const {app}=root();const r=await app.request('http://localhost/api/admin/platform/openai');assert.equal(r.status,403)});
