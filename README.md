@@ -1,9 +1,9 @@
-# MIF Smart 7.1 — Corporate SaaS + RAWI AI ERP
+# MIF Smart 7.3 — Corporate SaaS + RAWI AI ERP
 
 **Two different brands and product surfaces.**
 
 - **MIF Smart** is the company, its public website (`/mif`), its products catalogue and its owner SaaS console (`/mif/console`). The company identity uses its original orange logo.
-- **RAWI | راوي** is an independent AI-powered ERP product, available at `/`. RAWI uses its own purple/teal emblem and name, including the installable PWA/native shells. RAWI is the first registered company product, not an MIF brand alias.
+- **RAWI | راوي** is an independent AI-powered ERP product, available at `/`. RAWI retains its approved original orange (#e35a0e) icon and product identity, including the installable PWA/native shells. RAWI is the first registered company product, not an MIF brand alias.
 
 ### RAWI features available in code
 
@@ -13,7 +13,7 @@ Tenant-scoped client management, sales/purchase documents, inventory and stock m
 
 ### MIF Smart features available in code
 
-A corporate marketing website with editable identity, SEO, contact data, product pages and published content pages. Owner-only console includes product and website management, incoming enquiries, SaaS subscriptions, AI provider configuration (OpenAI/Anthropic/Gemini), AI usage reports and Neon PostgreSQL health diagnostics. Only RAWI is seeded as a product.
+A corporate marketing website with editable identity, SEO, contact data, product pages and published content pages. Owner-only console includes product and website management, incoming enquiries, SaaS subscriptions, AI provider configuration (OpenAI/Anthropic/Gemini/Groq/OpenRouter/Workers AI), AI usage reports and Neon PostgreSQL health diagnostics. Only RAWI is seeded as a product.
 
 ### Deploy
 
@@ -36,3 +36,19 @@ See `MIF_SMART_SETUP_AR.md`.
 - Additive migration: `sql/rawi-activities.sql`, plus provider CHECK-constraint updates in `sql/mif-saas.sql`. Apply migrations only after backups and validation.
 - Public demo does not run paid workflows without real Worker secrets, database binding, an active subscription and genuine provider credentials/bindings.
 - **Identity assets (RAWI icon and MIF company identity) are unchanged in 7.1.**
+
+## Release 7.3 — completing operational onboarding and tenant management
+
+- New Enterprise and Developers registrations create an owned workspace, profile, template and an **internal evaluation entitlement** atomically. Evaluation defaults to 7 days and 30 messages, configurable through `RAWI_TRIAL_DAYS` (1–30) and `RAWI_TRIAL_MESSAGE_LIMIT` (1–500). This does not create external AI provider credits. The owner can change or deactivate the evaluation plan in MIF Smart.
+- Authentication attempts are throttled with database-atomic counters; no raw IP address or email is stored in those counters.
+- RAWI account screen shows the actual per-workspace message balance and plan status. Registration UI reports when public registration is disabled.
+- Owners can add **existing registered RAWI users** to an organization, assign Administrator or Read-only roles, change permissions or revoke access. The owner role cannot be assigned or revoked through that API. Email invitations and verification are not yet implemented.
+- Odoo Developers can edit connection settings and rotate credentials, paginate module inventories and reassign or unlink implementations without corrupting related records. Connection deletion respects project links and cleans diagnostic history.
+- MIF Smart owner console audits production configuration (DB, sessions, encryption, provider keys, registration, owner identity, plans and site origin) without revealing secrets.
+- Configuration examples no longer include obsolete checkout integrations.
+
+## Deployment blockers — do not confuse a preview with a production ERP
+
+The GitHub workflow publishes a **temporary Cloudflare preview** when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are absent. A permanent hostname, persistent secure Worker bindings, real AI provider account credentials and a verified email sending service must be configured separately. Do not switch public registration on before implementing production email verification and abuse safeguards. No automated recurring payment collection has been implemented.
+
+Advanced ERP vertical compliance, bank reconciliation, e-invoicing/ZATCA integration, full statutory payroll, country-specific legal requirements, on-server Odoo deployment, and real client acceptance testing are **not complete**. Their implementation depends on requirements, real access and domain validation, not just interface scaffolding.
