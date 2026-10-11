@@ -6,7 +6,7 @@ const failed=(c,status,error)=>c.json({ok:false,error},status);
 const payload=async c=>{try{return await c.req.json()}catch{return {}}};
 const model=z.string().regex(/^[a-zA-Z0-9._@/:-]{2,150}$/);
 const providerInput=z.object({model,enabled:z.boolean(),priority:z.number().int().min(1).max(999),secret:z.string().min(12).max(4000).optional()});
-const planInput=z.object({code:z.string().regex(/^[a-z0-9-]{2,40}$/),title:z.string().trim().min(2).max(120),cycle:z.enum(['monthly','yearly']),price_halalas:z.number().int().min(0).max(1000000000),message_limit:z.number().int().min(1).max(1000000),active:z.boolean()});
+const planInput=z.object({code:z.string().regex(/^[a-z0-9-]{2,40}$/),title:z.string().trim().min(2).max(120),cycle:z.enum(['monthly','yearly']),price_halalas:z.number().int().min(0).max(1000000000),product_code:z.enum(['RAWI-AI-ERP','RAWI-DEVELOPERS']),message_limit:z.number().int().min(1).max(1000000),active:z.boolean()});
 const subscriptionInput=z.object({plan_id:uuid,status:z.enum(['trial','active','past_due','suspended','cancelled']),period_ends_at:z.iso.datetime({offset:true}),reset_usage:z.boolean().default(false)});
 const names={openai:'OpenAI',anthropic:'Anthropic Claude',gemini:'Google Gemini',groq:'GroqCloud',openrouter:'OpenRouter',workers_ai:'Cloudflare Workers AI'};
 const keyVars={openai:'OPENAI_API_KEY',anthropic:'ANTHROPIC_API_KEY',gemini:'GEMINI_API_KEY',groq:'GROQ_API_KEY',openrouter:'OPENROUTER_API_KEY',workers_ai:''};
@@ -62,27 +62,30 @@ export function installPlatformSaas(app,{db,env,query}){
   const usage=await query(db(c),"SELECT provider,count(*)::int requests,coalesce(sum(input_tokens),0)::bigint input_tokens,coalesce(sum(output_tokens),0)::bigint output_tokens FROM mif_ai_usage WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' GROUP BY provider");
   return c.json({ok:true,period:'UTC today',source:'MIF Smart measured AI requests only',external_credits_verified:false,usage:providerCodes.map(code=>({provider:code,...(usage.find(u=>u.provider===code)||{requests:0,input_tokens:0,output_tokens:0})}))});
  });
- app.get('/api/admin/platform/plans',async c=>c.json({ok:true,data:await query(db(c),'SELECT id,code,title,cycle,price_halalas,message_limit,active,created_at FROM mif_subscription_plans ORDER BY created_at DESC')}));
+ app.get('/api/admin/platform/plans',async c=>c.json({ok:true,data:await query(db(c),'SELECT id,code,title,cycle,product_code,price_halalas,message_limit,active,created_at FROM mif_subscription_plans ORDER BY created_at DESC')}));
  app.post('/api/admin/platform/plans',async c=>{
   const v=planInput.safeParse(await payload(c));if(!v.success)return failed(c,400,'Invalid subscription plan');
   const x=v.data;
-  const rows=await query(db(c),'INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(code) DO NOTHING RETURNING id',[x.code,x.title,x.cycle,x.price_halalas,x.message_limit,x.active]);
+  const rows=await query(db(c),'INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active,product_code) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(code) DO NOTHING RETURNING id',[x.code,x.title,x.cycle,x.price_halalas,x.message_limit,x.active,x.product_code]);
   return rows.length?c.json({ok:true,id:rows[0].id},201):failed(c,409,'Plan code already exists');
  });
  app.patch('/api/admin/platform/plans/:id',async c=>{
   if(!uuid.safeParse(c.req.param('id')).success)return failed(c,400,'Invalid plan');
-  const v=planInput.omit({code:true}).safeParse(await payload(c));if(!v.success)return failed(c,400,'Invalid plan settings');const x=v.data;
+  const v=planInput.omit({code:true,product_code:true}).safeParse(await payload(c));if(!v.success)return failed(c,400,'Invalid plan settings');const x=v.data;
   const rows=await query(db(c),'UPDATE mif_subscription_plans SET title=$1,cycle=$2,price_halalas=$3,message_limit=$4,active=$5 WHERE id=$6 RETURNING id',[x.title,x.cycle,x.price_halalas,x.message_limit,x.active,c.req.param('id')]);
   return rows.length?c.json({ok:true}):failed(c,404,'Plan not found');
  });
- app.get('/api/admin/platform/tenants',async c=>c.json({ok:true,data:await query(db(c),`SELECT w.id,w.name,w.created_at,a.email owner_email,s.plan_id,s.status subscription_status,s.messages_used,s.period_starts_at,s.period_ends_at,p.title plan_title,p.message_limit FROM erp_workspaces w JOIN admins a ON a.id=w.owner_id LEFT JOIN mif_tenant_subscriptions s ON s.workspace_id=w.id LEFT JOIN mif_subscription_plans p ON p.id=s.plan_id ORDER BY w.created_at DESC LIMIT 500`)}));
+ app.get('/api/admin/platform/tenants',async c=>c.json({ok:true,data:await query(db(c),`SELECT w.id,w.name,w.created_at,a.email owner_email,s.plan_id,s.status subscription_status,s.messages_used,s.period_starts_at,s.period_ends_at,p.title plan_title,p.message_limit,COALESCE(profile.account_type,'enterprise') account_type FROM erp_workspaces w JOIN admins a ON a.id=w.owner_id LEFT JOIN mif_tenant_subscriptions s ON s.workspace_id=w.id LEFT JOIN mif_subscription_plans p ON p.id=s.plan_id LEFT JOIN rawi_account_profiles profile ON profile.admin_id=w.owner_id ORDER BY w.created_at DESC LIMIT 500`)}));
  app.put('/api/admin/platform/tenants/:id/subscription',async c=>{
   const id=c.req.param('id'),v=subscriptionInput.safeParse(await payload(c));
   if(!uuid.safeParse(id).success||!v.success)return failed(c,400,'Invalid subscription');
   const sql=db(c),x=v.data,ends=new Date(x.period_ends_at);
   if(ends<=new Date()&&!['cancelled','suspended'].includes(x.status))return failed(c,400,'Subscription end date must be in the future');
   const rows=await query(sql,`INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,period_ends_at)
-    SELECT w.id,p.id,$3,$4::timestamptz FROM erp_workspaces w CROSS JOIN mif_subscription_plans p WHERE w.id=$1 AND p.id=$2 AND p.active=true
+    SELECT w.id,p.id,$3,$4::timestamptz FROM erp_workspaces w CROSS JOIN mif_subscription_plans p
+      LEFT JOIN rawi_account_profiles owner_profile ON owner_profile.admin_id=w.owner_id
+      WHERE w.id=$1 AND p.id=$2 AND p.active=true
+      AND p.product_code=CASE WHEN owner_profile.account_type='developer' THEN 'RAWI-DEVELOPERS' ELSE 'RAWI-AI-ERP' END
     ON CONFLICT(workspace_id) DO UPDATE SET plan_id=EXCLUDED.plan_id,status=EXCLUDED.status,period_starts_at=CASE WHEN $5 THEN now() ELSE mif_tenant_subscriptions.period_starts_at END,period_ends_at=EXCLUDED.period_ends_at,messages_used=CASE WHEN $5 THEN 0 ELSE mif_tenant_subscriptions.messages_used END,updated_at=now() RETURNING workspace_id`,[id,x.plan_id,x.status,x.period_ends_at,x.reset_usage]);
   return rows.length?c.json({ok:true}):failed(c,404,'Tenant or active plan not found');
  });
