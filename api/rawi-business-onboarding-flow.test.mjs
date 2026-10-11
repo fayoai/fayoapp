@@ -60,7 +60,7 @@ test('Operations UI is generated from industry schema, not a pre-existing list o
  const screen=readFileSync(new URL('../src/RawiGeneratedWorkspace.jsx',import.meta.url),'utf8');
  assert.match(shell,/RawiGeneratedWorkspace/);
  assert.match(shell,/\/api\/admin\/company\/plan/);
- assert.match(screen,/blueprint\.repositories/);
+ assert.match(screen,/blueprint\?\.repositories/);
  assert.match(screen,/selected\.fields\.map/);
  assert.match(screen,/\/propose/);
  assert.doesNotMatch(screen,/const sections=/);
