@@ -101,3 +101,10 @@
  .erp-nav button{font-size:12px;padding:10px 12px;min-height:43px}
  .erp-panel table{min-width:0}
 }
+
+.erp-business-setup-summary{display:flex;flex-direction:column;gap:9px;background:#f5f9ff;border:1px solid #d7e5fa;border-radius:13px;padding:14px 16px;margin-bottom:15px}
+.erp-business-setup-summary>div:first-child{display:flex;align-items:center;gap:8px;color:#2166e8;font-size:14px}
+.erp-business-setup-summary p{margin:0;font-size:12px;line-height:1.8;color:#445c7e}
+.erp-business-setup-summary small{font-size:11px;color:#768ba5}
+.erp-business-setup-departments{display:flex;flex-wrap:wrap;gap:6px}
+.erp-business-setup-departments span{font-size:11px;font-weight:650;color:#2556a5;padding:5px 8px;background:#fff;border:1px solid #d9e6fa;border-radius:8px}
