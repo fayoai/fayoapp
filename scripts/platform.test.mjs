@@ -5,8 +5,10 @@ import path from 'node:path';
 const root=process.cwd(),read=p=>readFileSync(path.join(root,p),'utf8');
 test('RAWI is the independent client application and MIF Smart retains corporate ownership',()=>{
  const manifest=JSON.parse(read('public/manifest.webmanifest'));
- assert.equal(manifest.short_name,'RAWI ERP');
- assert.match(manifest.name,/RAWI/);
+ assert.equal(manifest.short_name,'نظام راوي');
+ const en=JSON.parse(read('public/manifest.en.webmanifest'));
+ assert.equal(en.short_name,'Rawi ERP');
+ assert.equal(manifest.name,'نظام راوي');
  assert.equal(manifest.start_url,'/');
  assert.equal(manifest.display,'standalone');
  assert.ok(manifest.icons.every(i=>i.src==='/rawi-erp-mark.svg'));
