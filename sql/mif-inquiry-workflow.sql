@@ -13,3 +13,5 @@ CREATE TABLE IF NOT EXISTS mif_site_inquiry_events(
 );
 CREATE INDEX IF NOT EXISTS mif_site_inquiry_events_by_lead ON mif_site_inquiry_events(inquiry_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS mif_site_inquiries_followup ON mif_site_inquiries(next_action_on) WHERE status<>'closed';
+ALTER TABLE mif_site_inquiries ADD COLUMN IF NOT EXISTS notification_status text NOT NULL DEFAULT 'not_configured' CHECK(notification_status IN('not_configured','sent','failed'));
+ALTER TABLE mif_site_inquiries ADD COLUMN IF NOT EXISTS notified_at timestamptz;
