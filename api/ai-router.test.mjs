@@ -65,3 +65,20 @@ test('Public published company catalogue can reach free AI providers without pri
   assert.ok(!JSON.stringify(requested[0]).includes('PRIVATE_CHAT_HISTORY'));
  }finally{globalThis.fetch=prev}
 });
+
+test('OpenAI receives validated document bytes as input_file alongside the typed prompt',async()=>{
+ const prev=globalThis.fetch;let body;
+ globalThis.fetch=async(_url,opts)=>{body=JSON.parse(opts.body);return {ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'Document reviewed'}]}]})}};
+ try{
+  const data='data:application/pdf;base64,'+Buffer.from('%PDF-1.7').toString('base64');
+  const answer=await routeAI('Summarize',[{code:'groq',model:'test',key:'blocked'},{code:'openai',model:'test',key:'private'}],[],'','enterprise',[{name:'example.pdf',mime_type:'application/pdf',data}]);
+  assert.equal(answer.answer,'Document reviewed');
+  assert.equal(body.input.at(-1).content[0].text,'Summarize');
+  assert.deepEqual(body.input.at(-1).content[1],{type:'input_file',filename:'example.pdf',file_data:data});
+  assert.equal(body.store,false);
+ }finally{globalThis.fetch=prev}
+});
+test('Document prompts refuse providers that would drop their contents',async()=>{
+ const data='data:application/pdf;base64,'+Buffer.from('PDF').toString('base64');
+ await assert.rejects(routeAI('Analyze',[{code:'groq',model:'test',key:'private'}],[],'','enterprise',[{name:'invoice.pdf',mime_type:'application/pdf',data}]),/requires an enabled OpenAI provider/);
+});
