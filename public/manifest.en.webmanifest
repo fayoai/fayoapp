@@ -1,0 +1,50 @@
+{
+  "id": "/",
+  "name": "Rawi ERP",
+  "short_name": "Rawi ERP",
+  "description": "Rawi ERP intelligent enterprise management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "background_color": "#f7faff",
+  "theme_color": "#2166e8",
+  "orientation": "any",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/rawi-erp-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/rawi-erp-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rawi ERP",
+      "short_name": "Rawi",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/rawi-erp-mark.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
