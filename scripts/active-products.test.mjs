@@ -19,9 +19,8 @@ test('only MIF control plane and RAWI ERP have a functional application entry',(
   assert.ok(!existsSync(new URL('../'+name,import.meta.url)),name+' must not exist');
  const build=read('scripts/build-surfaces.mjs');
  assert.match(build,/surfaces=\['enterprise','mif'\]/);
- const inactive=JSON.parse(read('wrangler.developer.jsonc'));
- assert.equal(inactive.main,'worker/coming-soon.js');
- assert.ok(!inactive.assets);
+ assert.ok(!existsSync(new URL('../wrangler.developer.jsonc',import.meta.url)));
+ assert.ok(!existsSync(new URL('../worker/coming-soon.js',import.meta.url)));
 });
 test('inactive product Worker and routes never serve runnable customer code',()=>{
  assert.deepEqual(surfacePolicy('developer','/developer/'),{status:404});
