@@ -30,21 +30,21 @@ function platform(){
  if(/Linux/i.test(ua))return {name:'Linux',kind:'desktop'};
  return {name:'device',kind:'unknown'};
 }
+const protectedTabs=['chats','operations','team','schedule','alerts','account','integrations'];
 const nav=[['chats','المحادثات','Chats',MessageCircle],['operations','العمليات','Operations',Grid2X2],['schedule','الجدولة','Schedule',CalendarDays],['new','جديد','New',Plus],['team','الفريق','Team',UsersRound],['alerts','التنبيهات','Alerts',Bell],['account','حسابي','Account',UserRound]];
 const isInstalled=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||window.localStorage.getItem('rawi-erp-installed')==='1'}catch{return false}};
 export default function MifSmartShell(){
  const {lang,setLang}=useSite(),L=(a,e)=>tr(lang,a,e);
- const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('chats'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false);
- const [showAuth,setShowAuth]=useState(true),[postAuthTab,setPostAuthTab]=useState('chats');
+ const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false);
  const [workspaces,setWorkspaces]=useState([]),[workspaceId,setWorkspaceId]=useState('');
  const [registrationEnabled,setRegistrationEnabled]=useState(null),[subscriptions,setSubscriptions]=useState([]);
  const [tenantSetup,setTenantSetup]=useState(null),[tenantGeneration,setTenantGeneration]=useState(0);
- const [threads,setThreads]=useState([]),[active,setActive]=useState(''),[messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[asking,setAsking]=useState(false),[chatError,setChatError]=useState(''),[showHistory,setShowHistory]=useState(false);
+ const [threads,setThreads]=useState([]),[active,setActive]=useState(''),[messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[asking,setAsking]=useState(false),[chatError,setChatError]=useState('');
  const [installPrompt,setInstallPrompt]=useState(null),[installOpen,setInstallOpen]=useState(false),[installing,setInstalling]=useState(false),[installed,setInstalled]=useState(isInstalled);
  const [integrationOpen,setIntegrationOpen]=useState(false),[notice,setNotice]=useState('');
  const areaRef=useRef(null),questionRef=useRef(null),requestRef=useRef(null);
  const device=useMemo(platform,[]),authed=!!session;
- const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);setShowAuth(false);return true}catch{setSession(null);setShowAuth(true);return false}finally{setChecking(false)}},[]);
+ const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
  
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
@@ -74,31 +74,33 @@ export default function MifSmartShell(){
   api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(r=>setThreads(r.data||[])).catch(()=>{})
  },[authed,workspaceId]);
  useEffect(()=>{if(messages.length||asking)areaRef.current?.scrollTo({top:areaRef.current.scrollHeight,behavior:'smooth'})},[messages,asking,tab]);
- // Chat is RAWI ERP's primary entry. Recognize the signed-in account from its verified session.
- useEffect(()=>{if(tab==='chats'&&authed&&typeof window!=='undefined'&&window.matchMedia?.('(pointer:fine)').matches)questionRef.current?.focus({preventScroll:true})},[checking,tab,authed]);
- useEffect(()=>{const handler=()=>{const url=new URL(window.location.href),view=url.searchParams.get('view');const target=['chats','operations','schedule','team','alerts','account','integrations'].includes(view)?view:'chats';if(!authed&&target!=='chats'){setPostAuthTab(target);setShowAuth(true);setTab('chats')}else setTab(target)};window.addEventListener('popstate',handler);return()=>window.removeEventListener('popstate',handler)},[authed]);
- const navigate=key=>{setIntegrationOpen(false);setChatError('');setShowHistory(false);setTab(key);const url=new URL(window.location.href);url.searchParams.set('view',key);window.history.pushState({},'',url)};
- const selectTab=key=>{if(key==='new'){startNew();if(!authed)setShowAuth(true);return}if(!authed){setPostAuthTab(key==='account'?'chats':key);setShowAuth(true);navigate('chats');return}navigate(key)};
- const startNew=()=>{if(requestRef.current)requestRef.current.abort();requestRef.current=null;setActive('');setMessages([]);setQuestion('');setChatError('');navigate('chats')};
- const openThread=async id=>{if(!authed)return;setShowHistory(false);navigate('chats');setActive(id);setChatError('');try{const r=await api('/api/admin/chat/threads/'+id+'?workspace_id='+encodeURIComponent(workspaceId));setMessages(r.data||[])}catch(e){setChatError(e.message)}};
- const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})})}else{await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})})}if(!await refreshSession())throw new Error(L('تعذر بدء الجلسة، حاول مرة أخرى.','Could not start a session. Try again.'));setForm(initialLogin);setSignup(false);setShowAuth(false);navigate(postAuthTab);setPostAuthTab('chats')}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
- const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);setShowAuth(true);setPostAuthTab('chats');startNew();setThreads([]);setIntegrationOpen(false)};
+ // Start with a fresh chat on every launch. History is a separate protected view.
+ useEffect(()=>{const url=new URL(window.location.href);url.searchParams.set('view','new');window.history.replaceState({},'',url)},[]);
+ useEffect(()=>{if((tab==='new'||tab==='thread')&&typeof window!=='undefined'&&window.matchMedia?.('(pointer:fine)').matches)questionRef.current?.focus({preventScroll:true})},[checking,tab]);
+ useEffect(()=>{const handler=()=>{const view=new URL(window.location.href).searchParams.get('view');setTab([...protectedTabs,'new','thread'].includes(view)?view:'new')};window.addEventListener('popstate',handler);return()=>window.removeEventListener('popstate',handler)},[]);
+ const navigate=key=>{setIntegrationOpen(false);setChatError('');setTab(key);const url=new URL(window.location.href);url.searchParams.set('view',key);window.history.pushState({},'',url)};
+ const selectTab=key=>{if(key==='new'){startNew();return}navigate(key)};
+ const startNew=()=>{if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');setChatError('');navigate('new')};
+ const openThread=async id=>{if(!authed)return;if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');navigate('thread');try{const r=await api('/api/admin/chat/threads/'+encodeURIComponent(id));setActive(id);setMessages(r.data||[])}catch(e){setChatError(e.message)}};
+ const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})})}else{await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})})}if(!await refreshSession())throw new Error(L('تعذر بدء الجلسة، حاول مرة أخرى.','Could not start a session. Try again.'));setForm(initialLogin);setSignup(false)}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
+ const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);startNew();setThreads([]);setIntegrationOpen(false)};
  const ask=async e=>{
   e?.preventDefault?.();const text=question.trim();if(!text||asking||text.length>2500)return;
-  if(!authed){setShowAuth(true);setPostAuthTab('chats');navigate('chats');return}
-  if(!workspaceId){setChatError(L('حساب الشركة غير جاهز','Company workspace is not ready'));return}
+  const privateChat=authed&&!!workspaceId;
+  if(tab!=='new'&&tab!=='thread')return;
   setQuestion('');if(questionRef.current)questionRef.current.style.height='auto';setChatError('');setAsking(true);setMessages(m=>[...m,{role:'user',content:text,at:new Date().toISOString()}]);
   const ctl=new AbortController();requestRef.current=ctl;
   try{
-   const endpoint=authed?'/api/admin/chat/send':'/api/chat/public';
-   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(authed?{thread_id:active||null,workspace_id:workspaceId||null,question:text}:{question:text})});
+   const endpoint=privateChat?'/api/admin/chat/send':'/api/chat/public';
+   const history=messages.slice(-12).filter(m=>['user','assistant'].includes(m.role)).map(m=>({role:m.role,content:String(m.content).slice(0,2500)}));
+   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(privateChat?{thread_id:active||null,workspace_id:workspaceId,question:text}:{question:text,history})});
    if(ctl.signal.aborted)return;
-   if(r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(t=>setThreads(t.data||[])).catch(()=>{})}
+   if(privateChat&&r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(t=>setThreads(t.data||[])).catch(()=>{})}
    setMessages(m=>[...m,{role:'assistant',content:r.answer,at:new Date().toISOString()}]);
   }catch(err){if(ctl.signal.aborted)return;setMessages(m=>m.slice(0,-1));setQuestion(text);setChatError(err.message)}finally{setAsking(false);requestRef.current=null}
  };
  const install=async()=>{if(installed)return;if(installPrompt){setInstalling(true);try{await installPrompt.prompt();const result=await installPrompt.userChoice;if(result?.outcome==='accepted'){setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}}setInstallPrompt(null);setInstallOpen(false)}finally{setInstalling(false)}}else setInstallOpen(true)};
- const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+id+'?workspace_id='+encodeURIComponent(workspaceId),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setChatError(e.message)}};
+ const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
 const authPanel=<section className="mif-login-page rawi-login-compact" aria-label={L('الدخول أو إنشاء حساب','Sign in or sign up')}>
   <div className="rawi-auth-heading"><strong>{L('سجّل الدخول للمتابعة','Sign in to continue')}</strong></div>
   <div className="rawi-auth-tabs" role="group" aria-label={L('الحساب','Account')}>
@@ -114,18 +116,29 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
   </form>
  </section>;
  return <div className="mif-app" dir={lang==='ar'?'rtl':'ltr'}>
-  <main className={'mif-body mif-body-'+tab}>
-   {tab==='chats'&&<section className="mif-chat-page">
-    <div className="rawi-chat-tools rawi-enterprise-tools">{tenantSetup&&<span role="status" className="rawi-setup-state">{tenantSetup.status==='failed'?L('تعذر تهيئة القاعدة','Database setup failed'):L('تهيئة Neon','Preparing Neon')} {tenantSetup.step||''}</span>}{authed&&<><button className="mif-history-toggle" onClick={()=>setShowHistory(v=>!v)}><Menu size={17}/>{L('محادثاتي','My chats')}{threads.length>0&&<span>{threads.length}</span>}</button>{workspaces.length>0&&<label className="rawi-workspace-picker">{L('المؤسسة','Organization')}<select aria-label={L('المؤسسة النشطة','Active organization')} value={workspaceId} onChange={e=>{setWorkspaceId(e.target.value);setActive('');setMessages([]);setChatError('')}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}</>}{authed&&<span className="rawi-identity-label" title={session?.email}>{L('مرحبًا، ','Welcome, ')}{workspaces.find(w=>w.id===workspaceId)?.name||session?.email}</span>}{!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={13}/>{L('تنزيل','Install')}</button>}</div>
-    {showHistory&&authed&&<div className="mif-history-overlay"><div className="mif-history-panel"><div className="mif-history-head"><strong>{L('المحادثات','Conversations')}</strong><button onClick={()=>setShowHistory(false)} aria-label={L('إغلاق','Close')}><X size={19}/></button></div><button className="mif-history-new" onClick={startNew}><Plus size={16}/>{L('محادثة جديدة','New conversation')}</button>{threads.length?threads.map(t=><div className="mif-history-item" key={t.id}><button onClick={()=>openThread(t.id)}>{t.title}</button><button title={L('حذف المحادثة','Delete chat')} onClick={()=>deleteThread(t.id)}><Trash2 size={15}/></button></div>):<p>{L('لا توجد محادثات محفوظة بعد.','No saved conversations yet.')}</p>}</div><button className="mif-history-dismiss" aria-label="Close" onClick={()=>setShowHistory(false)}/></div>}
+  <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)}>
+   {(tab==='new'||tab==='thread')&&<section className="mif-chat-page">
+    <div className="rawi-chat-tools rawi-enterprise-tools">
+     {tenantSetup&&<span role="status" className="rawi-setup-state">{tenantSetup.status==='failed'?L('تعذر تهيئة القاعدة','Database setup failed'):L('تهيئة Neon','Preparing Neon')} {tenantSetup.step||''}</span>}
+     {authed&&workspaces.length>0&&<label className="rawi-workspace-picker">{L('المؤسسة','Organization')}<select aria-label={L('المؤسسة النشطة','Active organization')} value={workspaceId} onChange={e=>{setWorkspaceId(e.target.value);setActive('');setMessages([]);setChatError('');navigate('new')}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}
+     {authed&&<span className="rawi-identity-label" title={session?.email}>{workspaces.find(w=>w.id===workspaceId)?.name||session?.email}</span>}
+     {!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={13}/>{L('تنزيل','Install')}</button>}
+    </div>
     <div className={'mif-chat-scroll'+(!messages.length?' is-empty':'')} ref={areaRef} aria-live="polite">
      {!messages.length?<RawiGreeting lang={lang}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt="RAWI"/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt="RAWI"/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
-     {!authed&&!checking&&showAuth&&authPanel}
     </div>
     {chatError&&<div className="mif-chat-error" role="alert">{chatError}</div>}
     <form className="mif-composer" onSubmit={ask}><textarea ref={questionRef} rows={1} aria-label={L('رسالتك إلى راوي','Message RAWI')} value={question} placeholder={L('اكتب رسالتك...','Write a message...')} onChange={e=>setQuestion(e.target.value)} onInput={e=>{const node=e.currentTarget;node.style.height='auto';node.style.height=Math.min(node.scrollHeight,150)+'px'}} maxLength={2500} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask(e)}}}/><button type="submit" className="rawi-send" aria-label={L('إرسال','Send')} disabled={asking||!question.trim()}>{asking?<Loader2 size={18} className="mif-spinner"/>:<Send size={19}/>}</button></form>
 
    </section>}
+   {tab==='chats'&&authed&&<section className="mif-chats-history" aria-label={L('سجل المحادثات','Conversation history')}>
+    <div className="mif-chats-history-heading"><MessageCircle size={22}/><h1>{L('المحادثات','Conversations')}</h1><span>{threads.length}</span></div>
+    {workspaces.length>1&&<label className="rawi-workspace-picker">{L('المؤسسة','Organization')}<select value={workspaceId} onChange={e=>{setWorkspaceId(e.target.value);setThreads([])}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}
+    <div className="mif-chats-history-list">
+     {threads.length?threads.map(t=><article className="mif-history-item" key={t.id}><button onClick={()=>openThread(t.id)}><MessageCircle size={17}/><span>{t.title}</span></button><button title={L('حذف المحادثة','Delete chat')} aria-label={L('حذف المحادثة','Delete chat')} onClick={()=>deleteThread(t.id)}><Trash2 size={17}/></button></article>):<p className="mif-chats-empty">{L('لا توجد محادثات محفوظة بعد.','No saved conversations yet.')}</p>}
+    </div>
+   </section>}
+   {!checking&&!authed&&protectedTabs.includes(tab)&&<div className="mif-protected-auth">{authPanel}</div>}
    {(tab==='operations'||tab==='integrations')&&!checking&&authed&&<AiErpWorkspace key={tab} mode={tab} notify={setNotice}/>}
    {tab==='schedule'&&!checking&&authed&&<MifSchedule notify={setNotice}/>}
    {tab==='team'&&!checking&&authed&&<RawiTeamPanel workspaceId={workspaceId} workspace={workspaces.find(w=>w.id===workspaceId)} notify={setNotice}/>}
@@ -134,7 +147,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
 
 
   </main>
-  <nav className="mif-bottom-nav" aria-label={L('التنقل الرئيسي','Main navigation')}>{nav.map(([id,ar,en,Icon])=><button key={id} onClick={()=>selectTab(id)} aria-label={L(ar,en)} aria-current={tab===id?'page':undefined} className={'mif-bottom-item '+(tab===id?'active ':'')+(id==='new'?'new':'')}><span className="mif-bottom-icon"><Icon size={id==='new'?29:23} strokeWidth={id==='new'?2.6:1.9}/></span><span className="mif-bottom-label">{L(ar,en)}</span></button>)}</nav>
+  <nav className="mif-bottom-nav" aria-label={L('التنقل الرئيسي','Main navigation')}>{nav.map(([id,ar,en,Icon])=><button key={id} onClick={()=>selectTab(id)} aria-label={L(ar,en)} aria-current={(tab===id||(tab==='thread'&&id==='chats'))?'page':undefined} className={'mif-bottom-item '+((tab===id||(tab==='thread'&&id==='chats'))?'active ':'')+(id==='new'?'new':'')}><span className="mif-bottom-icon"><Icon size={id==='new'?29:23} strokeWidth={id==='new'?2.6:1.9}/></span><span className="mif-bottom-label">{L(ar,en)}</span></button>)}</nav>
   {installOpen&&<div className="mif-dialog-wrap" onMouseDown={e=>{if(e.target===e.currentTarget)setInstallOpen(false)}}><section className="mif-dialog mif-install-dialog" role="dialog" aria-modal="true"><button className="mif-close" onClick={()=>setInstallOpen(false)}><X size={19}/></button>{device.kind==='desktop'?<Monitor size={33}/>:<Smartphone size={33}/>}<h2>{L('تثبيت راوي ERP','Install RAWI ERP')}</h2><p>{device.kind==='ios'?L('على iPhone أو iPad: اضغط زر مشاركة في Safari، ثم «إضافة إلى الشاشة الرئيسية».','On iPhone or iPad, open in Safari, choose Share, then Add to Home Screen.'):device.kind==='android'?L('من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة للشاشة الرئيسية».','In your browser menu choose Install app or Add to Home Screen.'):device.kind==='desktop'?L('افتح التطبيق في Chrome أو Edge، ثم اختر «تثبيت RAWI».','In Chrome or Edge, choose Install RAWI.'):L('استخدم خيار تثبيت التطبيق من قائمة المتصفح، إن كان متاحًا.','Use your browser Install app option if available.')}</p><small>{L('التثبيت من المتصفح متاح على الأجهزة المدعومة. نسخ المتاجر الأصلية لا تظهر حتى تصبح جاهزة وموقعة.','Browser installation is available on supported devices. Native store packages appear only after they are built and signed.')}</small></section></div>}
   {integrationOpen&&authed&&<div className="mif-dialog-wrap" onMouseDown={e=>{if(e.target===e.currentTarget)setIntegrationOpen(false)}}><section className="mif-dialog mif-integration-dialog" role="dialog" aria-modal="true"><button className="mif-close" onClick={()=>setIntegrationOpen(false)}><X size={19}/></button><PlugZap size={29}/><h2>{L('التكاملات','Integrations')}</h2><p>{L('ربط الأنظمة الخارجية بحسابك يحتاج صلاحيات ومفاتيح معتمدة. إعداد الذكاء الاصطناعي تديره MIF Smart مركزيًا.','Connect external systems with authorized credentials. MIF Smart manages its AI service centrally.')}</p><button onClick={()=>{setIntegrationOpen(false);navigate('operations');setNotice(L('افتح قسم التكاملات داخل العمليات لإعداد الربط.','Open the Integrations section under Operations.'))}}>{L('إدارة التكاملات','Manage integrations')}</button></section></div>}
   {notice&&<button className="mif-toast" onClick={()=>setNotice('')}>{notice}<X size={14}/></button>}
