@@ -43,13 +43,14 @@ export default function RawiDeveloperApp(){
  }catch(e){setError(e.message)}finally{setBusy(false)}};
  const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);setWorkspaces([]);setThreads([]);setWorkspace('');fresh()};
  const send=async e=>{e?.preventDefault?.();if(!question.trim()||sending)return;
-  if(!developer||!workspace){setView('account');return}
+  if(developer&&!workspace){setError(L('لم تُحدد مساحة العمل','Workspace is not selected'));return}
   const q=question.trim();setQuestion('');setError('');setSending(true);setMessages(m=>[...m,{role:'user',content:q}]);
   try{
-   const r=await api('/api/admin/chat/send',{method:'POST',body:JSON.stringify({question:q,thread_id:activeThread||null,workspace_id:workspace})});
+   const endpoint=developer?'/api/admin/chat/send':'/api/chat/public';
+   const r=await api(endpoint,{method:'POST',body:JSON.stringify(developer?{question:q,thread_id:activeThread||null,workspace_id:workspace}:{question:q})});
    setMessages(m=>[...m,{role:'assistant',content:r.answer}]);
-   if(r.thread_id)setActiveThread(r.thread_id);
-   api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(x=>setThreads(x.data||[])).catch(()=>{})
+   if(developer&&r.thread_id)setActiveThread(r.thread_id);
+   if(developer)api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(x=>setThreads(x.data||[])).catch(()=>{})
   }catch(e){setMessages(m=>m.slice(0,-1));setQuestion(q);setError(e.message)}finally{setSending(false)}
  };
  const openThread=async id=>{setHistoryOpen(false);setView('chats');setError('');
