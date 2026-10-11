@@ -147,3 +147,8 @@ CREATE TABLE IF NOT EXISTS erp_external_invoices (
  UNIQUE(workspace_id,provider,external_id)
 );
 CREATE INDEX IF NOT EXISTS erp_external_invoices_workspace ON erp_external_invoices(workspace_id,updated_at DESC);
+
+ALTER TABLE erp_workspaces ADD COLUMN IF NOT EXISTS legal_name text NOT NULL DEFAULT '';
+ALTER TABLE erp_workspaces ADD COLUMN IF NOT EXISTS vat_number text NOT NULL DEFAULT '';
+ALTER TABLE erp_workspaces ADD COLUMN IF NOT EXISTS address text NOT NULL DEFAULT '';
+ALTER TABLE erp_workspaces ADD COLUMN IF NOT EXISTS phone text NOT NULL DEFAULT '';
