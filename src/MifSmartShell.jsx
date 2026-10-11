@@ -90,7 +90,7 @@ export default function MifSmartShell(){
  const openThread=async id=>{if(!authed)return;if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');navigate('thread');try{const r=await api('/api/admin/chat/threads/'+encodeURIComponent(id));setActive(id);setMessages(r.data||[])}catch(e){setChatError(e.message)}};
  const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{
   if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));
-   const result=await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})});
+   const result=await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form,language:lang})});
    if(!result.verification_required)throw new Error(L('لم يتم بدء التحقق من البريد','Email verification could not be started'));
    setSignupStep('verify');setVerificationCode('');return;
   }
@@ -105,7 +105,7 @@ export default function MifSmartShell(){
   setSignupStep('company');setForm(initialLogin);setSignup(false);
   await refreshSession();navigate('company');
  }catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
- const resendCode=async()=>{setAuthBusy(true);setAuthError('');try{await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})})}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
+ const resendCode=async()=>{setAuthBusy(true);setAuthError('');try{await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form,language:lang})})}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
  const submitCompany=async e=>{e.preventDefault();setCompanyBusy(true);setCompanyError('');try{
   await api('/api/admin/company/complete',{method:'POST',body:JSON.stringify(company)});
   const ok=await refreshSession();if(!ok)throw new Error(L('تعذر تحديث الجلسة','Could not refresh session'));
