@@ -19,6 +19,7 @@ export default {
     .on('meta[name="description"]',{element(el){el.setAttribute('content','RAWI Developers — independent Odoo engineering, module development and AI integration studio.')}})
     .transform(page);
   }
+  if(url.pathname.startsWith('/developers/')&&env.ASSETS)return env.ASSETS.fetch(request);
   // Public corporate pages may be indexed; RAWI customer routes and management remain private.
   if((request.method==='GET'||request.method==='HEAD')&&companyPage(url.pathname)&&env.ASSETS){
    const landing=new URL('/',request.url);
