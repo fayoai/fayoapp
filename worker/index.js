@@ -55,7 +55,9 @@ export default {
     .on('meta[name="robots"]',{element(el){el.setAttribute('content',robots)}})
     .on('meta[name="description"]',{element(el){el.setAttribute('content',meta.description)}})
     .on('title',{element(el){el.setInnerContent(meta.title)}})
+    .on('meta[name="theme-color"]',{element(el){el.setAttribute('content','#e35a0e')}})
     .on('link[rel="icon"]',{element(el){el.setAttribute('href','/mif-app-icon.svg')}})
+    .on('link[rel="apple-touch-icon"]',{element(el){el.setAttribute('href','/mif-app-icon.svg')}})
     .on('link[rel="manifest"]',{element(el){el.setAttribute('href','/mif/manifest.webmanifest')}})
     .on('head',{element(el){
       if(!isCanonical||!meta.index)return;
