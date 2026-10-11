@@ -29,7 +29,7 @@ test('RAWI ERP chat greeting types dynamically; no traditional heading',()=>{
  assert.match(src,/<RawiGreeting lang=\{lang\}\/\>/);
  assert.doesNotMatch(src,/<header className="mif-topbar"|mif-chat-welcome/);
 });
-test('Seven bottom tabs keep a prominent central New action, protected views show sign-in and installation stays in Account',()=>{
+test('Seven bottom tabs keep central New and route gated sections to sign-in within chat',()=>{
  const src=read('src/MifSmartShell.jsx');
  for(const tab of ['chats','operations','team','new','schedule','alerts','account'])assert.match(src,new RegExp("'"+tab+"'"));
  assert.match(src,/\['new','جديد','New',Plus\]/);
@@ -37,9 +37,11 @@ test('Seven bottom tabs keep a prominent central New action, protected views sho
  assert.match(src,/className="rawi-install-in-account"/);
  assert.doesNotMatch(src,/rawi-chat-install/);
  assert.match(src,/const authPanel=/);
- assert.match(src,/authed\?<RawiTeamPanel/);
- assert.match(src,/authed\?<RawiNotificationsPanel/);
- assert.match(src,/!authed&&!checking&&authPanel/);
+ assert.match(src,/tab==='team'&&!checking&&authed&&<RawiTeamPanel/);
+ assert.match(src,/tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel/);
+ assert.match(src,/!authed&&!checking&&showAuth&&authPanel/);
+ assert.match(src,/setPostAuthTab\(key==='account'\?'chats':key\)/);
+ assert.doesNotMatch(src,/:authPanel/);
  assert.doesNotMatch(src,/form\.invitation/);
  const css=read('src/mif-smart-shell.css');
  assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:63px/);
