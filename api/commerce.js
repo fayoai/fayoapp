@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {offers,cycles,validateHosting,quoteCart} from './commerce-model.js';
+import {validateProductConfig,needsTailoredQuote} from './product-config.js';
 const uuid=z.string().uuid();
 const itemSchema=z.object({sku:z.string().max(80),cycle:z.enum(cycles),quantity:z.number().int().min(1).max(100),configuration:z.record(z.string(),z.any()).optional()});
 const checkoutSchema=z.object({idempotency_key:uuid,customer:z.object({name:z.string().trim().min(2).max(120),email:z.email().max(180),phone:z.string().min(6).max(30),company:z.string().max(140).default(''),notes:z.string().max(2000).default('')}),items:z.array(itemSchema).min(1).max(25),method:z.enum(['gateway','bank','quote']),website:z.string().max(100).default('')});
@@ -18,15 +19,15 @@ export function installCommerce(app,{db,env,query}){
   const skus=input.items.map(x=>x.sku);if(new Set(input.items.map(x=>x.sku+':'+x.cycle+':'+JSON.stringify(x.configuration||{}))).size!==skus.length)return error(c,400,'Duplicate cart items');
   const modules=await query(sql,'SELECT sku FROM commerce_modules WHERE published=true AND r2_key IS NOT NULL AND sku=ANY($1::text[])',[skus]);
   if(input.items.some(x=>!(offers.find(p=>p.sku===x.sku)?.cycles.includes(x.cycle)||modules.some(m=>m.sku===x.sku&&x.cycle==='once'))))return error(c,400,'Unknown product or billing term');
-  if(input.method!=='quote'&&input.items.some(i=>i.sku==='MIF-HOSTING'))return error(c,400,'Custom hosting requires a quotation');
-  const configurations=[];try{for(const i of input.items)configurations.push(i.sku==='MIF-HOSTING'?validateHosting(i.configuration):{});}catch{return error(c,400,'Invalid server configuration')}
+  if(input.method!=='quote'&&input.items.some(i=>needsTailoredQuote(i.sku)))return error(c,400,'Tailored products require an approved quotation');
+  const configurations=[];try{for(const i of input.items)configurations.push(i.sku==='MIF-HOSTING'?validateHosting(i.configuration):validateProductConfig(i.sku,i.configuration));}catch{return error(c,400,'Invalid server configuration')}
   const ps=await query(sql,'SELECT sku,cycle,amount FROM commerce_prices WHERE active=true AND amount IS NOT NULL AND sku=ANY($1::text[])',[skus]);const pm=Object.fromEntries(ps.map(x=>[x.sku+':'+x.cycle,x.amount]));const priced=input.items.every(i=>pm[i.sku+':'+i.cycle]!=null);
-  if(input.method!=='quote'&&!priced)return error(c,400,'Unpriced products require a quotation');let money=null;try{if(priced){
+  if(input.method!=='quote'&&!priced)return error(c,400,'Unpriced products require a quotation');let money=null;try{if(priced&&input.method!=='quote'){
     let subtotal=0;for(const line of input.items){const n=Number(pm[line.sku+':'+line.cycle]);const h=Math.round(n*100);if(!Number.isFinite(n)||n<0||Math.abs(n*100-h)>0.000001)throw Error('Invalid price');subtotal+=h*line.quantity;}
     if(subtotal>100000000000)throw Error('Cart too large');const vat=Math.round(subtotal*0.15);money={subtotal_halalas:subtotal,vat_halalas:vat,total_halalas:subtotal+vat};
    }}catch{return error(c,400,'Invalid published prices')}
 
-  if(input.method==='gateway'&&(!env(c).MOYASAR_SECRET_KEY||!env(c).SITE_ORIGIN))return error(c,503,'Online payment is not configured');if(input.method==='gateway'&&money.total_halalas<100)return error(c,400,'Minimum payment amount is 1 SAR');
+  if(input.method==='gateway'&&(!/^sk_live_/.test(env(c).MOYASAR_SECRET_KEY||'')||!env(c).SITE_ORIGIN))return error(c,503,'Online payment is not configured');if(input.method==='gateway'&&money.total_halalas<100)return error(c,400,'Minimum payment amount is 1 SAR');
   if(input.method==='bank'){const b=await query(sql,"SELECT value FROM site_settings WHERE key='billing'");if(!b[0]?.value?.iban)return error(c,503,'Bank transfer is not configured')}
   const exists=await query(sql,'SELECT id FROM commerce_orders WHERE idempotency_key=$1',[input.idempotency_key]);if(exists.length)return error(c,409,'This checkout request has already been submitted');
   const access=makeSecret(),reference='MIF-'+new Date().getUTCFullYear()+'-'+crypto.randomUUID().slice(0,10).toUpperCase();const status=input.method==='quote'?'new':input.method==='bank'?'awaiting_transfer':'awaiting_payment';
