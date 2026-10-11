@@ -19,6 +19,7 @@ import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './ne
 import {migrateTenantBatch} from './tenant-migrations.js';
 import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailReady} from './rawi-email-verification.js';
 import {installRawiCompany} from './rawi-company.js';
+import {installRawiDynamicWorkspace} from './rawi-dynamic-workspace.js';
 import {passwordHash,PASSWORD_HASH_ITERATIONS} from './auth-password.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
@@ -244,6 +245,7 @@ app.get('/api/admin/my-subscription',async c=>{
 });
 app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);const pending=await query(centralDb(c),`SELECT w.id workspace_id FROM erp_workspaces w JOIN rawi_company_profiles p ON p.workspace_id=w.id WHERE w.owner_id=$1 AND p.completed_at IS NULL LIMIT 1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,company_setup_required:pending.length>0,setup_workspace_id:pending[0]?.workspace_id||null,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
 installRawiCompany(app,{centralDb,env,query});
+installRawiDynamicWorkspace(app,{db,centralDb,env,query});
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
