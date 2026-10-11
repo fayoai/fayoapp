@@ -24,9 +24,13 @@ export function installRawiTeam(app,{db,query}){
   const g=await gate(c,true);if(g.error)return g.error;
   const v=input.safeParse(await parse(c));if(!v.success)return bad(c,400,'Invalid team member');
   const x=v.data,rows=await query(g.sql,`INSERT INTO erp_memberships(workspace_id,admin_id,role)
-  SELECT $1,id,$3 FROM admins WHERE email=$2
+  SELECT $1,a.id,$3 FROM admins a
+  JOIN erp_workspaces w ON w.id=$1
+  LEFT JOIN rawi_account_profiles invited_type ON invited_type.admin_id=a.id
+  LEFT JOIN rawi_account_profiles owner_type ON owner_type.admin_id=w.owner_id
+  WHERE a.email=$2 AND COALESCE(invited_type.account_type,'enterprise')=COALESCE(owner_type.account_type,'enterprise')
   ON CONFLICT(workspace_id,admin_id) DO NOTHING RETURNING admin_id`,[g.w,x.email.trim().toLowerCase(),x.role]);
-  return rows.length?c.json({ok:true},201):bad(c,409,'User not found or already belongs to this organization. Ask them to register first.');
+  return rows.length?c.json({ok:true},201):bad(c,409,'User is not registered, already belongs to this organization, or uses a different RAWI product.');
  });
  app.patch('/api/admin/erp/w/:workspace/members/:member',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
