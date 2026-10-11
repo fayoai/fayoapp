@@ -2,15 +2,15 @@ import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {Resvg} from '@resvg/resvg-js';
 export function approvedNativeSvg(target,raw){
- if(!['enterprise','developer'].includes(target))throw new Error('Unknown RAWI app');
+ if(target!=='enterprise')throw new Error('Only RAWI ERP icons are enabled');
  if(!raw.includes('viewBox="280 165 690 742"'))throw new Error('Expected approved RAWI mark viewBox');
- const expected=target==='developer'?['#080808','#ffd21a']:['#2166e8','#ffffff'];
+ const expected=['#2166e8','#ffffff'];
  if(expected.some(x=>!raw.includes('fill="'+x+'"')))throw new Error('Approved RAWI application colors or mark changed');
  return raw.replace('viewBox="280 165 690 742"','viewBox="254 165 742 742"');
 }
 function png(svg,size){return new Resvg(svg,{fitTo:{mode:'width',value:size},background:'rgba(0,0,0,0)'}).render().asPng()}
 export function writeApprovedNativeIcons(target,root='.'){
- const filename=target==='developer'?'rawi-developer-mark.svg' :'rawi-erp-mark.svg';
+ const filename='rawi-erp-mark.svg';
  const svg=approvedNativeSvg(target,readFileSync(join(root,'public',filename),'utf8'));
  const res=join(root,'android','app','src','main','res');
  if(existsSync(join(root,'android'))){
@@ -22,7 +22,7 @@ export function writeApprovedNativeIcons(target,root='.'){
   const xml='<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/rawi_icon_background"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>';
   for(const name of ['ic_launcher.xml','ic_launcher_round.xml'])writeFileSync(join(anydpi,name),xml);
   const values=join(res,'values');mkdirSync(values,{recursive:true});
-  writeFileSync(join(values,'rawi_native_icon_color.xml'),'<?xml version="1.0" encoding="utf-8"?><resources><color name="rawi_icon_background">'+(target==='developer'?'#080808':'#e35a0e')+'</color></resources>');
+  writeFileSync(join(values,'rawi_native_icon_color.xml'),'<?xml version="1.0" encoding="utf-8"?><resources><color name="rawi_icon_background">'+'#2166e8'+'</color></resources>');
  }
  if(existsSync(join(root,'ios'))){
   const assets=join(root,'ios','App','App','Assets.xcassets','AppIcon.appiconset');
