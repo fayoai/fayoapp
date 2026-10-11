@@ -198,18 +198,29 @@ export default function MifSmartShell(){
  const install=async()=>{if(installed)return;if(installPrompt){setInstalling(true);try{await installPrompt.prompt();const result=await installPrompt.userChoice;if(result?.outcome==='accepted'){setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}}setInstallPrompt(null);setInstallOpen(false)}finally{setInstalling(false)}}else setInstallOpen(true)};
  const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
 const authPanel=<section className="mif-login-page rawi-login-compact" aria-label={L('الدخول أو إنشاء حساب','Sign in or sign up')}>
-  <div className="rawi-auth-heading"><img src="/rawi-erp-mark.svg" alt="" width="32" height="32" style={{width:32,height:32,maxWidth:32,maxHeight:32,flex:"0 0 32px"}}/><strong>{signup?L('إنشاء حساب جديد','Create an account'):L('تسجيل الدخول','Sign in')}</strong></div>
-  <div className="rawi-auth-tabs" role="group" aria-label={L('الحساب','Account')}>
-   <button type="button" className={!signup?'selected':''} aria-pressed={!signup} onClick={()=>{setSignup(false);setAuthError('')}}>{L('دخول','Sign in')}</button>
-   <button type="button" className={signup?'selected':''} aria-pressed={signup} onClick={()=>{setSignup(true);setAuthError('')}}>{L('حساب جديد','New account')}</button>
-  </div>
-  <form className="rawi-account-form" onSubmit={submitAuth}>
-   {signup&&<label>{L('الاسم','Name')}<input required autoComplete="name" minLength={2} maxLength={160} value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>}
-   <label>{L('البريد الإلكتروني','Email')}<input type="email" autoComplete="username" inputMode="email" required value={form.email} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
-   <label>{L('كلمة المرور','Password')}<input type="password" autoComplete={signup?'new-password':'current-password'} minLength={signup?12:1} required value={form.password} onChange={e=>setForm(v=>({...v,password:e.target.value}))}/></label>
-   {authError&&<p role="alert" className="mif-form-error">{authError}</p>}
-   <button type="submit" disabled={authBusy||(signup&&registrationEnabled===false)}>{authBusy&&<Loader2 size={17} className="mif-spinner"/>}{signup?L('إنشاء الحساب','Create account'):L('تسجيل الدخول','Sign in')}</button>
-  </form>
+  <div className="rawi-auth-heading"><img src="/rawi-erp-mark.svg" alt="" width="32" height="32" style={{width:32,height:32,maxWidth:32,maxHeight:32,flex:"0 0 32px"}}/><strong>{signupStep==='verify'?L('تأكيد البريد الإلكتروني','Verify your email'):signup?L('إنشاء حساب جديد','Create account'):L('تسجيل الدخول','Sign in')}</strong></div>
+  {signupStep==='verify'?<>
+   <p className="rawi-verify-help">{L('أرسلنا رمزًا مكونًا من 6 أرقام إلى','A six-digit code was sent to')} <b dir="ltr">{form.email}</b></p>
+   <form className="rawi-account-form" onSubmit={confirmEmail}>
+    <label>{L('رمز التأكيد','Verification code')}<input required autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={e=>setVerificationCode(e.target.value.replace(/[^0-9]/g,''))}/></label>
+    {authError&&<p role="alert" className="mif-form-error">{authError}</p>}
+    <button type="submit" disabled={authBusy||verificationCode.length!==6}>{L('تأكيد البريد','Verify email')}</button>
+   </form>
+   <button type="button" className="rawi-resend" disabled={authBusy} onClick={resendCode}>{L('إعادة إرسال الرمز','Resend code')}</button>
+   <button type="button" className="rawi-resend" onClick={()=>{setSignupStep('auth');setAuthError('')}}>{L('تعديل البريد','Change email')}</button>
+  </>:<>
+   <div className="rawi-auth-tabs" role="group" aria-label={L('الحساب','Account')}>
+    <button type="button" className={!signup?'selected':''} aria-pressed={!signup} onClick={()=>{setSignup(false);setAuthError('')}}>{L('دخول','Sign in')}</button>
+    <button type="button" className={signup?'selected':''} aria-pressed={signup} onClick={()=>{setSignup(true);setAuthError('')}}>{L('حساب جديد','New account')}</button>
+   </div>
+   <form className="rawi-account-form" onSubmit={submitAuth}>
+    {signup&&<label>{L('الاسم','Name')}<input required autoComplete="name" minLength={2} maxLength={160} value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>}
+    <label>{L('البريد الإلكتروني','Email')}<input type="email" autoComplete="username" inputMode="email" required value={form.email} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
+    <label>{L('كلمة المرور','Password')}<input type="password" autoComplete={signup?'new-password':'current-password'} minLength={signup?12:1} required value={form.password} onChange={e=>setForm(v=>({...v,password:e.target.value}))}/></label>
+    {authError&&<p role="alert" className="mif-form-error">{authError}</p>}
+    <button type="submit" disabled={authBusy||(signup&&registrationEnabled===false)}>{authBusy&&<Loader2 size={17} className="mif-spinner"/>}{signup?L('إرسال رمز التأكيد','Send verification code'):L('تسجيل الدخول','Sign in')}</button>
+   </form>
+  </>}
  </section>;
  return <div className="mif-app" dir={lang==='ar'?'rtl':'ltr'}>
   <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)+(!authed&&!checking&&protectedTabs.includes(tab)?' mif-body-auth':'')}>
@@ -232,11 +243,32 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
        <button type="button" className="rawi-composer-tool" title={L('إرفاق مستند','Attach documents')} aria-label={L('إرفاق مستند','Attach documents')} disabled={filesBusy||asking||documents.length>=maxDocuments} onClick={()=>fileRef.current?.click()}>{filesBusy?<Loader2 size={19} className="mif-spinner"/>:<Paperclip size={19}/>}</button>
        <button type="button" className={'rawi-composer-tool'+(recording?' is-recording':'')} title={recording?L('إيقاف التسجيل','Stop recording'):L('إملاء صوتي','Voice dictation')} aria-label={recording?L('إيقاف التسجيل','Stop recording'):L('إملاء صوتي','Voice dictation')} aria-pressed={recording} disabled={transcribing||asking} onClick={toggleMicrophone}>{transcribing?<Loader2 size={19} className="mif-spinner"/>:recording?<Square size={17}/>:<Mic size={19}/>}</button>
        {authed&&workspaces.length>0&&<label className="rawi-composer-company"><Building2 size={15}/><select aria-label={L('الشركة','Company')} title={L('الشركة','Company')} value={workspaceId} onChange={e=>{if(requestRef.current)requestRef.current.abort();setWorkspaceId(e.target.value);setActive('');setMessages([]);setChatError('');navigate('new')}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}
+       <button type="submit" className="rawi-send" aria-label={L('إرسال','Send')} disabled={asking||filesBusy||transcribing||(!question.trim()&&!documents.length)}>{asking?<Loader2 size={18} className="mif-spinner"/>:<ArrowUp size={19} strokeWidth={2.5}/>}</button>
       </div>
      </div>
-     <button type="submit" className="rawi-send" aria-label={L('إرسال','Send')} disabled={asking||filesBusy||transcribing||(!question.trim()&&!documents.length)}>{asking?<Loader2 size={18} className="mif-spinner"/>:<ArrowUp size={19} strokeWidth={2.5}/>}</button>
+
     </form>
 
+   </section>}
+   {tab==='company'&&authed&&session?.company_setup_required&&<section className="rawi-company-setup" aria-label={L('بيانات الشركة','Company details')}>
+    <div className="rawi-company-head"><img src="/rawi-erp-mark.svg" alt=""/><div><h1>{L('إعداد الشركة','Set up your company')}</h1><p>{L('أكمل بيانات الشركة للبدء باستخدام نظام راوي.','Complete company details to start using Rawi ERP.')}</p></div></div>
+    <form className="rawi-company-form" onSubmit={submitCompany}>
+     <label className="rawi-company-logo">{company.logo_data?<img src={company.logo_data} alt={L('شعار الشركة','Company logo')}/>:<Building2 size={31}/>}<span>{L('شعار الشركة','Company logo')}</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectCompanyLogo}/></label>
+     <div className="rawi-company-grid">
+      <label>{L('اسم الشركة','Company name')}<input required maxLength={150} value={company.name} onChange={e=>setCompany(v=>({...v,name:e.target.value}))}/></label>
+      <label>{L('النشاط','Business activity')}<input required maxLength={200} value={company.activity} onChange={e=>setCompany(v=>({...v,activity:e.target.value}))}/></label>
+      <label className="rawi-company-wide">{L('العنوان','Address')}<input required minLength={5} maxLength={450} value={company.address} onChange={e=>setCompany(v=>({...v,address:e.target.value}))}/></label>
+      <label>{L('السجل التجاري','Commercial registration')}<input maxLength={50} value={company.commercial_registration} onChange={e=>setCompany(v=>({...v,commercial_registration:e.target.value}))}/></label>
+      <label>{L('الرقم الضريبي','Tax number')}<input maxLength={50} value={company.tax_number} onChange={e=>setCompany(v=>({...v,tax_number:e.target.value}))}/></label>
+      <label>{L('رقم الهاتف','Phone number')}<input type="tel" maxLength={35} value={company.phone} onChange={e=>setCompany(v=>({...v,phone:e.target.value}))}/></label>
+      <label>{L('رقم الجوال','Mobile number')}<input type="tel" maxLength={35} value={company.mobile} onChange={e=>setCompany(v=>({...v,mobile:e.target.value}))}/></label>
+      <label>{L('الموقع الإلكتروني','Website')}<input type="url" placeholder="https://" value={company.website} onChange={e=>setCompany(v=>({...v,website:e.target.value}))}/></label>
+      <label>{L('إيميلات التواصل','Contact emails')}<input maxLength={450} placeholder={L('افصل بينها بفاصلة','Separate with commas')} value={company.emails} onChange={e=>setCompany(v=>({...v,emails:e.target.value}))}/></label>
+      <label className="rawi-company-wide">{L('نبذة عن النشاط','About the business')}<textarea rows={3} maxLength={2000} value={company.description} onChange={e=>setCompany(v=>({...v,description:e.target.value}))}/></label>
+     </div>
+     {companyError&&<p role="alert" className="mif-form-error">{companyError}</p>}
+     <button type="submit" disabled={companyBusy||!company.workspace_id}>{companyBusy?<Loader2 className="mif-spinner" size={17}/>:<Check size={18}/>} {L('حفظ وبدء استخدام النظام','Save and start using Rawi ERP')}</button>
+    </form>
    </section>}
    {tab==='chats'&&authed&&<section className="mif-chats-history" aria-label={L('سجل المحادثات','Conversation history')}>
     <div className="mif-chats-history-heading"><MessageCircle size={22}/><h1>{L('المحادثات','Conversations')}</h1><span>{threads.length}</span></div>
