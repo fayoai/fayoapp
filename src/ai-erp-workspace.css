@@ -17,3 +17,27 @@
 .erp-readonly .erp-panel form,.erp-readonly .erp-core-form,.erp-readonly .erp-prompt,.erp-readonly .erp-record-actions,.erp-readonly .erp-template-form{pointer-events:none;user-select:none}
 .erp-readonly .erp-panel input,.erp-readonly .erp-panel textarea,.erp-readonly .erp-panel select,.erp-readonly .erp-core-form input,.erp-readonly .erp-core-form textarea,.erp-readonly .erp-core-form select{background:#fafafa}
 .erp-readonly .erp-nav,.erp-readonly .erp-ai-side{pointer-events:auto}
+
+/* Professional AI ERP workspace navigation, not a public website tab row. */
+@media(min-width:1120px){
+ .erp-shell{display:grid;grid-template-columns:242px minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:19px;row-gap:17px;align-items:start;max-width:1640px}
+ .erp-shell>.erp-head{grid-column:2;grid-row:1;min-width:0}
+ .erp-shell>.erp-nav{grid-column:1;grid-row:1 / span 20;display:flex;flex-direction:column;gap:4px;padding:14px;background:#fff;border:1px solid #e6e9e7;border-radius:16px;box-shadow:0 8px 32px #122b2910;position:sticky;top:91px;max-height:calc(100vh - 108px);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+ .erp-nav button{width:100%;min-height:43px;padding:10px 12px;flex:0 0 auto;border-color:transparent;border-radius:9px;background:transparent;color:#46535a;font-size:12px;font-weight:700;text-align:start}
+ .erp-nav button:hover{background:#fff2e9;border-color:#ffdbca;color:#ab440b}
+ .erp-nav button.active{background:#e95814;color:#fff;border-color:#e95814;box-shadow:0 7px 14px #e9581422}
+ .erp-nav-group{display:block;font-size:10px;font-weight:800;letter-spacing:.2px;color:#899499;padding:11px 9px 4px}
+ .erp-shell>:not(.erp-head):not(.erp-nav){grid-column:2;min-width:0}
+ .erp-shell>.erp-print-modal{grid-column:unset}
+ .erp-head{margin:0}
+}
+@media(max-width:1119px){
+ .erp-nav-group{display:none}
+ .erp-nav{scrollbar-width:thin;gap:7px}
+ .erp-nav button{min-height:44px}
+}
+@media(max-width:600px){
+ .erp-head{border-radius:13px;padding:20px 15px}
+ .erp-ai-layout{gap:11px}
+ .erp-chat{border-radius:13px}
+}
