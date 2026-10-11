@@ -30,7 +30,7 @@ test('AI can produce domain-specific repositories without an allowlist of generi
  assert.ok(blueprintReady(plan));
  assert.equal(plan.repositories[0].key,'runways');
  assert.deepEqual(plan.repositories.map(x=>x.key),['runways','repair_cases']);
- assert.equal(validateRepositoryRecord(plan.repositories[0],{code:'12L',length:2400}).length,undefined);
+ assert.equal(validateRepositoryRecord(plan.repositories[0],{code:'12L',length:2400}).length,2400);
  assert.equal(validateRepositoryRecord(plan.repositories[0],{unknown:'value'}),null);
  assert.equal(validateRepositoryRecord(plan.repositories[0],{length:20}),null);
  assert.equal(validateGeneratedBlueprint({...draft,repositories:[draft.repositories[0],draft.repositories[0]]}),null);
