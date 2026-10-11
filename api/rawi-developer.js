@@ -100,11 +100,23 @@ export function installRawiDeveloper(app,{db,env,query}){
   if(!uuid.safeParse(workspace).success)return {error:fail(c,400,'Invalid workspace')};
   const member=await query(sql,`SELECT m.role FROM erp_memberships m
    JOIN rawi_account_profiles p ON p.admin_id=m.admin_id AND p.account_type='developer'
+   JOIN erp_workspaces w ON w.id=m.workspace_id
+   JOIN rawi_account_profiles owner_type ON owner_type.admin_id=w.owner_id AND owner_type.account_type='developer'
    WHERE m.admin_id=$1 AND m.workspace_id=$2`,[actor,workspace]);
   if(!member.length)return {error:fail(c,403,'Developer account and workspace membership required')};
   if(write&&member[0].role==='viewer')return {error:fail(c,403,'Write permission required')};
   return {sql,workspace};
  }
+ app.get('/api/admin/developer/workspaces',async c=>{
+  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
+  const owner=await query(sql,"SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1",[c.get('adminId')]);
+  if(owner[0]?.account_type!=='developer')return fail(c,403,'Developer account required');
+  const data=await query(sql,`SELECT w.id,w.name,w.created_at,m.role FROM erp_workspaces w
+   JOIN erp_memberships m ON m.workspace_id=w.id
+   JOIN rawi_account_profiles owner_type ON owner_type.admin_id=w.owner_id AND owner_type.account_type='developer'
+   WHERE m.admin_id=$1 ORDER BY w.created_at DESC`,[c.get('adminId')]);
+  return c.json({ok:true,data});
+ });
  app.get('/api/admin/developer/platforms',async c=>{
   const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
   const rows=await query(sql,"SELECT 1 FROM rawi_account_profiles WHERE admin_id=$1 AND account_type='developer'",[c.get('adminId')]);
