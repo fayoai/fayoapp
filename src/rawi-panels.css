@@ -1,0 +1,25 @@
+.rawi-utility-page{width:min(100%,1080px);margin:0 auto;display:flex;flex-direction:column;gap:17px}
+.rawi-panel-head{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid #e4eaf4;padding:8px 0 19px}
+.rawi-panel-head h1{display:flex;align-items:center;gap:10px;margin:0;font-size:23px;font-weight:800;color:#223b60}
+.rawi-panel-head h1 svg{color:#2166e8}
+.rawi-panel-head span{font-size:12px;color:#8595a9}
+.rawi-utility-refresh{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #dce6f4;color:#2758a2;border-radius:10px;padding:10px 13px;font-size:12px}
+.rawi-team-invite{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.38fr) auto;gap:10px;align-items:end;border:1px solid #e3ebf6;border-radius:18px;padding:16px;background:#fff}
+.rawi-team-invite label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:750;color:#415675}
+.rawi-team-invite input,.rawi-team-invite select,.rawi-member-controls select{min-height:43px;border:1px solid #d9e4f4;border-radius:10px;padding:9px 11px;min-width:0;background:#fff;color:#1d3d6c}
+.rawi-team-invite button{min-height:43px;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border:0;border-radius:10px;background:#2166e8;color:#fff;font-size:12px;font-weight:750}
+.rawi-team-members,.rawi-notification-list{display:flex;flex-direction:column;gap:9px}
+.rawi-member-row,.rawi-notification{display:flex;align-items:center;gap:13px;min-width:0;border:1px solid #e5ecf7;border-radius:15px;padding:14px;background:white}
+.rawi-member-avatar,.rawi-alert-icon{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#edf4ff;color:#2166e8}
+.rawi-member-details,.rawi-notification>div:nth-child(2){display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.rawi-member-details strong,.rawi-notification strong{font-size:14px;font-weight:750;overflow-wrap:anywhere}
+.rawi-member-details small,.rawi-notification small{display:flex;align-items:center;gap:5px;font-size:11px;color:#788ba5}
+.rawi-member-controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.rawi-member-controls select{font-size:12px}
+.rawi-member-controls button{font-size:12px;padding:9px 12px;border-radius:9px;border:1px solid #f1d5d7;background:#fff9fa;color:#a63f49}
+.rawi-notification.urgent{border-color:#f2d8d7}
+.rawi-notification.urgent .rawi-alert-icon{background:#fff3f2;color:#ba4651}
+.rawi-notification>button{border:0;background:#eff5ff;color:#2166e8;border-radius:10px;width:36px;height:36px;display:grid;place-items:center}
+.rawi-no-records{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;min-height:130px;color:#8293aa;font-size:13px}
+.rawi-panel-error{padding:10px 12px;border:1px solid #f2d0d0;background:#fff2f2;color:#ae454d;border-radius:10px;font-size:12px}
+@media(max-width:680px){.rawi-team-invite{grid-template-columns:1fr 1fr}.rawi-team-invite label:first-child{grid-column:1/-1}.rawi-team-invite button{height:43px;margin-top:auto}.rawi-member-row{flex-wrap:wrap}.rawi-member-controls{width:100%;justify-content:flex-end;padding-inline-start:50px}.rawi-panel-head h1{font-size:20px}}
