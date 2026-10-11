@@ -64,16 +64,20 @@ async function requestProvider(provider,messages,instructions){
  const usage=code==='openai'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:code==='anthropic'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:(code==='groq'||code==='openrouter')?{input:result.usage?.prompt_tokens,output:result.usage?.completion_tokens}:{input:result.usageMetadata?.promptTokenCount,output:result.usageMetadata?.candidatesTokenCount};
  return {answer:answer.slice(0,12000),provider:code,model,input_tokens:Number(usage.input)||0,output_tokens:Number(usage.output)||0};
 }
-export async function routeAI(question,providers,history=[],context='',mode='enterprise'){
+export async function routeAI(question,providers,history=[],context='',mode='enterprise',documents=[]){
  if(!providers.length)throw Object.assign(new Error('RAWI AI service is not configured by MIF Smart'),{status:503});
- const messages=[...history.slice(-12).filter(x=>['user','assistant'].includes(x.role)).map(x=>({role:x.role,content:String(x.content).slice(0,2500)})),{role:'user',content:question}];
+ if(documents.length&&!providers.some(p=>p.code==='openai'))throw Object.assign(new Error('Document analysis requires an enabled OpenAI provider'),{status:503});
+ const current=documents.length?[{type:'input_text',text:question},...documents.map(file=>({type:'input_file',filename:file.name,file_data:file.data}))]:question;
+ const messages=[...history.slice(-12).filter(x=>['user','assistant'].includes(x.role)).map(x=>({role:x.role,content:String(x.content).slice(0,2500)})),{role:'user',content:current}];
  for(let i=0;i<providers.length;i++){
+  // Documents are explicitly sent only to OpenAI, never downgraded to a provider that would silently omit them.
+  if(documents.length&&providers[i].code!=='openai')continue;
   // Free-trial models may log prompts or use content for training. Do not share tenant context with them by default.
   const safeContext=mode==='mif-public'?context:(!freeTrialCodes.includes(providers[i].code)?context:'');
   const instruction=(mode==='mif-public'?mifPublicPolicy:mode==='enterprise-public'?enterpriseVisitorPolicy:policy)+(mode==='developer'?'\nDeveloper focus: Act as an Odoo development and implementation assistant for Odoo 17–20. Offer precise addon structures, security ACLs, views, migration plans, safe diagnostics and troubleshooting. Distinguish JSON-2 for Odoo 19+ from legacy JSON-RPC for older databases. Never assert an installation, deploy or database change has happened without verified tool results. For generated code, explain required staging tests.':'')+(safeContext?'\n'+(mode==='mif-public'?'Published MIF Smart website catalogue (public read-only data): ':'Read-only authorized tenant context: ')+String(safeContext).slice(0,3000):'');
   // Trial providers receive only the message explicitly being sent now, never old conversations.
   const requestMessages=freeTrialCodes.includes(providers[i].code)?[{role:'user',content:question}]:messages;
   try{return await requestProvider(providers[i],requestMessages,instruction)}
-  catch(e){if(i===providers.length-1)throw Object.assign(new Error(e.status===429?'AI service is busy; try again later':'RAWI could not answer at this time'),{status:e.status===429?429:502});}
+  catch(e){if(documents.length||i===providers.length-1)throw Object.assign(new Error(e.status===429?'AI service is busy; try again later':'RAWI could not answer at this time'),{status:e.status===429?429:502});}
  }
 }
