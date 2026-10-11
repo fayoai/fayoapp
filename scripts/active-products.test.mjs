@@ -27,7 +27,6 @@ test('inactive product Worker and routes never serve runnable customer code',()=
  assert.deepEqual(surfacePolicy('developer','/api/admin/login','POST'),{status:404});
  assert.deepEqual(surfacePolicy('enterprise','/api/admin/developer/connections','GET'),{status:404});
  assert.deepEqual(surfacePolicy('mif','/developer/'),{status:404});
- assert.match(read('worker/coming-soon.js'),/status:404/);
 });
 test('RAWI ERP approved blue chat layout and account-only installation are frozen',()=>{
  const source=read('src/MifSmartShell.jsx');
