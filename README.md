@@ -6,7 +6,7 @@ Modern, bilingual (Arabic RTL / English LTR) React 19 front-end, Node.js/Hono RE
 
 ## Products in scope
 
-- **MIF ERP** — extended Odoo Community, scoped modules and services (not bundled Enterprise source code).
+- **Odoo Community المطوّر (Enhanced Odoo Community)** — extended Odoo Community, scoped modules and services (not bundled Enterprise source code).
 - **MIF Odoo Control** — Odoo server/instance/backup/release management product.
 - **Partner Cloud** — SaaS control plane and CRM for Odoo partners.
 - **MIF Marketing** — marketing website and CRM/content/chats SaaS.
