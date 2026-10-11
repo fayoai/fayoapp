@@ -30,7 +30,7 @@ export default function MifSmartShell(){
  const areaRef=useRef(null),requestRef=useRef(null);
  const device=useMemo(platform,[]),authed=!!session;
  const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
- useEffect(()=>{if(session?.account_type==='developer'&&!ownerSetup)window.location.replace('/developers')},[session?.account_type,ownerSetup]);
+ useEffect(()=>{if(session?.account_type==='developer'&&!ownerSetup)window.location.replace('/developers/')},[session?.account_type,ownerSetup]);
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false)};window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
