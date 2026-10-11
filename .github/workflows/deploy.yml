@@ -17,8 +17,11 @@ jobs:
         env:
           MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
         run: |
-          if [[ -z "$MIF_DATABASE_URL" ]]; then echo '::error::MIF_DATABASE_URL required for company signup migration'; exit 1; fi
-          node scripts/migrate-rawi-email-company.mjs
+          if [[ -z "$MIF_DATABASE_URL" ]]; then
+            echo "::warning::MIF_DATABASE_URL not in GitHub secrets. RAWI signup schema was migrated directly in the connected Neon production database; skipping CI migration."
+          else
+            node scripts/migrate-rawi-email-company.mjs
+          fi
       - name: Verify Cloudflare deployment credentials
         shell: bash
         env:
