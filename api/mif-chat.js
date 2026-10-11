@@ -185,9 +185,18 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
    const companyInfo=await query(centralDb(c),"SELECT p.name,p.activity,p.setup_plan FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND m.admin_id=$2",[workspace,user]).catch(()=>[]);
-   const business=companyInfo[0]?{name:companyInfo[0].name,activity:companyInfo[0].activity,sector:companyInfo[0].setup_plan?.sector,
-    focus:companyInfo[0].setup_plan?.summary,prioritized_departments:companyInfo[0].setup_plan?.sections}:null;
-   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3000),'enterprise',v.data.documents||[]);
+   const blueprint=companyInfo[0]?.setup_plan;
+   const dynamicStats=blueprint?.repositories?.length?await query(sql,`SELECT repository_key,COUNT(*)::int records
+     FROM rawi_dynamic_records WHERE workspace_id=$1 GROUP BY repository_key`,[workspace]).catch(()=>[]):[];
+   const business=companyInfo[0]?{
+    name:companyInfo[0].name,activity:companyInfo[0].activity,sector:blueprint?.sector,
+    description:blueprint?.summary,
+    company_specific_repositories:(blueprint?.repositories||[]).map(r=>({
+     key:r.key,name:r.name,stages:r.stages,fields:r.fields.map(f=>({key:f.key,label:f.label,type:f.type})),
+     saved_records:dynamicStats.find(x=>x.repository_key===r.key)?.records||0
+    }))
+   }:null;
+   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3700),'enterprise',v.data.documents||[]);
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
