@@ -78,17 +78,31 @@ app.post('/api/admin/login',async c=>{const sql=db(c),key=secret(c);if(!sql||!ke
   if(profiles[0]?.account_type!==surface)return fail(c,403,'This account belongs to the other RAWI application');
  }
  const token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(loginSurface(c))).setIssuedAt().setExpirationTime('8h').sign(key);setCookie(c,sessionCookieFor(loginSurface(c)),token,{httpOnly:true,sameSite:'Strict',secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});return c.json({ok:true,email:row.email})});
-app.use('/api/admin/*',async(c,next)=>{if(['login','bootstrap','register'].includes(c.req.path.split('/').pop()))return next();const key=secret(c);if(!key)return fail(c,503,'Authentication unavailable');const token=getCookie(c,sessionCookieFor(loginSurface(c)));if(!token)return fail(c,401,'Sign-in required');try{const {payload}=await jwtVerify(token,key,{issuer:'mif-smart',audience:sessionAudienceFor(loginSurface(c))});c.set('adminId',payload.sub);
- const surface=env(c).MIF_APP_SURFACE;
+app.use('/api/admin/*',async(c,next)=>{
+ if(['login','bootstrap','register'].includes(c.req.path.split('/').pop()))return next();
+ const key=secret(c);
+ if(!key)return fail(c,503,'Authentication unavailable');
+ const token=getCookie(c,sessionCookieFor(loginSurface(c)));
+ if(!token)return fail(c,401,'Sign-in required');
+ let payload;
+ try{({payload}=await jwtVerify(token,key,{issuer:'mif-smart',audience:sessionAudienceFor(loginSurface(c))}))}
+ catch{return fail(c,401,'Session expired')}
+ c.set('adminId',payload.sub);
+ const central=centralDb(c),surface=env(c).MIF_APP_SURFACE;
  if(surface==='enterprise'||surface==='developer'){
-  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
-  const profiles=await query(sql,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[payload.sub]);
-  if(profiles[0]?.account_type!==surface)return fail(c,403,'Application account mismatch');
+  if(!central)return fail(c,503,'Central Neon database is not connected');
+  try{
+   const profiles=await query(central,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[payload.sub]);
+   if(profiles[0]?.account_type!==surface)return fail(c,403,'Application account mismatch');
+  }catch(e){console.error('Identity verification unavailable',e?.message);return fail(c,503,'Identity service unavailable')}
  }
- const routing=await attachTenantDb(c,{central:centralDb(c),query,settings:env(c)});
- if(routing)return fail(c,routing.status,routing.error);
- c.set('centralSQL',centralDb(c));
- await next()}catch(e){console.error('Secure session or tenant routing failed',e?.message);return fail(c,503,'Secure session or database routing unavailable')}});
+ try{
+  const routing=await attachTenantDb(c,{central,query,settings:env(c)});
+  if(routing)return fail(c,routing.status,routing.error);
+ }catch(e){console.error('Customer Neon routing failed',e?.message);return fail(c,503,'Customer database unavailable')}
+ c.set('centralSQL',central);
+ return next();
+});
 app.post('/api/admin/logout',c=>{deleteCookie(c,sessionCookieFor(loginSurface(c)),{path:'/'});return c.json({ok:true})});
 app.get('/api/admin/my-subscription',async c=>{
  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
