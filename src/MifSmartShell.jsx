@@ -65,9 +65,10 @@ export default function MifSmartShell(){
     const result=await api('/api/admin/company/plan',{method:'POST',body:JSON.stringify({workspace_id,name,activity,language:lang})});
     if(!alive)return;
     if(result.pending){timer=setTimeout(analyze,Math.min(10000,Math.max(1200,result.retry_after_ms||1500)));return}
-    setCompanyPlan(result.plan?{...result.plan,name,activity}:null);
+    setCompanyPlan(result.ready&&result.plan?{...result.plan,name,activity}:null);
+    if(!result.ready)setCompanyPlanError(L('النموذج لم يستطع تصميم المساحة الآن. سيتم إعادة التوليد بعد إعداد الشركة؛ لن نعرض إدارات جاهزة بدلًا منه.','The AI model could not generate your workspace yet. Rawi will retry after setup instead of showing fixed departments.'));
     setCompanyPlanBusy(false);
-   }catch(e){if(!alive)return;setCompanyPlanBusy(false);setCompanyPlanError(L('تعذر تحليل النشاط الآن؛ سيتم حفظ التهيئة الأساسية عند إكمال الشركة.','Business analysis is currently unavailable; basic setup will be saved when you finish.'))}
+   }catch(e){if(!alive)return;setCompanyPlanBusy(false);setCompanyPlanError(L('تعذر تصميم مساحة الشركة الآن. يمكنك حفظ بيانات الشركة وإعادة توليد المستودعات من مساحة العمل.','Workspace generation is unavailable. Save your company details and retry generating repositories from the workspace.'))}
   };
   timer=setTimeout(analyze,1100);
   return()=>{alive=false;clearTimeout(timer)};
