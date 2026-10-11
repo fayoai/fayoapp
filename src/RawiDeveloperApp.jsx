@@ -16,7 +16,7 @@ export default function RawiDeveloperApp(){
  useEffect(()=>{refresh();api('/api/public/rawi/status').then(s=>setAllowRegister(!!s.registration_enabled)).catch(()=>setAllowRegister(false))},[refresh]);
  const isDeveloper=session?.account_type==='developer';
  const reload=useCallback(async()=>{if(!isDeveloper)return;try{
-  const [w,p]=await Promise.all([api('/api/admin/erp/workspaces'),api('/api/admin/my-subscription')]);
+  const [w,p]=await Promise.all([api('/api/admin/developer/workspaces'),api('/api/admin/my-subscription')]);
   const list=w.data||[];setWorkspaces(list);setSubscriptions(p.data||[]);
   setWorkspace(old=>list.some(x=>x.id===old)?old:list[0]?.id||'');
  }catch(e){setError(e.message)}},[isDeveloper]);
