@@ -189,3 +189,11 @@
 @media(max-width:560px){.rawi-company-grid{grid-template-columns:1fr}.rawi-company-setup{padding:16px 14px;margin:3px auto 14px}.rawi-company-form>button[type=submit]{align-self:stretch}}
 
 .rawi-signup-unavailable{font-size:12px;line-height:1.8;color:#9b4141;background:#fff5f5;border-radius:9px;padding:10px 12px;margin:0}
+
+.rawi-business-plan{display:flex;flex-direction:column;gap:9px;padding:15px;border:1px solid #dbe8fb;background:#f6f9ff;border-radius:13px;min-width:0}
+.rawi-business-plan-head{display:flex;align-items:center;gap:8px;color:var(--rawi-blue);font-size:13px}
+.rawi-business-plan-head strong{flex:1}
+.rawi-business-plan p{margin:0;font-size:12px;line-height:1.8;color:#3e526b}
+.rawi-business-plan small{font-size:11px;line-height:1.7;color:#657a95}
+.rawi-business-departments{display:flex;flex-wrap:wrap;gap:6px}
+.rawi-business-departments span{border-radius:8px;border:1px solid #d4e2f8;background:#fff;padding:6px 9px;font-size:11px;font-weight:700;color:#2853a2}
