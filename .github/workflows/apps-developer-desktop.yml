@@ -1,0 +1,43 @@
+name: Package RAWI Developer Desktop (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Deployed MIF Smart HTTPS URL (required)'
+        required: true
+        type: string
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cmd: dist:linux
+          - os: windows-latest
+            cmd: dist:win
+          - os: macos-latest
+            cmd: dist:mac
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Prepare verified deployment URL
+        shell: bash
+        env:
+          APP_URL: ${{ inputs.site_url }}
+        run: |
+          node -e "const u=new URL(process.env.APP_URL);if(u.protocol!=='https:'||u.hostname.endsWith('.example'))process.exit(1);const fs=require('fs');fs.writeFileSync('apps/developer-desktop/desktop-config.json',JSON.stringify({siteUrl:u.origin+'/developer/'}))"
+      - name: Install Electron build tooling
+        working-directory: apps/developer-desktop
+        run: npm install --no-audit --no-fund
+      - name: Build unsigned app installer
+        working-directory: apps/developer-desktop
+        run: npm run ${{ matrix.cmd }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rawi-developer-${{ matrix.os }}-unsigned
+          path: apps/developer-desktop/release/*
+          if-no-files-found: error
+          retention-days: 7
