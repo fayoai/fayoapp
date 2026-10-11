@@ -125,7 +125,14 @@ export function installMifChat(app,{db,env,query}){
   const accountMode=profiles[0]?.account_type==='developer'?'developer':'enterprise';
   let result;try{
    // Tenant-scoped aggregates only. No raw contacts, private messages, payment credentials or other organizations.
-   const stats=await query(sql,`SELECT w.name,
+   const stats=accountMode==='developer'?await query(sql,`SELECT w.name,
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=w.id) odoo_connections,
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=w.id AND last_status='ok') verified_odoo_connections,
+    (SELECT count(*)::int FROM rawi_odoo_connections WHERE workspace_id=w.id AND last_status='failed') failed_odoo_connections,
+    (SELECT count(*)::int FROM rawi_implementation_projects WHERE workspace_id=w.id) implementation_projects,
+    (SELECT count(*)::int FROM rawi_implementation_projects WHERE workspace_id=w.id AND status='blocked') blocked_implementations,
+    (SELECT count(*)::int FROM rawi_odoo_diagnostics WHERE workspace_id=w.id AND status='error') recorded_diagnostics_errors
+    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]):await query(sql,`SELECT w.name,
    (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=w.id) contacts,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id) invoices,
    (SELECT count(*)::int FROM erp_invoices WHERE workspace_id=w.id AND status='issued' AND due_on<CURRENT_DATE) overdue_invoices,
