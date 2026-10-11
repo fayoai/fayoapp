@@ -12,7 +12,7 @@ test('Evaluation provisioning preserves owner-edited settings',async()=>{
  assert.equal(p.id,'example-plan');
  assert.match(captured.sql,/ON CONFLICT\(code\) DO UPDATE SET code=EXCLUDED.code/);
  assert.match(captured.sql,/price_halalas,message_limit,active/);
- assert.deepEqual(captured.params,[30]);
+ assert.deepEqual(captured.params,['rawi-evaluation','RAWI Enterprise evaluation',30,'RAWI-AI-ERP']);
 });
 test('Disabled evaluation plan blocks registration instead of creating unusable subscriptions',async()=>{
  await assert.rejects(()=>ensureEvaluationPlan({},async()=>[{id:'p',active:false}],evaluationSettings({})),/disabled/);
@@ -27,4 +27,9 @@ test('Login and registration throttles use atomic upserts and never write raw em
  assert.ok(!JSON.stringify(captured.params).includes('192.0.2.17'));
  assert.equal(captured.params[1],'login');
  await assert.rejects(()=>enforceAuthLimit({},query,'x','192.0.2.17','login'),/secret/);
+});
+
+test('Independent Developers registration gets its own evaluation plan',async()=>{
+ let args;await ensureEvaluationPlan({},async(_db,_sql,params)=>{args=params;return [{id:'developers-evaluation',active:true,message_limit:30,product_code:'RAWI-DEVELOPERS'}]},evaluationSettings({}),'developer');
+ assert.equal(args[0],'rawi-developers-evaluation');assert.equal(args[3],'RAWI-DEVELOPERS');
 });
