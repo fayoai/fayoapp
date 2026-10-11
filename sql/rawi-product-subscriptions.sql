@@ -5,3 +5,6 @@ ALTER TABLE mif_subscription_plans
 UPDATE mif_subscription_plans
  SET product_code='RAWI-AI-ERP' WHERE product_code IS NULL OR product_code='';
 CREATE INDEX IF NOT EXISTS mif_plans_product_active ON mif_subscription_plans(product_code,active);
+INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active,product_code)
+VALUES('rawi-developers-evaluation','RAWI Developers evaluation','monthly',0,30,true,'RAWI-DEVELOPERS')
+ON CONFLICT(code) DO NOTHING;
