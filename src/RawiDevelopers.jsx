@@ -14,7 +14,7 @@ export default function RawiDevelopers({notify=()=>{}}){
  const [connection,setConnection]=useState(defaultConnect),[editingConnection,setEditingConnection]=useState(''),[moduleHasMore,setModuleHasMore]=useState(false),[implementation,setImplementation]=useState(defaultImplementation),[module,setModule]=useState(defaultModule),[filter,setFilter]=useState('');
  const base=workspace?'/api/admin/developer/w/'+encodeURIComponent(workspace):'';
  const show=(msg,failed=false)=>{setError(failed?msg:'');setSuccess(failed?'':msg);notify(msg,failed)};
- const getWorkspaces=useCallback(async()=>{try{const r=await api('/api/admin/erp/workspaces'),list=r.data||[];setWorkspaces(list);setWorkspace(old=>list.some(w=>w.id===old)?old:list[0]?.id||'')}catch(e){setError(e.message)}},[]);
+ const getWorkspaces=useCallback(async()=>{try{const r=await api('/api/admin/developer/workspaces'),list=r.data||[];setWorkspaces(list);setWorkspace(old=>list.some(w=>w.id===old)?old:list[0]?.id||'')}catch(e){setError(e.message)}},[]);
  useEffect(()=>{getWorkspaces()},[getWorkspaces]);
  const load=useCallback(async()=>{if(!base)return;setLoading(true);try{const [a,b]=await Promise.all([api(base+'/connections'),api(base+'/implementations')]);setConnections(a.data||[]);setImplementations(b.data||[])}catch(e){setError(e.message)}finally{setLoading(false)}},[base]);
  useEffect(()=>{load();setModules([]);setModuleHasMore(false);setChecks([]);setActive('')},[load]);
