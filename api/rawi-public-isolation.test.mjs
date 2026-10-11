@@ -12,7 +12,7 @@ test('RAWI ERP visitor has real AI answers without exposing customer records',as
   const result=await app.request('https://erp.example/api/chat/public',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.21'},body:JSON.stringify({question:'How to invoice?'})});
   assert.equal(result.status,200);
   assert.equal((await result.json()).answer,'Provider response');
-  assert.match(instruction,/You are RAWI Enterprise/);
+  assert.match(instruction,/You are RAWI ERP/);
   assert.ok(!statements.some(x=>x.sql.includes('FROM mif_products')));
   assert.ok(statements.some(x=>x.sql.startsWith('INSERT INTO mif_ai_usage')));
  }finally{globalThis.fetch=original}
