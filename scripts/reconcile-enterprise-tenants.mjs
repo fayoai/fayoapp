@@ -13,7 +13,7 @@ const records=await query(sql,`SELECT d.workspace_id,d.status,d.migration_versio
 console.log('RAWI workspace reconciliation: '+records.length+' completed company profiles require initialization');
 for(const record of records){
  const options={central:sql,query,settings:{DATABASE_URL:url,NEON_PROJECT_ID:vars.NEON_PROJECT_ID,NEON_BRANCH_ID:vars.NEON_BRANCH_ID},workspaceId:record.workspace_id};
- let status=record.status,last;
+ let status=record.status==='ready'&&Number(record.migration_version)<tenantMigrationCount?'outdated':record.status,last;
  for(let attempt=0;attempt<Math.ceil(tenantMigrationCount/20)+3&&status!=='ready';attempt++){
   last=await migrateTenantBatch(options);status=last.status;
   if(status==='busy')throw Error('Workspace is being initialized elsewhere; retry deployment');
