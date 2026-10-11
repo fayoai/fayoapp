@@ -1,6 +1,7 @@
 import React,{useState,createContext,useContext,useEffect} from 'react';
 import MifSmartShell from './MifSmartShell.jsx';
 import MifCompany from './MifCompany.jsx';
+import {initialLanguage} from './language-preferences.js';
 export const SiteContext=createContext(null);
 export const useSite=()=>useContext(SiteContext);
 export const tr=(lang,ar,en)=>lang==='ar'?ar:en;
@@ -13,7 +14,7 @@ export async function api(path,options={}){
  return value;
 }
 export default function App(){
- const [lang,setLang]=useState(()=>{try{return localStorage.getItem('mif_lang')==='en'?'en':'ar'}catch{return 'ar'}});
- useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';try{localStorage.setItem('mif_lang',lang)}catch{}},[lang]);
+ const [lang,setLang]=useState(()=>initialLanguage(window.location.pathname.startsWith('/mif')?'mif_lang':'rawi_lang'));
+ useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';try{localStorage.setItem(window.location.pathname.startsWith('/mif')?'mif_lang':'rawi_lang',lang)}catch{}},[lang]);
  return <SiteContext.Provider value={{lang,setLang,mode:'live'}}>{window.location.pathname.startsWith('/mif')?<MifCompany/>:<MifSmartShell/>}</SiteContext.Provider>;
 }
