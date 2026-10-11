@@ -27,10 +27,9 @@ test('Website presents only RAWI ERP as available and marks all remaining produc
  assert.doesNotMatch(site,/MIF ERP/);
 });
 test('Existing company and future-product logo colors stay unchanged',()=>{
- const mif=read('public/mif-logo.svg'),legacy=read('public/rawi-mark.svg'),developer=read('public/rawi-developer-mark.svg');
+ const mif=read('public/mif-logo.svg'),erp=read('public/rawi-erp-mark.svg');
  assert.match(mif,/fill="#e35a0e"/);
- assert.match(legacy,/fill="#e35a0e"/);
- assert.match(developer,/fill="#080808"/);
- assert.match(developer,/fill="#ffd21a"/);
+ assert.match(erp,/fill="#2166e8"/);
+ assert.match(erp,/fill="#ffffff"/);
  assert.match(read('src/mif-company.css'),/--mif-org:#e35a0e/);
 });
