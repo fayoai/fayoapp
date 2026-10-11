@@ -7,9 +7,9 @@ export default defineConfig(()=>{
  return {
   plugins:[
    react(),
-   ...(surface?[{name:'rawi-independent-entry',transformIndexHtml(html){
+   ...(surface?[{name:'rawi-independent-entry',enforce:'pre',transformIndexHtml:{order:'pre',handler(html){
     return html.replace('/src/main.jsx','/src/entry-'+surface+'.jsx');
-   }}]:[])
+   }}}]:[])
   ],
   resolve:{alias:surface?[{find:/^\.\/App\.jsx$/,replacement:path.resolve('src/site-shared.jsx')}]:[]},
   server:{port:5173,proxy:{'/api':'http://localhost:8788'}},
