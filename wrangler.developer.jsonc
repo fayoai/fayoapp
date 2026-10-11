@@ -1,30 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "rawi-developer",
-  "main": "worker/index.js",
-  "compatibility_date": "2026-10-11",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "vars": {
-    "MIF_APP_SURFACE": "developer",
-    "NEON_PROJECT_ID": "blue-wave-63999494",
-    "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
-    "NEON_DB_ROLE_NAME": "mif_smart_owner"
-  },
-  "assets": {
-    "directory": "./dist/developer",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": [
-      "/",
-      "/api/*",
-      "/developer",
-      "/developer/*",
-      "/mif",
-      "/mif/*",
-      "/owner-setup",
-      "/sitemap.xml"
-    ]
-  }
+  "main": "worker/coming-soon.js",
+  "compatibility_date": "2026-10-11"
 }
