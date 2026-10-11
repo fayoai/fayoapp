@@ -14,8 +14,10 @@ test('Single chat input has one visual border, no nested brand bar, and stays ov
  assert.match(css,/\.mif-app\{height:100dvh;min-height:100dvh;max-height:100dvh;overflow:hidden/);
  assert.match(css,/\.mif-body-chats\{height:auto;min-height:0/);
  assert.match(css,/\.mif-chat-page>\.mif-composer\{grid-row:3;align-self:end;justify-self:center;width:min\(100%,620px\)/);
- assert.match(ui,/<form className="mif-composer" onSubmit=\{ask\}><div className="mif-composer-field"><textarea/);
- assert.match(ui,/<\/div><button type="submit" className="rawi-send"/);
+ assert.match(ui,/<form className="mif-composer" onSubmit=\{ask\}>\s*<div className="mif-composer-field">/);
+ assert.match(ui,/<div className="rawi-composer-toolbar">/);
+ assert.match(ui,/<\/div>\s*<button type="submit" className="rawi-send"/);
+
  assert.match(ui,/e\.key==='Enter'&&!e\.shiftKey&&!e\.nativeEvent\?\.isComposing&&e\.keyCode!==229/);
  assert.match(css,/\.mif-composer-field\{flex:1;min-width:0/);
  assert.match(ui,/<img src="\/rawi-erp-mark\.svg" alt="" width="32" height="32" style=/);
@@ -94,4 +96,19 @@ test('Responsive mobile menu uses smaller icons, labels and footprint without ch
  assert.match(css,/\.mif-bottom-item\{font-size:9px;min-height:49px/);
  assert.match(css,/\.mif-bottom-item \.mif-bottom-icon svg\{width:19px;height:19px\}/);
  assert.match(css,/\.mif-bottom-item\.new \.mif-bottom-icon\{width:46px;height:46px/);
+});
+
+test('Composer exposes real attachments and voice, but company selection only exists when signed in',()=>{
+ const ui=read('src/MifSmartShell.jsx'),css=read('src/mif-smart-shell.css'),server=read('api/mif-chat.js');
+ assert.match(ui,/type="file" className="rawi-file-input"/);
+ assert.match(ui,/multiple aria-label=\{L\('اختيار المستندات'/);
+ assert.match(ui,/onChange=\{addDocuments\}/);
+ assert.match(ui,/onClick=\{toggleMicrophone\}/);
+ assert.match(ui,/authed&&workspaces\.length>0&&<label className="rawi-composer-company"/);
+ assert.doesNotMatch(ui,/className="rawi-workspace-picker">\{L\('المؤسسة','Organization'\)\}<select aria-label=\{L\('المؤسسة النشطة'/);
+ assert.match(ui,/<ArrowUp size=\{19\}/);
+ assert.match(css,/\.rawi-composer-company\{margin-inline-start:auto/);
+ assert.match(server,/documentsSchema\.optional\(\)/);
+ assert.match(server,/routeAI\(/);
+ assert.match(server,/app\.post\('\/api\/chat\/transcribe'/);
 });
