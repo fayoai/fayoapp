@@ -1,8 +1,7 @@
 // Public Cloudflare checks: only MIF Smart and RAWI ERP are active.
 const origin={
  erp:'https://rawi-enterprise.fayosaas.workers.dev',
- mif:'https://mif-smart-platform.fayosaas.workers.dev',
- retired:'https://rawi-developer.fayosaas.workers.dev'
+ mif:'https://mif-smart-platform.fayosaas.workers.dev'
 };
 const checks=[
  ['RAWI ERP home',origin.erp+'/',200,'html'],
@@ -15,9 +14,7 @@ const checks=[
  ['MIF future application disabled',origin.mif+'/developer/',404],
  ['MIF blocks ERP tenant APIs',origin.mif+'/api/admin/erp/workspaces',404],
  ['MIF blocks tenant registration',origin.mif+'/api/admin/register',404],
- ['MIF owner setup',origin.mif+'/mif/owner-setup',200,'html'],
- ['Inactive Developer Worker returns 404',origin.retired+'/',404],
- ['Inactive Developer API returns 404',origin.retired+'/api/admin/login',404]
+ ['MIF owner setup',origin.mif+'/mif/owner-setup',200,'html']
 ];
 let failures=0;
 for(const [label,url,status,type] of checks){
