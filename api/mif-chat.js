@@ -104,7 +104,7 @@ export function installMifChat(app,{db,env,query}){
   const rec=await query(sql,"SELECT COUNT(*)::int n FROM mif_chat_messages m JOIN mif_chat_threads t ON t.id=m.thread_id WHERE t.owner_id=$1 AND m.role='user' AND m.created_at>now()-interval '1 minute'",[user]);
   if((rec[0]?.n||0)>=12)return fail(c,429,'Too many messages; try again shortly');
   const selected=v.data.workspace_id||null;
-   const valid=await query(sql,'SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND ($2::uuid IS NULL OR w.id=$2) ORDER BY w.created_at LIMIT 1',[user,selected]);
+   const valid=await query(sql,`SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id LEFT JOIN rawi_account_profiles owner_type ON owner_type.admin_id=w.owner_id LEFT JOIN rawi_account_profiles member_type ON member_type.admin_id=m.admin_id WHERE m.admin_id=$1 AND ($2::uuid IS NULL OR w.id=$2) AND COALESCE(owner_type.account_type,'enterprise')=COALESCE(member_type.account_type,'enterprise') ORDER BY w.created_at LIMIT 1`,[user,selected]);
    if(!valid.length)return fail(c,404,'Select an authorized organization');
    const workspace=valid[0].id;
    let id=v.data.thread_id||null,history=[];
@@ -115,7 +115,7 @@ export function installMifChat(app,{db,env,query}){
    history.reverse();
   }
   // Every billable request reserves tenant quota atomically, even under concurrency.
-  const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND w.id=$2 ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
+  const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id LEFT JOIN rawi_account_profiles owner_type ON owner_type.admin_id=w.owner_id LEFT JOIN rawi_account_profiles member_type ON member_type.admin_id=m.admin_id WHERE m.admin_id=$1 AND w.id=$2 AND COALESCE(owner_type.account_type,'enterprise')=COALESCE(member_type.account_type,'enterprise') ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
    FROM target,mif_subscription_plans p WHERE target.id=s.workspace_id
    AND p.id=s.plan_id AND p.active=true AND p.application=COALESCE((SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1),'enterprise')
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
