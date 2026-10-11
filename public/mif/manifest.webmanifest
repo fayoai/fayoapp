@@ -1,0 +1,18 @@
+{
+  "id": "/mif/",
+  "name": "MIF Smart",
+  "short_name": "MIF Smart",
+  "start_url": "/mif",
+  "scope": "/mif/",
+  "display": "standalone",
+  "theme_color": "#e35a0e",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/mif-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

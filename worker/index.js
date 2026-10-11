@@ -14,6 +14,8 @@ export default {
   if(env.MIF_APP_SURFACE==='enterprise'&&(request.method==='GET'||request.method==='HEAD')&&url.pathname==='/'&&env.ASSETS){
    return env.ASSETS.fetch(request);
   }
+  // The company manifest must remain a static asset, never the HTML app shell.
+  if(url.pathname==='/mif/manifest.webmanifest'&&env.ASSETS)return env.ASSETS.fetch(request);
   if(url.pathname==='/sitemap.xml'){
    const canonical=getCanonicalOrigin(env);
    if(!canonical||url.origin!==canonical||!env.DATABASE_URL)return new Response('Not found',{status:404,headers:{'Cache-Control':'no-store'}});
@@ -54,6 +56,7 @@ export default {
     .on('meta[name="description"]',{element(el){el.setAttribute('content',meta.description)}})
     .on('title',{element(el){el.setInnerContent(meta.title)}})
     .on('link[rel="icon"]',{element(el){el.setAttribute('href','/mif-app-icon.svg')}})
+    .on('link[rel="manifest"]',{element(el){el.setAttribute('href','/mif/manifest.webmanifest')}})
     .on('head',{element(el){
       if(!isCanonical||!meta.index)return;
       const href=canonical+meta.path;

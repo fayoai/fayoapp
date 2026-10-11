@@ -10,7 +10,7 @@
     "MIF_APP_SURFACE": "enterprise"
   },
   "assets": {
-    "directory": "./dist",
+    "directory": "./dist/enterprise",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": [
