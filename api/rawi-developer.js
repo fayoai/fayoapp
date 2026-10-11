@@ -36,14 +36,15 @@ async function safeFetch(url,options={}){
  if(text.length>1024*1024)throw new Error('Odoo response exceeds supported size');
  try{return JSON.parse(text)}catch{throw new Error('Invalid JSON returned by Odoo')}
 }
-export async function odooRead(connection,credential,model,fields=['name'],limit=50){
+export async function odooRead(connection,credential,model,fields=['name'],limit=50,offset=0){
  if(!['ir.module.module','res.partner','ir.cron'].includes(model))throw new Error('Unsupported read-only model');
- const safeLimit=Math.min(Math.max(Number(limit)||1,1),150);
+ const safeLimit=Math.min(Math.max(Number(limit)||1,1),150),safeOffset=Number(offset);
+ if(!Number.isInteger(safeOffset)||safeOffset<0||safeOffset>100000)throw new Error('Invalid Odoo record offset');
  const host=validateRemote(connection.base_url,'odoo');
  if(connection.api_version==='json2'){
   const response=await safeFetch(host+'/json/2/'+model+'/search_read',{
    method:'POST',headers:{'Content-Type':'application/json','Authorization':'bearer '+credential,'X-Odoo-Database':connection.database_name},
-   body:JSON.stringify({domain:[],fields,limit:safeLimit})
+   body:JSON.stringify({domain:[],fields,limit:safeLimit,offset:safeOffset})
   });
   if(!Array.isArray(response))throw new Error('Unexpected Odoo records response');
   return response;
@@ -57,7 +58,7 @@ export async function odooRead(connection,credential,model,fields=['name'],limit
   };
   const uid=await req('common','authenticate',[connection.database_name,connection.login,credential,{}]);
   if(!Number.isInteger(uid)||uid<1)throw new Error('Odoo login failed');
-  const rows=await req('object','execute_kw',[connection.database_name,uid,credential,model,'search_read',[[]],{fields,limit:safeLimit}]);
+  const rows=await req('object','execute_kw',[connection.database_name,uid,credential,model,'search_read',[[]],{fields,limit:safeLimit,offset:safeOffset}]);
   if(!Array.isArray(rows))throw new Error('Unexpected Odoo records response');
   return rows;
  }
@@ -125,10 +126,32 @@ export function installRawiDeveloper(app,{db,env,query}){
    VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,[g.workspace,x.label,host,x.database_name,x.api_version,x.login,encrypted]);
   return c.json({ok:true,id:rows[0].id},201);
  });
+ app.patch('/api/admin/developer/w/:workspace/connections/:id',async c=>{
+   const g=await gate(c,true);if(g.error)return g.error;
+   const id=c.req.param('id');if(!uuid.safeParse(id).success)return fail(c,400,'Invalid connection');
+   const existing=await query(g.sql,'SELECT * FROM rawi_odoo_connections WHERE workspace_id=$1 AND id=$2',[g.workspace,id]);
+   if(!existing.length)return fail(c,404,'Connection not found');
+   const v=connectionInput.safeParse({...existing[0],...await parse(c)});
+   if(!v.success)return fail(c,400,'Invalid Odoo connection configuration');
+   const x=v.data;
+   let host,encrypted='';
+   try{host=validateRemote(x.base_url,'odoo');
+     if(x.credential)encrypted=await seal(x.credential,env(c).CONNECTOR_ENCRYPTION_KEY)
+   }catch{return fail(c,400,'Invalid HTTPS Odoo address or server encryption configuration')}
+   if(x.api_version==='jsonrpc'&&!x.login)return fail(c,400,'Odoo legacy JSON-RPC requires a username');
+   const data=await query(g.sql,`UPDATE rawi_odoo_connections SET label=$1,base_url=$2,database_name=$3,api_version=$4,login=$5,
+    encrypted_credential=CASE WHEN $6<>'' THEN $6 ELSE encrypted_credential END,
+    last_status='not_tested',last_tested_at=NULL,last_summary='{}'::jsonb,updated_at=now()
+    WHERE workspace_id=$7 AND id=$8 RETURNING id`,[x.label,host,x.database_name,x.api_version,x.login,encrypted,g.workspace,id]);
+   return data.length?c.json({ok:true,id:data[0].id}):fail(c,404,'Connection not found');
+ });
  app.delete('/api/admin/developer/w/:workspace/connections/:id',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
   if(!uuid.safeParse(c.req.param('id')).success)return fail(c,400,'Invalid connection');
-  const rows=await query(g.sql,'DELETE FROM rawi_odoo_connections WHERE id=$1 AND workspace_id=$2 RETURNING id',[c.req.param('id'),g.workspace]);
+  const id=c.req.param('id');
+  const linked=await query(g.sql,'SELECT 1 FROM rawi_implementation_projects WHERE workspace_id=$1 AND connection_id=$2 LIMIT 1',[g.workspace,id]);
+  if(linked.length)return fail(c,409,'This Odoo database is linked to implementation projects. Reassign their connection before deleting it.');
+  const rows=await query(g.sql,'DELETE FROM rawi_odoo_connections WHERE id=$1 AND workspace_id=$2 RETURNING id',[id,g.workspace]);
   return rows.length?c.json({ok:true}):fail(c,404,'Connection not found');
  });
  async function getConnection(c,g){
@@ -153,7 +176,12 @@ export function installRawiDeveloper(app,{db,env,query}){
  app.get('/api/admin/developer/w/:workspace/connections/:id/modules',async c=>{
   const g=await gate(c);if(g.error)return g.error;
   const connection=await getConnection(c,g);if(!connection)return fail(c,404,'Connection not found');
-  try{const data=await odooRead(connection,await credential(c,connection),'ir.module.module',['name','shortdesc','state','installed_version','latest_version'],150);return c.json({ok:true,data,partial:true,limit:150})}
+  try{
+    const requested=Number(c.req.query('offset')||0);
+    if(!Number.isInteger(requested)||requested<0||requested>100000)return fail(c,400,'Invalid page offset');
+    const limit=100,data=await odooRead(connection,await credential(c,connection),'ir.module.module',['name','shortdesc','state','installed_version','latest_version'],limit,requested);
+    return c.json({ok:true,data,limit,offset:requested,has_more:data.length===limit,next_offset:requested+data.length})
+   }
   catch(e){return fail(c,502,shortError(e))}
  });
  app.get('/api/admin/developer/w/:workspace/connections/:id/diagnostics',async c=>{
