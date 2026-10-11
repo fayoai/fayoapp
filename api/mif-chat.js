@@ -1,3 +1,4 @@
+import {seal,unseal} from './ai-erp.js';
 import {z} from 'zod';
 const uuid=z.string().uuid();
 const input=z.object({question:z.string().trim().min(1).max(2500)});
@@ -26,7 +27,39 @@ export async function respondWithOwnerKey(question,env,history=[],context=''){
  if(!answer)throw Object.assign(new Error('No answer returned by the AI service'),{status:502});
  return answer.slice(0,12000);
 }
+
+async function platformCredentials(sql,settings,query){
+ if(settings.OPENAI_API_KEY)return {OPENAI_API_KEY:settings.OPENAI_API_KEY,OPENAI_MODEL:settings.OPENAI_MODEL||'gpt-4.1-mini'};
+ if(!sql)return {};
+ try{
+  const rows=await query(sql,"SELECT encrypted_value,metadata FROM mif_platform_settings WHERE name='openai'");
+  if(!rows[0]?.encrypted_value)return {};
+  return {OPENAI_API_KEY:await unseal(rows[0].encrypted_value,settings.CONNECTOR_ENCRYPTION_KEY),OPENAI_MODEL:rows[0]?.metadata?.model||'gpt-4.1-mini'};
+ }catch{return {}}
+}
 export function installMifChat(app,{db,env,query}){
+ async function operator(c){
+  const settings=env(c),email=settings.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
+  if(!email)return null;
+  const sql=db(c);if(!sql)return null;
+  const rows=await query(sql,'SELECT id FROM admins WHERE id=$1 AND lower(email)=$2',[c.get('adminId'),email]);
+  return rows.length?sql:null;
+ }
+ app.get('/api/admin/platform/openai',async c=>{
+  const sql=await operator(c);if(!sql)return fail(c,403,'Platform operator access only');
+  const stored=await query(sql,"SELECT (length(encrypted_value)>0) configured,metadata,updated_at FROM mif_platform_settings WHERE name='openai'");
+  return c.json({ok:true,configured:!!env(c).OPENAI_API_KEY||!!stored[0]?.configured,model:env(c).OPENAI_MODEL||stored[0]?.metadata?.model||'gpt-4.1-mini',managed_by:env(c).OPENAI_API_KEY?'environment':'platform'});
+ });
+ app.put('/api/admin/platform/openai',async c=>{
+  const sql=await operator(c);if(!sql)return fail(c,403,'Platform operator access only');
+  if(env(c).OPENAI_API_KEY)return fail(c,409,'OpenAI is managed by Worker secret; update it on the hosting account');
+  const v=z.object({secret:z.string().min(15).max(4000),model:z.string().regex(/^[a-zA-Z0-9._-]{2,90}$/).default('gpt-4.1-mini')}).safeParse(await parse(c));
+  if(!v.success)return fail(c,400,'Invalid OpenAI configuration');
+  let encrypted;try{encrypted=await seal(v.data.secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch{return fail(c,503,'Encryption service is not configured')}
+  const rows=await query(sql,"INSERT INTO mif_platform_settings(name,encrypted_value,metadata) VALUES('openai',$1,$2::jsonb) ON CONFLICT(name) DO UPDATE SET encrypted_value=EXCLUDED.encrypted_value,metadata=EXCLUDED.metadata,updated_at=now() RETURNING name",[encrypted,JSON.stringify({model:v.data.model})]);
+  return c.json({ok:true,configured:!!rows.length,model:v.data.model});
+ });
+
  app.post('/api/chat/public',async c=>{
   const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
   // Anonymous model calls must be guarded by Cloudflare's distributed rate limiter.
@@ -36,7 +69,7 @@ export function installMifChat(app,{db,env,query}){
   if(!ip)return fail(c,403,'Unable to verify visitor request');
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ip)))).map(x=>x.toString(16).padStart(2,'0')).join('');
   try{const limit=await rate.limit({key:hash});if(!limit?.success)return fail(c,429,'Too many messages; try again shortly')}catch{return fail(c,503,'Public chat security is unavailable')}
-  try{return c.json({ok:true,answer:await respondWithOwnerKey(v.data.question,env(c))})}catch(e){return fail(c,e.status||502,e.message)}
+  try{return c.json({ok:true,answer:await respondWithOwnerKey(v.data.question,{...env(c),...await platformCredentials(db(c),env(c),query)})})}catch(e){return fail(c,e.status||502,e.message)}
  });
  app.get('/api/admin/chat/threads',async c=>{
   const sql=db(c);if(!sql)return fail(c,503,'Storage is not connected');
@@ -68,7 +101,7 @@ export function installMifChat(app,{db,env,query}){
    history.reverse();
   }
   const stats=await query(sql,"SELECT w.name, (SELECT COUNT(*) FROM erp_contacts WHERE workspace_id=w.id)::int contacts, (SELECT COUNT(*) FROM erp_invoices WHERE workspace_id=w.id)::int invoices, (SELECT COUNT(*) FROM erp_tasks WHERE workspace_id=w.id AND status='pending')::int pending_tasks FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 ORDER BY w.created_at LIMIT 3",[user]);
-  let answer;try{answer=await respondWithOwnerKey(v.data.question,env(c),history,JSON.stringify({workspaces:stats}).slice(0,3000))}catch(e){return fail(c,e.status||502,e.message)}
+  let answer;try{answer=await respondWithOwnerKey(v.data.question,{...env(c),...await platformCredentials(sql,env(c),query)},history,JSON.stringify({workspaces:stats}).slice(0,3000))}catch(e){return fail(c,e.status||502,e.message)}
   if(!id){
    const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title) VALUES($1,$2) RETURNING id',[user,v.data.question.slice(0,95)]);
    id=created[0].id;
