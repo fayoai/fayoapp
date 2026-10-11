@@ -21,6 +21,8 @@ jobs:
             npx wrangler deploy
           else
             echo "Cloudflare account secrets are absent; deploying a temporary, public preview only"
+            # Temporary accounts do not permit cron triggers. Retain them for authenticated production deploys.
+            node -e "const fs=require('fs');const p='wrangler.jsonc';const x=JSON.parse(fs.readFileSync(p,'utf8'));delete x.triggers;fs.writeFileSync(p,JSON.stringify(x,null,2))"
             npx wrangler deploy --temporary
           fi
         env:
