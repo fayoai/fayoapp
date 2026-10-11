@@ -44,7 +44,7 @@ export function installCommerce(app,{db,env,query}){
  // Customer accepts a real, administrator-issued quotation using their private order access.
  app.post('/api/commerce/order/:ref/accept',async c=>{
   const ref=c.req.param('ref'),input=z.object({access:z.string().min(20).max(200),method:z.enum(['gateway','bank'])}).safeParse(await body(c));
-  if(!/^MIF-\\d{4}-[A-F0-9]{10}$/.test(ref)||!input.success)return error(c,400,'Invalid quotation acceptance');
+  if(!/^MIF-\d{4}-[A-F0-9]{10}$/.test(ref)||!input.success)return error(c,400,'Invalid quotation acceptance');
   const sql=db(c);if(!sql)return error(c,503,'Order service not connected');
   const rows=await query(sql,'SELECT id,reference,total_halalas,status,payment_method FROM commerce_orders WHERE reference=$1 AND secret_hash=$2',[ref,await digest(input.data.access)]);
   const order=rows[0];if(!order)return error(c,404,'Order not found');
