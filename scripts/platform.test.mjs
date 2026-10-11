@@ -1,33 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import path from 'node:path';
 const root=process.cwd(),read=p=>readFileSync(path.join(root,p),'utf8');
-test('ERP installs as a single standalone application on supported devices',()=>{
+test('MIF Smart brand is the only user facing product name',()=>{
  const manifest=JSON.parse(read('public/manifest.webmanifest'));
- assert.equal(manifest.display,'standalone');
- assert.equal(manifest.name,'MIF Smart AI ERP');
- assert.equal(manifest.icons.every(i=>i.src==='/mif-app-icon.svg'),true);
- assert.equal(manifest.shortcuts.every(s=>s.url==='/'||s.url.startsWith('/erp')),true);
+ assert.equal(manifest.name,'MIF Smart');
  assert.equal(manifest.start_url,'/');
- for(const icon of manifest.icons)assert.equal(existsSync(path.join(root,'public',icon.src.slice(1))),true);
+ assert.equal(manifest.display,'standalone');
+ assert.ok(manifest.icons.every(i=>i.src==='/mif-app-icon.svg'));
+ assert.ok(manifest.icons.every(i=>existsSync(path.join(root,'public',i.src.slice(1)))));
+ assert.doesNotMatch(read('index.html'),/AI ERP|MIF ERP/);
+});
+test('Chat-first app has exactly five bottom navigation actions',()=>{
+ const shell=read('src/MifSmartShell.jsx'),app=read('src/App.jsx');
+ assert.match(app,/MifSmartShell/);
+ assert.match(shell,/\['chats'/);
+ for(const k of ['operations','new','schedule','account'])assert.match(shell,new RegExp("'"+k+"'"));
+ assert.match(shell,/mif-bottom-nav/);
+ assert.match(shell,/authed&&/);
+ assert.match(shell,/beforeinstallprompt/);
+ assert.match(shell,/mif-logo.svg/);
+ assert.doesNotMatch(shell,/MIF Smart AI ERP|Odoo Community|<CommerceStore/);
+});
+test('Only installed applications are offered for download',()=>{
+ const app=read('src/MifSmartShell.jsx');
+ assert.match(app,/beforeinstallprompt/);
+ assert.match(app,/Add to Home Screen/);
+ assert.doesNotMatch(app,/download=.*\.apk|download=.*\.exe/);
+});
+test('Native wrappers retain required isolation for supported builds',()=>{
  const config=JSON.parse(read('capacitor.config.json'));
  assert.equal(config.webDir,'dist');
  const desktop=read('apps/desktop/main.mjs');
  assert.match(desktop,/contextIsolation:true/);
  assert.match(desktop,/sandbox:true/);
 });
-test('Root application is ERP only without public store navigation',()=>{
- const app=read('src/App.jsx'),admin=read('src/Admin.jsx');
- assert.doesNotMatch(app,/CommerceStore|OrderCenter|AIPortal|<Footer/);
- assert.doesNotMatch(admin,/CommerceAdmin|Catalog notify|Pipeline key/);
- assert.match(admin,/AiErpWorkspace/);
- assert.match(admin,/onExplore/);
- assert.match(admin,/\/explore/);
- assert.match(read('api/app.js'),/installErpCore/);
- assert.doesNotMatch(read('api/app.js'),/installCommerce|seedCatalog/);
-});
-test('Offline worker avoids caching authenticated endpoints',()=>{
+test('Offline worker does not cache authenticated API responses',()=>{
  const sw=read('public/sw.js');
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
