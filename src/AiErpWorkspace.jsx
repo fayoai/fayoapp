@@ -33,9 +33,9 @@ export default function AiErpWorkspace({notify=()=>{},explore=false,mode='operat
  useEffect(()=>{
   if(explore||!workspace||mode!=='operations'){setBusinessPlan(null);return}
   let active=true;setBusinessPlan(null);
-  api('/api/admin/company/workspace-plan/'+encodeURIComponent(workspace)).then(r=>{if(active)setBusinessPlan(r.data?.sections?.length?r.data:null)}).catch(()=>{if(active)setBusinessPlan(null)});
+  api('/api/admin/company/workspace-plan/'+encodeURIComponent(workspace)+'?language='+encodeURIComponent(lang)).then(r=>{if(active)setBusinessPlan(r.data?.sections?.length?r.data:null)}).catch(()=>{if(active)setBusinessPlan(null)});
   return()=>{active=false};
- },[explore,workspace,mode]);useEffect(()=>{const found=workspaces.find(w=>w.id===workspace);if(found)setProfile({legal_name:found.legal_name||'',vat_number:found.vat_number||'',address:found.address||'',phone:found.phone||''})},[workspace,workspaces]);
+ },[explore,workspace,mode,lang]);useEffect(()=>{const found=workspaces.find(w=>w.id===workspace);if(found)setProfile({legal_name:found.legal_name||'',vat_number:found.vat_number||'',address:found.address||'',phone:found.phone||''})},[workspace,workspaces]);
  const loadTeam=async()=>{if(explore||!workspace)return;try{const r=await api(base+'/members');setTeam(r.data||[])}catch(e){setError(e.message)}};
  useEffect(()=>{if(tab==='organization')loadTeam()},[workspace,tab,explore]);
  const addMember=async e=>{e.preventDefault();const result=await perform(()=>api(base+'/members',{method:'POST',body:JSON.stringify(invite)}),L('تمت إضافة العضو','Team member added'));if(result){setInvite({email:'',role:'viewer'});loadTeam()}};
