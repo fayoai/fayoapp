@@ -1,0 +1,12 @@
+import React,{createContext,useContext} from 'react';
+export const SiteContext=createContext(null);
+export const useSite=()=>useContext(SiteContext);
+export const tr=(lang,ar,en)=>lang==='ar'?ar:en;
+export const formatDay=(date,lang)=>date?new Date(date).toLocaleDateString(lang==='ar'?'ar-SA':'en-US'):'—';
+export const displayMoney=(amount,lang)=>new Intl.NumberFormat(lang==='ar'?'ar-SA':'en-US',{style:'currency',currency:'SAR'}).format(Number(amount)||0);
+export async function api(path,options={}){
+ const response=await fetch(path,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})}});
+ const value=await response.json().catch(()=>({error:'تعذر قراءة استجابة الخادم'}));
+ if(!response.ok)throw new Error(value.error||'Request failed ('+response.status+')');
+ return value;
+}
