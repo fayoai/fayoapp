@@ -19,6 +19,8 @@
       "/api/*",
       "/mif",
       "/mif/*",
+      "/admin",
+      "/admin/*",
       "/sitemap.xml",
       "/",
       "/developer/*"
