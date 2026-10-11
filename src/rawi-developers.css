@@ -100,3 +100,6 @@
  .rawi-dev-field-row>button{grid-column:2;width:100%}
  .rawi-dev-actions{gap:7px}
 }
+
+/* Operational workspace: keep labels and errors, omit static explanatory helper paragraphs. */
+.rawi-dev .rawi-dev-hint{display:none}
