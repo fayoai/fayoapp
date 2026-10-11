@@ -1,0 +1,55 @@
+{
+  "name": "rawi-developers-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RAWI Developers independent secure Odoo desktop application",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "prepare:icon": "node icon.mjs",
+    "start": "npm run prepare:icon && electron .",
+    "dist:win": "npm run prepare:icon && electron-builder --win nsis portable --publish never",
+    "dist:mac": "npm run prepare:icon && electron-builder --mac dmg zip --publish never",
+    "dist:linux": "npm run prepare:icon && electron-builder --linux AppImage deb --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "^26.0.12",
+    "sharp": "^0.34.2"
+  },
+  "build": {
+    "appId": "com.mifsmart.rawidevelopers.desktop",
+    "productName": "RAWI Developers",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.mjs",
+      "desktop-config.json",
+      "package.json",
+      "build/icon.png"
+    ],
+    "asar": true,
+    "icon": "build/icon.png",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    }
+  }
+}
