@@ -53,3 +53,15 @@ test('Public MIF website chat uses a company-specific policy, not RAWI tenant pe
   assert.ok(!JSON.stringify(sent).includes('PRIVATE_TENANT_123'));
  }finally{globalThis.fetch=original}
 });
+
+test('Public published company catalogue can reach free AI providers without prior conversation history',async()=>{
+ const prev=globalThis.fetch,requested=[];
+ globalThis.fetch=async(_url,opt)=>{requested.push(JSON.parse(opt.body));return {ok:true,json:async()=>({choices:[{message:{content:'Public catalogue reply'}}]})}};
+ try{
+  const result=await routeAI('What does MIF offer?',[{code:'groq',model:'test-model',key:'server-key'}],[{role:'user',content:'PRIVATE_CHAT_HISTORY'}],'[{"code":"ODOO-COMMUNITY-ENHANCED","title_en":"Enhanced Odoo Community"}]','mif-public');
+  assert.equal(result.answer,'Public catalogue reply');
+  assert.match(requested[0].messages[0].content,/Published MIF Smart website catalogue/);
+  assert.match(requested[0].messages[0].content,/ODOO-COMMUNITY-ENHANCED/);
+  assert.ok(!JSON.stringify(requested[0]).includes('PRIVATE_CHAT_HISTORY'));
+ }finally{globalThis.fetch=prev}
+});

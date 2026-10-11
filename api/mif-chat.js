@@ -78,7 +78,9 @@ export function installMifChat(app,{db,env,query}){
    if((day[0]?.hits||0)>45)return fail(c,429,'Daily conversation limit reached');
   }catch{return fail(c,503,'Public chat protection is temporarily unavailable')}
   try{
-   const result=await routeAI(v.data.question,await getAIProviders(sql,cfg,query),[],'','mif-public');
+   const products=await query(sql,'SELECT code,title_ar,title_en,summary_ar,summary_en FROM mif_products WHERE published=true ORDER BY sort_order,created_at LIMIT 12');
+   const catalogue=JSON.stringify(products.map(p=>({code:p.code,title_ar:p.title_ar,title_en:p.title_en,summary_ar:p.summary_ar,summary_en:p.summary_en}))).slice(0,3000);
+   const result=await routeAI(v.data.question,await getAIProviders(sql,cfg,query),[],catalogue,'mif-public');
    // Public requests are recorded without visitor IP, email or an invented tenant.
    try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES(NULL,NULL,$1,$2,$3,$4)',[result.provider,result.model,result.input_tokens,result.output_tokens])}catch(e){console.error('MIF public AI usage audit failed',e.message)}
    return c.json({ok:true,answer:result.answer});

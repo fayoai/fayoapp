@@ -102,3 +102,5 @@ Temporary Cloudflare previews do **not** contain the production secret bindings 
 ### Website AI attribution and accounting
 
 The public `/mif` AI calls now use a company-specific, public-information-only system policy rather than the private RAWI Enterprise assistant persona. Successful replies are recorded in `mif_ai_usage` with null tenant and actor (no raw visitor IP), so owner analytics include real website model consumption. The deployment audit identifies whether the public assistant is actually configured and enabled.
+
+The public MIF assistant grounds its answers in the **published** catalogue retrieved from Neon. This published information may be sent to an enabled free provider; unlike customer ERP history, it contains no tenant business data. Unpublished products and prior private chat history are not sent.
