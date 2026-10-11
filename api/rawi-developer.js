@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {validateRemote,seal,unseal} from './ai-erp.js';
 import {buildOdooModule} from './rawi-module-builder.js';
+import {listDeveloperPlatforms} from './rawi-platform-registry.js';
 const uuid=z.string().uuid();
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
@@ -103,6 +104,12 @@ export function installRawiDeveloper(app,{db,env,query}){
   if(write&&member[0].role==='viewer')return {error:fail(c,403,'Write permission required')};
   return {sql,workspace};
  }
+ app.get('/api/admin/developer/platforms',async c=>{
+  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
+  const rows=await query(sql,"SELECT 1 FROM rawi_account_profiles WHERE admin_id=$1 AND account_type='developer'",[c.get('adminId')]);
+  if(!rows.length)return fail(c,403,'Developer account required');
+  return c.json({ok:true,data:listDeveloperPlatforms(),note:'Only Odoo is implemented and enabled'});
+ });
  const view="id,label,base_url,database_name,api_version,login,(length(encrypted_credential)>0) has_credential,odoo_version,last_status,last_tested_at,last_summary,created_at";
  app.post('/api/admin/developer/w/:workspace/modules/build',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
