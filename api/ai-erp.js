@@ -37,7 +37,7 @@ export async function unseal(value,master){
 export async function runErpSchedule(sql){
  return sql.query("WITH due AS(SELECT id FROM erp_tasks WHERE status='pending' AND next_run_at<=now() ORDER BY next_run_at FOR UPDATE SKIP LOCKED LIMIT 100), changed AS(UPDATE erp_tasks t SET last_run_at=now(),next_run_at=CASE t.repeat WHEN 'daily' THEN now()+interval '1 day' WHEN 'weekly' THEN now()+interval '7 days' WHEN 'monthly' THEN now()+interval '1 month' ELSE NULL END,status=CASE WHEN t.repeat='once' THEN 'done' ELSE t.status END FROM due WHERE t.id=due.id RETURNING t.id,t.workspace_id,t.title) INSERT INTO erp_task_events(workspace_id,task_id,message) SELECT workspace_id,id,title FROM changed RETURNING task_id");
 }
-const integrationSchema=z.object({label:z.string().min(2).max(100),base_url:z.string().max(260).default(''),secret:z.string().max(4000).optional(),model:z.string().max(70).default('gpt-4.1-mini'),organization_id:z.string().max(50).default(''),enabled:z.boolean().default(true)});
+const integrationSchema=z.object({label:z.string().min(2).max(100),base_url:z.string().max(260).default(''),secret:z.string().max(4000).optional(),model:z.string().max(70).default('gpt-4.1-mini'),organization_id:z.string().max(50).default(''),sender:z.union([z.literal(''),z.email()]).default(''),enabled:z.boolean().default(true)});
 export function installAiErp(app,{db,env,query}){
  async function gate(c,write=false){
   const sql=db(c),id=c.req.param('workspace');if(!sql)return {err:invalid(c,'Database is not connected',503)};
@@ -140,9 +140,51 @@ export function installAiErp(app,{db,env,query}){
   let url='';try{if(x.base_url)url=validateRemote(x.base_url,provider)}catch(e){return invalid(c,e.message)}
   if(provider==='zoho'&&!x.organization_id)return invalid(c,'Zoho organization ID required');
   let token='';if(x.secret){try{token=await seal(x.secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch(e){return invalid(c,e.message,503)}}
-  const config=JSON.stringify({model:x.model,organization_id:x.organization_id});
+  const config=JSON.stringify({model:x.model,organization_id:x.organization_id,sender:x.sender});
   const data=await query(g.sql,"INSERT INTO erp_integrations(workspace_id,provider,label,base_url,configuration,encrypted_secret,enabled) VALUES($1,$2,$3,$4,$5::jsonb,$6,$7) ON CONFLICT(workspace_id,provider) DO UPDATE SET label=EXCLUDED.label,base_url=EXCLUDED.base_url,configuration=EXCLUDED.configuration,encrypted_secret=CASE WHEN EXCLUDED.encrypted_secret<>'' THEN EXCLUDED.encrypted_secret ELSE erp_integrations.encrypted_secret END,enabled=EXCLUDED.enabled RETURNING provider,label,base_url,configuration,enabled",[g.id,provider,x.label,url,config,token,x.enabled]);
   return c.json({ok:true,data:data[0]});
+ });
+ app.post('/api/admin/erp/w/:workspace/integrations/:provider/sync',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const provider=c.req.param('provider');
+  if(!['odoo','erpnext','zoho'].includes(provider))return invalid(c,'Provider does not support contact synchronization');
+  const rows=await query(g.sql,'SELECT base_url,configuration,encrypted_secret,enabled FROM erp_integrations WHERE workspace_id=$1 AND provider=$2',[g.id,provider]);
+  const rec=rows[0];if(!rec?.enabled||!rec.encrypted_secret)return invalid(c,'Configure provider credentials before synchronization',409);
+  let secret,root;try{secret=await unseal(rec.encrypted_secret,env(c).CONNECTOR_ENCRYPTION_KEY);root=validateRemote(rec.base_url,provider)}catch{return invalid(c,'Integration credentials or URL invalid',503)}
+  let uri,init={method:'GET',headers:{Accept:'application/json'},redirect:'error'};
+  if(provider==='odoo'){
+   uri=root+'/json/2/res.partner/search_read';
+   init={...init,method:'POST',headers:{...init.headers,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({domain:[['customer_rank','>',0]],fields:['id','name','email','phone'],limit:100})};
+  }else if(provider==='erpnext'){
+   uri=root+'/api/resource/Customer?fields='+encodeURIComponent(JSON.stringify(['name','customer_name']))+'&limit_page_length=100';
+   init.headers.Authorization='token '+secret;
+  }else{
+   const org=rec.configuration?.organization_id;if(!org)return invalid(c,'Zoho organization ID required');
+   uri=root+'/books/v3/contacts?organization_id='+encodeURIComponent(org)+'&per_page=100';
+   init.headers.Authorization='Zoho-oauthtoken '+secret;
+  }
+  let result;try{
+   const response=await fetch(uri,{...init,signal:AbortSignal.timeout(18000)});
+   if(!response.ok)throw Error('Provider HTTP '+response.status);
+   result=await response.json();
+  }catch{
+   await query(g.sql,'UPDATE erp_integrations SET last_checked_at=now(),last_error=$1 WHERE workspace_id=$2 AND provider=$3',['Connection or API authorization failed',g.id,provider]);
+   return invalid(c,'Could not verify provider connection or fetch contacts',502);
+  }
+  let contacts;
+  if(provider==='odoo')contacts=Array.isArray(result)?result:Array.isArray(result?.result)?result.result:[];
+  else if(provider==='erpnext')contacts=Array.isArray(result?.data)?result.data:[];
+  else contacts=Array.isArray(result?.contacts)?result.contacts:[];
+  const mapped=contacts.slice(0,100).map(x=>{
+   const id=String(provider==='odoo'?x.id:provider==='erpnext'?x.name:x.contact_id||'');
+   const name=String(provider==='odoo'?x.name:provider==='erpnext'?x.customer_name||x.name:x.contact_name||'').trim();
+   return {id:id.slice(0,100),name:name.slice(0,180),email:String(x.email||'').slice(0,180),phone:String(x.phone||'').slice(0,40)};
+  }).filter(x=>x.id&&x.name.length>=2);
+  let count=0;for(const x of mapped){
+   await query(g.sql,"INSERT INTO erp_contacts(workspace_id,kind,name,email,phone,external_source,external_id) VALUES($1,'customer',$2,$3,$4,$5,$6) ON CONFLICT(workspace_id,external_source,external_id) WHERE external_source<>'' AND external_id<>'' DO UPDATE SET name=EXCLUDED.name,email=EXCLUDED.email,phone=EXCLUDED.phone,updated_at=now()",[g.id,x.name,x.email,x.phone,provider,x.id]);count++;
+  }
+  await query(g.sql,'UPDATE erp_integrations SET last_checked_at=now(),last_error=$1 WHERE workspace_id=$2 AND provider=$3',['',g.id,provider]);
+  return c.json({ok:true,imported:count,provider});
  });
  app.get('/api/admin/erp/w/:workspace/messages',c=>list(c,'erp_ai_messages'));
  app.post('/api/admin/erp/w/:workspace/ask',async c=>{
@@ -170,7 +212,7 @@ export function installAiErp(app,{db,env,query}){
  app.post('/api/admin/erp/w/:workspace/email',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;
   const v=z.object({to:z.email(),subject:z.string().min(2).max(200),text:z.string().min(1).max(10000)}).safeParse(await body(c));if(!v.success)return invalid(c,'Invalid message');
-  const key=env(c).RESEND_API_KEY,from=env(c).MAIL_FROM;if(!key||!from)return invalid(c,'Email provider not configured',503);
+  const emailCfg=await query(g.sql,"SELECT encrypted_secret,configuration FROM erp_integrations WHERE workspace_id=$1 AND provider='email' AND enabled=true",[g.id]);let key=env(c).RESEND_API_KEY||'';if(emailCfg[0]?.encrypted_secret){try{key=await unseal(emailCfg[0].encrypted_secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch{return invalid(c,'Email credential cannot be decrypted',503)}}const from=emailCfg[0]?.configuration?.sender||env(c).MAIL_FROM;if(!key||!from)return invalid(c,'Email provider not configured',503);
   let sent=false;try{const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({from,to:[v.data.to],subject:v.data.subject,text:v.data.text})});sent=r.ok}catch{}
   await query(g.sql,'INSERT INTO erp_email_log(workspace_id,recipient,subject,delivery_status) VALUES($1,$2,$3,$4)',[g.id,v.data.to,v.data.subject,sent?'sent':'failed']);
   return sent?c.json({ok:true}):invalid(c,'Email was not sent',502);
