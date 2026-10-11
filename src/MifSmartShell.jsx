@@ -53,7 +53,7 @@ export default function MifSmartShell(){
   <header className="mif-topbar">
    <button type="button" className="mif-head-logo" aria-label="MIF Smart" onClick={()=>navigate('chats')}><img src="/mif-logo.svg" alt="MIF Smart"/></button>
    <div className="mif-head-actions">
-    {authed&&<button className="mif-head-control" onClick={()=>setIntegrationOpen(true)}><PlugZap size={18}/><span>{L('التكاملات','Integrations')}</span></button>}
+    {authed&&<button className="mif-head-control" onClick={()=>navigate('integrations')}><PlugZap size={18}/><span>{L('التكاملات','Integrations')}</span></button>}
     <button className="mif-head-control mif-download" onClick={install}><Download size={18}/><span>{L('تنزيل التطبيق','Get app')}</span></button>
     {!authed&&<button className="mif-head-signin" onClick={()=>setAuthOpen(true)}>{L('دخول','Sign in')}</button>}
    </div>
@@ -69,7 +69,7 @@ export default function MifSmartShell(){
     <form className="mif-composer" onSubmit={ask}><textarea rows={1} value={question} placeholder={L('اكتب رسالتك هنا...','Message MIF Smart...')} onChange={e=>setQuestion(e.target.value)} maxLength={2500} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask(e)}}}/><button type="submit" aria-label={L('إرسال','Send')} disabled={asking||!question.trim()}><Send size={21}/></button></form>
     <div className="mif-chat-footnote">{authed?L('محادثاتك محفوظة في حسابك.','Your chats are saved to your account.'):L('سجّل الدخول لحفظ محادثاتك واستخدام بيانات أعمالك.','Sign in to save chats and use your business records.')}</div>
    </section>}
-   {tab==='operations'&&(authed?<AiErpWorkspace key="operations" mode="operations" notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
+   {(tab==='operations'||tab==='integrations')&&(authed?<AiErpWorkspace key={tab} mode={tab} notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
    {tab==='schedule'&&(authed?<AiErpWorkspace key="schedule" mode="schedule" notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
    {tab==='account'&&(authed?<section className="mif-account"><div className="mif-account-avatar"><UserRound size={32}/></div><h2>{L('حسابي','My account')}</h2><div className="mif-account-detail"><span>{L('البريد الإلكتروني','Email')}</span><strong>{session.email||'—'}</strong></div><div className="mif-account-detail"><span>{L('اللغة','Language')}</span><button onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'العربية':'English'}</button></div><button className="mif-logout" onClick={logout}><LogOut size={18}/>{L('تسجيل الخروج','Sign out')}</button></section>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
   </main>
