@@ -25,6 +25,15 @@ jobs:
           else
             node scripts/migrate-rawi-email-company.mjs
           fi
+      - name: Initialize incomplete RAWI customer workspaces
+        env:
+          MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
+        run: |
+          if [[ -z "$MIF_DATABASE_URL" ]]; then
+            echo "::error::MIF_DATABASE_URL is required to prepare tenant databases"
+            exit 1
+          fi
+          node scripts/reconcile-enterprise-tenants.mjs
       - name: Verify Cloudflare deployment credentials
         shell: bash
         env:
