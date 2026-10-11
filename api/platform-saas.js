@@ -9,7 +9,7 @@ const failed=(c,status,error)=>c.json({ok:false,error},status);
 const payload=async c=>{try{return await c.req.json()}catch{return {}}};
 const model=z.string().regex(/^[a-zA-Z0-9._@/:-]{2,150}$/);
 const providerInput=z.object({model,enabled:z.boolean(),priority:z.number().int().min(1).max(999),secret:z.string().min(12).max(4000).optional()});
-const planInput=z.object({code:z.string().regex(/^[a-z0-9-]{2,40}$/),title:z.string().trim().min(2).max(120),cycle:z.enum(['monthly','yearly']),price_halalas:z.number().int().min(0).max(1000000000),message_limit:z.number().int().min(1).max(1000000),application:z.enum(['enterprise','developer']).default('enterprise'),active:z.boolean()});
+const planInput=z.object({code:z.string().regex(/^[a-z0-9-]{2,40}$/),title:z.string().trim().min(2).max(120),cycle:z.enum(['monthly','yearly']),price_halalas:z.number().int().min(0).max(1000000000),message_limit:z.number().int().min(1).max(1000000),application:z.literal('enterprise').default('enterprise'),active:z.boolean()});
 const subscriptionInput=z.object({plan_id:uuid,status:z.enum(['trial','active','past_due','suspended','cancelled']),period_ends_at:z.iso.datetime({offset:true}),reset_usage:z.boolean().default(false)});
 const names={openai:'OpenAI',anthropic:'Anthropic Claude',gemini:'Google Gemini',groq:'GroqCloud',openrouter:'OpenRouter',workers_ai:'Cloudflare Workers AI'};
 const keyVars={openai:'OPENAI_API_KEY',anthropic:'ANTHROPIC_API_KEY',gemini:'GEMINI_API_KEY',groq:'GROQ_API_KEY',openrouter:'OPENROUTER_API_KEY',workers_ai:''};
@@ -80,7 +80,7 @@ export function installPlatformSaas(app,{db,env,query}){
  });
  app.post('/api/admin/platform/invitations',async c=>{
   const input=z.object({
-   email:z.email().max(180),application:z.enum(['enterprise','developer']),
+   email:z.email().max(180),application:z.literal('enterprise'),
    expires_in_days:z.number().int().min(1).max(14).default(7)
   }).safeParse(await payload(c));
   if(!input.success)return failed(c,400,'Invalid invitation');
