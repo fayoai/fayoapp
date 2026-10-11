@@ -66,6 +66,16 @@ app.get('/api/admin/my-subscription',async c=>{
  return c.json({ok:true,data});
 });
 app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
+// Separate product authorization: Developers may create/list their own workspace,
+// but cannot enter Enterprise ERP operational APIs. Shared identity never implies access.
+app.use('/api/admin/erp/*',async(c,next)=>{
+ const path=c.req.path,workspaceIndex='/api/admin/erp/workspaces';
+ if(path===workspaceIndex&&(c.req.method==='GET'||c.req.method==='POST'))return next();
+ const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
+ const rows=await query(sql,'SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1',[c.get('adminId')]);
+ if(rows[0]?.account_type==='developer')return fail(c,403,'RAWI Developers has separate Odoo tools. Enterprise ERP operations are not available to Developer accounts.');
+ await next();
+});
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
