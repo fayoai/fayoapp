@@ -39,12 +39,29 @@
 .mif-spinner{animation:rawi-spin 1s linear infinite}
 @keyframes rawi-spin{to{transform:rotate(360deg)}}
 .mif-chat-error,.mif-form-error{color:#a52e37;background:#fff2f2;border:1px solid #f4cdd3;padding:10px 13px;border-radius:11px;font-size:12px;margin:7px 0}
-.mif-chat-page>.mif-composer{grid-row:3;align-self:end;justify-self:center;width:min(100%,620px);min-height:58px;max-height:178px;display:flex;flex-direction:row;align-items:flex-end;gap:10px;padding:0;margin:0 0 clamp(24px,5vh,48px);border:0;border-radius:0;background:transparent;box-shadow:none}
-.mif-composer-field{flex:1;min-width:0;min-height:56px;max-height:178px;display:flex;align-items:flex-end;padding:9px 13px;background:#fff;border:1.5px solid #d6e3f7;border-radius:17px;box-shadow:0 4px 18px #2143740a;transition:border-color .17s,box-shadow .17s}
+.mif-chat-page>.mif-composer{grid-row:3;align-self:end;justify-self:center;width:min(100%,620px);min-height:58px;max-height:275px;display:flex;flex-direction:row;align-items:flex-end;gap:10px;padding:0;margin:0 0 clamp(24px,5vh,48px);border:0;border-radius:0;background:transparent;box-shadow:none}
+.mif-composer-field{flex:1;min-width:0;min-height:75px;max-height:275px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:7px;padding:10px 12px 6px;background:#fff;border:1.5px solid #d6e3f7;border-radius:17px;box-shadow:0 4px 18px #2143740a;transition:border-color .17s,box-shadow .17s}
 .mif-composer-field:focus-within{border-color:var(--rawi-blue);box-shadow:0 0 0 3px #2166e817,0 12px 35px #21437412}
-.mif-composer textarea{display:block;flex:1;width:100%;min-width:0;resize:none;height:auto;min-height:35px;max-height:150px;overflow-y:auto;appearance:none;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;color:var(--rawi-text);line-height:1.75;font-size:14px;padding:6px 2px 1px;margin:0}
+.mif-composer textarea{display:block;flex:0 1 auto;width:100%;min-width:0;resize:none;height:auto;min-height:35px;max-height:150px;overflow-y:auto;appearance:none;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;color:var(--rawi-text);line-height:1.75;font-size:14px;padding:6px 2px 1px;margin:0}
 .mif-composer textarea::placeholder{color:#91a0b6}
-.rawi-send{flex:none;display:grid;place-items:center;width:44px;height:44px;margin-bottom:6px;border:0;border-radius:13px;background:var(--rawi-blue);color:#fff;box-shadow:none}
+.rawi-composer-toolbar{display:flex;align-items:center;gap:5px;min-height:29px;min-width:0}
+.rawi-composer-tool{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;padding:0;border:0;border-radius:9px;background:transparent;color:#687b98}
+.rawi-composer-tool:hover:not(:disabled){background:#edf4ff;color:var(--rawi-blue)}
+.rawi-composer-tool.is-recording{background:#fff0f0;color:#bd2735;animation:rawi-mic-pulse 1.3s ease-in-out infinite}
+.rawi-composer-tool:disabled{opacity:.4}
+@keyframes rawi-mic-pulse{50%{background:#fbd9df}}
+.rawi-file-input{display:none!important}
+.rawi-composer-company{margin-inline-start:auto;display:flex;align-items:center;gap:4px;min-width:0;max-width:min(60%,200px);color:#5c7091;font-size:11px}
+.rawi-composer-company select{width:100%;min-width:0;max-width:175px;min-height:28px;border:0;outline:0;background:transparent;color:#36547c;font-size:11px;font-weight:650;overflow:hidden;text-overflow:ellipsis}
+.rawi-composer-company svg{flex:none}
+.rawi-chat-files{display:flex;gap:6px;min-width:0;width:100%;overflow-x:auto;padding:1px 0 3px}
+.rawi-chat-file{flex:0 1 auto;min-width:0;max-width:220px;display:flex;align-items:center;gap:6px;border:1px solid #dde8f7;border-radius:10px;background:#f5f8fe;padding:6px 7px;color:#3a5277;font-size:11px}
+.rawi-chat-file>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rawi-chat-file>svg{flex:none;color:var(--rawi-blue)}
+.rawi-chat-file button{display:grid;place-items:center;flex:none;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:#7d8da4;padding:2px}
+.rawi-chat-file button:hover{background:#e9effa;color:#284877}
+
+.rawi-send{flex:none;display:grid;place-items:center;width:44px;height:44px;margin-bottom:6px;border:0;border-radius:50%;background:var(--rawi-blue);color:#fff;box-shadow:none}
 .rawi-send:hover:not(:disabled){background:var(--rawi-blue-dark)}
 .rawi-composer-brand img{width:22px;height:22px;object-fit:contain}
 .rawi-send:disabled{background:#e8effb;color:#a5b5cf}
@@ -127,8 +144,8 @@
  .mif-welcome-message img{width:41px;height:41px}
  .mif-welcome-message p{font-size:19px}
  .mif-chat-page>.mif-composer{width:min(100%,540px);min-height:50px;gap:8px;margin-bottom:clamp(17px,4vh,28px)}
- .mif-composer-field{min-height:50px;padding:6px 10px;border-radius:15px}
- .rawi-send{width:39px;height:39px;margin-bottom:5px;border-radius:12px}
+ .mif-composer-field{min-height:69px;padding:8px 9px 5px;border-radius:15px;gap:5px}
+ .rawi-send{width:39px;height:39px;margin-bottom:5px;border-radius:50%}
  .mif-composer textarea{min-height:34px;font-size:14px}
  .mif-bottom-nav{height:calc(64px + env(safe-area-inset-bottom));gap:0;padding:5px max(3px,env(safe-area-inset-right)) calc(3px + env(safe-area-inset-bottom))}
  .mif-bottom-item{font-size:9px;min-height:49px;padding:1px 0;gap:1px;max-width:none;white-space:nowrap}
