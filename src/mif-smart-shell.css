@@ -1,4 +1,4 @@
-:root{--mif-accent:#e35a0e;--mif-dark:#172024;--mif-muted:#728086}
+:root{--mif-accent:#2166e8;--mif-dark:#172024;--mif-muted:#728086}
 .mif-app{min-height:100dvh;background:#fcfcfb;color:#1e292e;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;display:flex;flex-direction:column}
 .mif-app button,.mif-app input,.mif-app textarea{font:inherit}
 .mif-app button{cursor:pointer}
@@ -7,13 +7,13 @@
 .mif-head-logo img{width:142px;height:61px;object-fit:contain}
 .mif-head-actions{display:flex;align-items:center;gap:9px}
 .mif-head-control,.mif-head-signin{border:1px solid #e9e9e6;border-radius:10px;padding:9px 13px;min-height:40px;background:#fff;color:#323d43;display:flex;align-items:center;justify-content:center;gap:9px;font-size:12px;font-weight:750;white-space:nowrap}
-.mif-head-control:hover{background:#faf7f4;border-color:#ffe8d7}
-.mif-head-signin{background:#e35a0e;border-color:#e35a0e;color:#fff;padding:9px 18px}
+.mif-head-control:hover{background:#faf7f4;border-color:#dce9fc}
+.mif-head-signin{background:#2166e8;border-color:#2166e8;color:#fff;padding:9px 18px}
 .mif-body{flex:1;min-height:0;width:100%;max-width:1600px;margin:0 auto;padding:12px 22px 95px}
 .mif-body-chats{display:flex;padding-bottom:90px}
 .mif-chat-page{display:flex;flex-direction:column;width:min(100%,940px);height:calc(100dvh - 178px);min-height:370px;margin:0 auto;position:relative;gap:0}
 .mif-history-toggle{align-self:start;display:flex;align-items:center;gap:8px;min-height:36px;background:#fff;border:1px solid #ebebe8;border-radius:10px;padding:7px 10px;color:#576168;font-size:12px}
-.mif-history-toggle span{border-radius:7px;color:#b84b14;background:#fff3e9;padding:0 5px}
+.mif-history-toggle span{border-radius:7px;color:#2154a6;background:#edf4ff;padding:0 5px}
 .mif-chat-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;padding:8px clamp(8px,2vw,22px)}
 .mif-chat-scroll.is-empty{justify-content:center}
 .mif-chat-welcome{text-align:center;margin:auto;padding:20px 0 40px}
@@ -22,18 +22,18 @@
 .mif-chat-welcome p{font-size:13px;color:#7d878c;line-height:1.9;margin:0}
 .mif-chat-messages{width:100%;display:flex;flex-direction:column;gap:21px;padding:24px 0}
 .mif-bubble{display:flex;gap:10px;max-width:89%;align-items:flex-start;white-space:pre-wrap}
-.mif-bubble img{height:35px;width:35px;object-fit:contain;flex-shrink:0;background:#fff4eb;padding:5px;border-radius:10px}
+.mif-bubble img{height:35px;width:35px;object-fit:contain;flex-shrink:0;background:#eef4ff;padding:5px;border-radius:10px}
 .mif-bubble>div{font-size:14px;line-height:1.95;min-width:0;overflow-wrap:anywhere}
 .mif-bubble p{margin:0}
 .mif-bubble.user{align-self:start;background:#f2f2ef;border:1px solid #e8e9e5;border-radius:17px 17px 5px 17px;padding:11px 16px}
 .mif-bubble.assistant{align-self:stretch;max-width:100%}
 .mif-bubble.assistant>div{padding:6px 2px}
-.mif-typing{display:flex;align-items:center;gap:10px;color:#e35a0e}
+.mif-typing{display:flex;align-items:center;gap:10px;color:#2166e8}
 .mif-typing img{width:32px;height:32px}
 .mif-spinner{animation:mif-spin .9s linear infinite}
 @keyframes mif-spin{to{transform:rotate(360deg)}}
 .mif-composer{min-height:62px;max-width:100%;display:flex;align-items:center;gap:12px;padding:9px 9px 9px 13px;background:#fff;border:1.5px solid #d6dcd8;border-radius:21px;box-shadow:0 5px 20px #1720240c}
-.mif-composer:focus-within{border-color:#f3a26e;box-shadow:0 5px 24px #e35a0e17}
+.mif-composer:focus-within{border-color:#91b5fa;box-shadow:0 5px 24px #2166e817}
 .mif-composer textarea{flex:1;resize:none;min-height:35px;max-height:115px;border:0;outline:0;padding:8px 7px;font-size:14px;line-height:1.7;color:#202b30;background:transparent;overflow:auto}
 .mif-composer textarea::placeholder{color:#969ea0}
 .mif-composer button{flex:none;width:44px;height:44px;border:0;border-radius:14px;display:grid;place-items:center;background:var(--mif-accent);color:white}
@@ -43,27 +43,27 @@
 .mif-bottom-nav{position:fixed;bottom:0;left:0;right:0;height:82px;padding:7px max(13px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom));display:flex;justify-content:space-around;align-items:start;gap:6px;background:#fff;border-top:1px solid #ececea;z-index:45;box-shadow:0 -2px 20px #131b1b09}
 .mif-bottom-item{width:min(19%,130px);min-height:58px;border:0;background:transparent;color:#879196;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:650}
 .mif-bottom-item .mif-bottom-icon{height:29px;display:grid;place-items:center}
-.mif-bottom-item.active{color:#e35a0e}
-.mif-bottom-item.new .mif-bottom-icon{width:59px;height:59px;margin-top:-28px;border-radius:50%;background:#e35a0e;box-shadow:0 6px 16px #e35a0e2b;color:#fff;border:5px solid #fff}
-.mif-bottom-item.new .mif-bottom-label{margin-top:-1px;color:#e35a0e}
+.mif-bottom-item.active{color:#2166e8}
+.mif-bottom-item.new .mif-bottom-icon{width:59px;height:59px;margin-top:-28px;border-radius:50%;background:#2166e8;box-shadow:0 6px 16px #2166e82b;color:#fff;border:5px solid #fff}
+.mif-bottom-item.new .mif-bottom-label{margin-top:-1px;color:#2166e8}
 .mif-access-gate{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;min-height:calc(100dvh - 210px);padding:25px 15px}
 .mif-access-gate img{width:84px;height:84px}
 .mif-access-gate h2{font-size:24px;margin:22px 0 4px}
 .mif-access-gate p{font-size:13px;color:#768289;max-width:400px;line-height:1.9}
-.mif-access-gate>button,.mif-dialog form>button,.mif-integration-dialog>button:last-child{display:flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:10px;background:#e35a0e;color:#fff;min-height:46px;padding:11px 22px;font-size:13px;font-weight:750;margin-top:10px}
+.mif-access-gate>button,.mif-dialog form>button,.mif-integration-dialog>button:last-child{display:flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:10px;background:#2166e8;color:#fff;min-height:46px;padding:11px 22px;font-size:13px;font-weight:750;margin-top:10px}
 .mif-dialog-wrap{position:fixed;inset:0;background:#111c218c;z-index:100;display:grid;place-items:center;padding:18px}
 .mif-dialog{width:min(100%,450px);max-height:calc(100dvh - 36px);overflow:auto;position:relative;background:#fff;border-radius:23px;padding:30px 29px;box-shadow:0 25px 90px #1118;display:flex;flex-direction:column;gap:9px}
 .mif-dialog>img{width:64px;height:65px;object-fit:contain;margin:0 auto}
-.mif-dialog>svg{margin:0 auto;color:#e35a0e}
+.mif-dialog>svg{margin:0 auto;color:#2166e8}
 .mif-dialog h2{text-align:center;font-size:23px;margin:8px 0 12px}
 .mif-dialog p{line-height:1.9;color:#69767d;text-align:center;font-size:13px}
 .mif-dialog small{font-size:11px;color:#79888f;line-height:1.8}
 .mif-close{position:absolute;top:14px;inset-inline-end:14px;display:grid;place-items:center;width:35px;height:35px;border:0;background:#f3f4f2;border-radius:50%}
 .mif-dialog form{display:grid;gap:13px}
 .mif-dialog form label{display:grid;gap:6px;font-size:12px;color:#414b51;font-weight:700}
-.mif-dialog form input{height:46px;border:1px solid #dfe2df;border-radius:10px;padding:10px 13px;color:#26333a;font-size:14px;outline-color:#f3a26e}
+.mif-dialog form input{height:46px;border:1px solid #dfe2df;border-radius:10px;padding:10px 13px;color:#26333a;font-size:14px;outline-color:#91b5fa}
 .mif-dialog form>button{margin-top:8px;width:100%}
-.mif-auth-switch{background:transparent;border:0;color:#e35a0e;font-size:12px;margin-top:10px;padding:10px}
+.mif-auth-switch{background:transparent;border:0;color:#2166e8;font-size:12px;margin-top:10px;padding:10px}
 .mif-form-error{color:#a82f21;background:#fff9f4;padding:12px;border-radius:9px;border:1px solid #f1d1c9;font-size:12px}
 .mif-install-dialog{text-align:center;align-items:center}
 .mif-install-dialog small{max-width:340px}
@@ -73,18 +73,18 @@
 .mif-history-dismiss{position:absolute;inset:0;background:#1116;border:0;pointer-events:auto}
 .mif-history-head{display:flex;justify-content:space-between;align-items:center;padding:7px 9px 17px}
 .mif-history-head button{border:0;background:transparent}
-.mif-history-new{display:flex;align-items:center;gap:9px;background:#fff9f5;color:#b74b12;border:1px solid #ffe8d7;padding:11px;border-radius:9px;width:100%;margin-bottom:13px}
+.mif-history-new{display:flex;align-items:center;gap:9px;background:#f7faff;color:#b74b12;border:1px solid #dce9fc;padding:11px;border-radius:9px;width:100%;margin-bottom:13px}
 .mif-history-item{display:flex;align-items:center;gap:8px;padding:3px 4px}
 .mif-history-item button{min-height:36px;border:0;background:#fff;color:#475258;text-align:start;border-radius:7px;padding:6px 9px}
 .mif-history-item button:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mif-history-item button:hover{background:#f5f6f4}
 .mif-account{max-width:540px;margin:30px auto;background:#fff;border:1px solid #e8eae8;border-radius:18px;padding:34px 28px}
-.mif-account-avatar{background:#fff3e9;border-radius:50%;width:78px;height:78px;display:grid;place-items:center;color:#e35a0e;margin:auto}
+.mif-account-avatar{background:#edf4ff;border-radius:50%;width:78px;height:78px;display:grid;place-items:center;color:#2166e8;margin:auto}
 .mif-account h2{text-align:center;margin:14px 0 27px}
 .mif-account-detail{display:flex;justify-content:space-between;gap:15px;align-items:center;border-bottom:1px solid #ebecea;padding:16px 0;font-size:13px;overflow-wrap:anywhere}
 .mif-account-detail span{color:#748188}
-.mif-account-detail button{border:0;background:#fff8f3;color:#e35a0e;border-radius:8px;padding:8px 12px}
-.mif-logout{display:flex;justify-content:center;gap:10px;align-items:center;background:#fff0ea;color:#e35a0e;border:1px solid #f2d2c5;border-radius:9px;width:100%;padding:12px;margin-top:23px}
+.mif-account-detail button{border:0;background:#f6f9ff;color:#2166e8;border-radius:8px;padding:8px 12px}
+.mif-logout{display:flex;justify-content:center;gap:10px;align-items:center;background:#eef4ff;color:#2166e8;border:1px solid #d9e5fb;border-radius:9px;width:100%;padding:12px;margin-top:23px}
 .mif-toast{position:fixed;z-index:95;inset-inline-end:16px;bottom:100px;background:#263339;color:#fff;padding:14px;border-radius:10px;display:flex;align-items:center;gap:10px;border:0}
 .mif-body-operations,.mif-body-schedule{max-width:1700px;padding-top:24px}
 .mif-body-operations .erp-shell,.mif-body-schedule .erp-shell{max-width:1700px}
@@ -94,17 +94,17 @@
 
 .mif-owner-settings{border-top:1px solid #e6e9e5;margin-top:22px;padding-top:24px;display:grid;gap:12px;text-align:start}
 .mif-owner-settings h3{font-size:15px;display:flex;align-items:center;gap:8px;margin:0}
-.mif-owner-settings h3 svg{color:#e35a0e}
+.mif-owner-settings h3 svg{color:#2166e8}
 .mif-owner-settings p{font-size:12px;color:#718088;line-height:1.85;margin:0}
-.mif-owner-status{display:flex;align-items:center;gap:8px;background:#fff8f3;padding:12px;color:#ba4d12;border:1px solid #ffe8d7;border-radius:9px;font-size:12px;font-weight:700}
+.mif-owner-status{display:flex;align-items:center;gap:8px;background:#f6f9ff;padding:12px;color:#2154a6;border:1px solid #dce9fc;border-radius:9px;font-size:12px;font-weight:700}
 .mif-owner-settings form{display:grid;gap:12px}
 .mif-owner-settings label{display:grid;gap:6px;font-size:12px;font-weight:700}
 .mif-owner-settings input{width:100%;padding:10px 12px;min-height:44px;border:1px solid #dae1dc;border-radius:9px}
-.mif-owner-settings form button{background:#e35a0e;color:#fff;border:0;border-radius:9px;min-height:44px}
+.mif-owner-settings form button{background:#2166e8;color:#fff;border:0;border-radius:9px;min-height:44px}
 .mif-owner-settings small{color:#677a80;font-size:11px;line-height:1.8}
 
 
-/* MIF Smart / RAWI visual system — company symbol on white; RAWI on orange. */
+/* MIF Smart / RAWI visual system — company symbol on white; RAWI on blue. */
 .mif-app{background:linear-gradient(145deg,#fafaf8,#fff 58%,#f9f7f5)}
 .mif-topbar{background:#ffffffed;backdrop-filter:blur(18px);border-bottom-color:#eef0ec;box-shadow:0 3px 19px #1f2b3105}
 .mif-head-control,.mif-head-signin{border-radius:12px;transition:background .16s,transform .16s;letter-spacing:0}
@@ -114,29 +114,29 @@
 .mif-rawi-brand{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto 25px;width:max-content;max-width:100%;background:#fff;padding:11px 17px 11px 12px;border:1px solid #e7ebe8;border-radius:19px;box-shadow:0 12px 33px #2330390b;text-align:start}
 .mif-rawi-brand img{width:57px;height:57px;object-fit:contain;border-radius:15px}
 .mif-rawi-brand strong{font-size:24px;font-weight:850;letter-spacing:.5px;display:block;line-height:1.35;color:#24333a}
-.mif-rawi-brand strong span{color:#e35a0e;font-size:17px;letter-spacing:0;margin-inline-start:4px}
+.mif-rawi-brand strong span{color:#2166e8;font-size:17px;letter-spacing:0;margin-inline-start:4px}
 .mif-rawi-brand small{color:#748288;display:block;font-size:11px;margin-top:4px;white-space:normal}
 .mif-chat-welcome h1{font-size:clamp(27px,4vw,39px);font-weight:850;color:#222f35;letter-spacing:-.8px}
 .mif-chat-welcome p{font-size:13px;line-height:2;color:#7a898e}
 .mif-chat-messages{gap:19px;padding:29px 4px 34px}
 .mif-bubble{gap:12px}
-.mif-bubble.assistant>img{background:#e35a0e;object-fit:cover;padding:0;border-radius:11px;width:36px;height:36px}
+.mif-bubble.assistant>img{background:#2166e8;object-fit:cover;padding:0;border-radius:11px;width:36px;height:36px}
 .mif-bubble.user{background:#f4f4f1;border-color:#e9ece7;border-radius:18px 18px 6px 18px;padding:12px 17px;box-shadow:0 2px 13px #27323508}
 .mif-bubble.assistant>div{font-size:14px;line-height:2.1;max-width:100%}
 .mif-bubble.assistant{padding:8px 1px}
 .mif-typing img{width:34px;height:34px;object-fit:contain}
 .mif-composer{border-radius:22px;min-height:70px;padding:11px;box-shadow:0 13px 35px #17202412;border:1px solid #e5e5df;background:#fff;transition:box-shadow .18s,border-color .18s}
-.mif-composer:focus-within{border-color:#edaa82;box-shadow:0 13px 38px #e35a0e1d}
+.mif-composer:focus-within{border-color:#91b5fa;box-shadow:0 13px 38px #2166e81d}
 .mif-composer textarea{font-size:14px;line-height:1.85;padding:9px 12px;min-height:38px}
 .mif-composer button{width:47px;height:47px;border-radius:15px;transition:transform .16s}
 .mif-composer button:not(:disabled):hover{transform:translateY(-2px)}
 .mif-chat-footnote{font-size:10px;line-height:1.8;color:#939d9e;margin-top:11px}
 .mif-bottom-nav{background:#fffefef7;backdrop-filter:blur(14px);box-shadow:0 -9px 34px #1322220c;border-top-color:#eaeeea}
 .mif-bottom-item{color:#7c8b90;transition:color .16s}
-.mif-bottom-item.active{color:#e35a0e;font-weight:800}
-.mif-bottom-item.new .mif-bottom-icon{box-shadow:0 8px 24px #e35a0e5c;border:5px solid #fff}
+.mif-bottom-item.active{color:#2166e8;font-weight:800}
+.mif-bottom-item.new .mif-bottom-icon{box-shadow:0 8px 24px #2166e85c;border:5px solid #fff}
 .mif-bottom-item.new:hover .mif-bottom-icon{transform:translateY(-2px)}
-.mif-owner-link{margin-top:22px;width:100%;border:1px solid #f0d4c2;background:#fff7f1;color:#e35a0e;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:14px;font-size:13px;font-weight:800}
+.mif-owner-link{margin-top:22px;width:100%;border:1px solid #cbdcf7;background:#fff7f1;color:#2166e8;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:14px;font-size:13px;font-weight:800}
 .mif-body-owner{max-width:1450px}
 @media(max-width:620px){.mif-chat-welcome{padding:18px 3px 20px}.mif-rawi-brand{margin-bottom:18px;padding:9px 12px}.mif-rawi-brand img{width:49px;height:49px}.mif-rawi-brand strong{font-size:20px}.mif-rawi-brand small{font-size:10px}.mif-chat-welcome h1{font-size:25px}.mif-chat-page{height:calc(100dvh - 164px)}.mif-composer{min-height:61px;padding:7px;border-radius:19px}.mif-composer button{width:44px;height:44px}.mif-bottom-nav{height:79px}}
 
@@ -144,46 +144,46 @@
 .rawi-head-logo{display:flex;gap:11px;align-items:center}
 .rawi-head-logo img{width:46px!important;height:46px!important;object-fit:contain;border-radius:12px}
 .rawi-head-logo>span{font-size:23px;color:#282d30;font-weight:900;letter-spacing:1px}
-.rawi-head-logo>span small{display:block;font-size:10px;font-weight:700;color:#e35a0e;letter-spacing:0;text-align:start;margin-top:-4px}
-.mif-app{background:linear-gradient(135deg,#fbfdfc,#fbfaf9 64%,#fff7f2);--mif-accent:#e35a0e}
-.mif-rawi-brand img,.mif-bubble.assistant>img{background:#e35a0e}
-.mif-composer{border-color:#eae4de}
-.mif-composer:focus-within{border-color:#f3a26e;box-shadow:0 13px 38px #e35a0e23}
-.mif-head-signin{background:#e35a0e;border-color:#e35a0e}
-.mif-owner-link{background:#fff4eb;border-color:#ffe8d7;color:#e35a0e}
+.rawi-head-logo>span small{display:block;font-size:10px;font-weight:700;color:#2166e8;letter-spacing:0;text-align:start;margin-top:-4px}
+.mif-app{background:linear-gradient(135deg,#fbfdfc,#fbfaf9 64%,#f6f9ff);--mif-accent:#2166e8}
+.mif-rawi-brand img,.mif-bubble.assistant>img{background:#2166e8}
+.mif-composer{border-color:#e5ecf7}
+.mif-composer:focus-within{border-color:#91b5fa;box-shadow:0 13px 38px #2166e823}
+.mif-head-signin{background:#2166e8;border-color:#2166e8}
+.mif-owner-link{background:#eef4ff;border-color:#dce9fc;color:#2166e8}
 .mif-chat-welcome h1{color:#282d30}
-.mif-app .mif-account-avatar{background:#fff4eb;color:#e35a0e}
+.mif-app .mif-account-avatar{background:#eef4ff;color:#2166e8}
 @media(max-width:620px){.rawi-head-logo img{width:38px!important;height:38px!important}.rawi-head-logo>span{font-size:19px}.rawi-head-logo>span small{font-size:9px}}
 
 .rawi-chat-tools{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:3px 3px 9px}
 .rawi-workspace-picker{display:flex;align-items:center;gap:8px;font-size:11px;color:#657d7e}
-.rawi-workspace-picker select{border:1px solid #ffe8d7;border-radius:9px;padding:8px 10px;background:white;color:#295b60;max-width:220px;font-size:12px}
+.rawi-workspace-picker select{border:1px solid #dce9fc;border-radius:9px;padding:8px 10px;background:white;color:#295b60;max-width:220px;font-size:12px}
 @media(max-width:600px){.rawi-chat-tools{padding:3px 0 6px}.rawi-workspace-picker select{max-width:145px}}
 
 /* RAWI 7.2 visual refinement. Only app interface: preserves RAWI original image assets. */
-.mif-app{background:radial-gradient(ellipse at 80% 2%,#fff3e9,transparent 40%),linear-gradient(180deg,#fffefd,#faf8f5 85%);color:#282d30;--mif-accent:#e35a0e}
+.mif-app{background:radial-gradient(ellipse at 80% 2%,#edf4ff,transparent 40%),linear-gradient(180deg,#fffefd,#faf8f5 85%);color:#282d30;--mif-accent:#2166e8}
 .mif-topbar{background:#fffffff5;border-bottom:1px solid #e0e9e6;box-shadow:0 3px 16px #282d300a}
-.rawi-head-logo>span{color:#282d30;font-weight:850}.rawi-head-logo>span small{color:#e35a0e}
-.mif-head-signin,.mif-composer button,.mif-bottom-item.new .mif-bottom-icon{background:#e35a0e;border-color:#e35a0e;color:white}
-.mif-composer{border:1px solid #e9e1d9;background:white;border-radius:19px;box-shadow:0 12px 38px #282d300f}
-.mif-composer:focus-within{border-color:#f3a26e;box-shadow:0 12px 38px #e35a0e1a}
+.rawi-head-logo>span{color:#282d30;font-weight:850}.rawi-head-logo>span small{color:#2166e8}
+.mif-head-signin,.mif-composer button,.mif-bottom-item.new .mif-bottom-icon{background:#2166e8;border-color:#2166e8;color:white}
+.mif-composer{border:1px solid #e3ebf9;background:white;border-radius:19px;box-shadow:0 12px 38px #282d300f}
+.mif-composer:focus-within{border-color:#91b5fa;box-shadow:0 12px 38px #2166e81a}
 .mif-chat-welcome h1{color:#282d30}.mif-chat-welcome p{color:#7a8b8d}
-.mif-rawi-brand{border:1px solid #eae4de;box-shadow:0 13px 38px #282d300b}.mif-rawi-brand strong{color:#282d30}.mif-rawi-brand strong span{color:#e35a0e}
-.mif-bottom-nav{background:#fffffff5;border-top:1px solid #e2ebe7;box-shadow:0 -8px 23px #282d3010}.mif-bottom-item.active{color:#e35a0e}
+.mif-rawi-brand{border:1px solid #e5ecf7;box-shadow:0 13px 38px #282d300b}.mif-rawi-brand strong{color:#282d30}.mif-rawi-brand strong span{color:#2166e8}
+.mif-bottom-nav{background:#fffffff5;border-top:1px solid #e2ebe7;box-shadow:0 -8px 23px #282d3010}.mif-bottom-item.active{color:#2166e8}
 .mif-dialog{background:#fff;border:1px solid #e2ebe6;border-radius:23px;box-shadow:0 28px 90px #282d3040}
 .rawi-signup-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:2px 0 16px}
 .rawi-signup-types>button{border:1px solid #e9e4de;background:#fefcf9;display:flex;flex-direction:column;text-align:start;align-items:flex-start;gap:7px;padding:15px;border-radius:14px;color:#385358;min-height:124px}
-.rawi-signup-types>button.selected{border-color:#e35a0e;background:#fff3e8;box-shadow:inset 0 0 0 1px #e35a0e}
-.rawi-signup-types>button svg{color:#e35a0e}.rawi-signup-types strong{font-size:13px}.rawi-signup-types small{font-size:10px;line-height:1.65;color:#657e81}
-.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #e35a0e;outline-offset:2px}
+.rawi-signup-types>button.selected{border-color:#2166e8;background:#eef4ff;box-shadow:inset 0 0 0 1px #2166e8}
+.rawi-signup-types>button svg{color:#2166e8}.rawi-signup-types strong{font-size:13px}.rawi-signup-types small{font-size:10px;line-height:1.65;color:#657e81}
+.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #2166e8;outline-offset:2px}
 @media(max-width:440px){.rawi-signup-types>button{padding:12px;min-height:117px}.rawi-signup-types small{font-size:9px}}
 
-/* RAWI approved original-orange interface. Layout refinements only; logo files are untouched. */
+/* RAWI approved original-blue interface. Layout refinements only; logo files are untouched. */
 .mif-app{
-  --mif-accent:#e35a0e;
-  --rawi-orange:#e35a0e;
-  --rawi-orange-dark:#be4610;
-  --rawi-orange-soft:#fff1e6;
+  --mif-accent:#2166e8;
+  --rawi-blue:#2166e8;
+  --rawi-blue-dark:#174db4;
+  --rawi-blue-soft:#eaf2ff;
   --rawi-border:#e7e7e3;
   --rawi-text:#263138;
   background:linear-gradient(180deg,#fffefd 0%,#fbfaf8 60%,#f8f7f5 100%);
@@ -192,22 +192,22 @@
 .mif-topbar{background:#fff;border-bottom:1px solid #eae7e3;box-shadow:0 1px 9px #27221b08}
 .mif-head-control{background:#fff;border-color:#e7e3df;color:#3d4348}
 .mif-head-control:hover{background:#fff7f0;border-color:#f2c3a3}
-.mif-head-signin{background:var(--rawi-orange);border-color:var(--rawi-orange);color:#fff}
-.mif-head-signin:hover{background:var(--rawi-orange-dark);border-color:var(--rawi-orange-dark)}
+.mif-head-signin{background:var(--rawi-blue);border-color:var(--rawi-blue);color:#fff}
+.mif-head-signin:hover{background:var(--rawi-blue-dark);border-color:var(--rawi-blue-dark)}
 .mif-body{width:100%;max-width:1660px}
 .mif-chat-page{width:min(100%,950px);gap:7px}
 .mif-chat-welcome{padding:18px 18px 35px}
 .mif-chat-welcome h1{font-size:clamp(27px,3.4vw,40px);line-height:1.4;color:#252d32}
 .mif-chat-welcome p{font-size:13px;line-height:1.95;max-width:660px;margin-inline:auto}
-.mif-composer{background:#fff;border:1px solid #e6dfd9;border-radius:18px;box-shadow:0 10px 31px #3928190f;padding:11px}
-.mif-composer:focus-within{border-color:#e89b69;box-shadow:0 12px 34px #e35a0e1b}
+.mif-composer{background:#fff;border:1px solid #dee6f5;border-radius:18px;box-shadow:0 10px 31px #3928190f;padding:11px}
+.mif-composer:focus-within{border-color:#91b5fa;box-shadow:0 12px 34px #2166e81b}
 .mif-composer textarea{font-size:14px;min-width:0;line-height:1.85;color:#253037}
-.mif-composer button{background:#e35a0e;border-radius:13px}
+.mif-composer button{background:#2166e8;border-radius:13px}
 .mif-history-toggle{background:#fff;border-color:#ebe6e2;color:#515d62}
-.mif-history-toggle span{background:#fff0e3;color:#b34511}
+.mif-history-toggle span{background:#eef4ff;color:#2154a6}
 .rawi-workspace-picker select{border-color:#ebe2db;color:#634330;background:#fff}
 .rawi-head-logo>span{color:#2e3133}
-.rawi-head-logo>span small{color:#c4541b}
+.rawi-head-logo>span small{color:#2154a6}
 .mif-chat-footnote{color:#92918e}
 .mif-dialog-wrap{padding:clamp(10px,3vw,24px);background:#16191bc2;backdrop-filter:blur(7px)}
 .mif-dialog{
@@ -238,10 +238,10 @@
   transition:box-shadow .15s,border-color .15s;
 }
 .mif-dialog form input::placeholder{color:#a0a5a6}
-.mif-dialog form input:focus{outline:0;border-color:#de7d43;box-shadow:0 0 0 3px #e35a0e17}
-.mif-dialog form>button{min-height:50px;margin-top:7px;background:#e35a0e;border-radius:11px;font-size:14px;font-weight:850}
-.mif-dialog form>button:hover:not(:disabled){background:#c94d12}
-.mif-auth-switch{display:block;color:#b34b18;font-size:13px;font-weight:750;margin:0;padding:10px 5px}
+.mif-dialog form input:focus{outline:0;border-color:#709de9;box-shadow:0 0 0 3px #2166e817}
+.mif-dialog form>button{min-height:50px;margin-top:7px;background:#2166e8;border-radius:11px;font-size:14px;font-weight:850}
+.mif-dialog form>button:hover:not(:disabled){background:#1b50b5}
+.mif-auth-switch{display:block;color:#2154a6;font-size:13px;font-weight:750;margin:0;padding:10px 5px}
 .rawi-signup-types{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 5px}
 .rawi-signup-types>button{
   min-width:0;
@@ -256,16 +256,16 @@
   color:#3a4449;
   transition:border-color .18s,background .18s,box-shadow .18s;
 }
-.rawi-signup-types>button:hover{border-color:#e3a778;background:#fff9f3}
-.rawi-signup-types>button.selected{background:#fff1e5;border-color:#e35a0e;box-shadow:inset 0 0 0 1px #e35a0e}
-.rawi-signup-types>button svg{color:#e35a0e}
+.rawi-signup-types>button:hover{border-color:#aac8f8;background:#f7faff}
+.rawi-signup-types>button.selected{background:#eaf2ff;border-color:#2166e8;box-shadow:inset 0 0 0 1px #2166e8}
+.rawi-signup-types>button svg{color:#2166e8}
 .rawi-signup-types>button strong{font-size:15px;line-height:1.4}
 .rawi-signup-types>button small{font-size:11px;line-height:1.65;color:#727678}
 .mif-form-error{background:#fff3f0;border:1px solid #f2d1c9;color:#a82f21;border-radius:11px;line-height:1.7}
-.mif-bottom-nav{background:#fff;border-top:1px solid #eae4de;box-shadow:0 -5px 22px #1b1b190b}
-.mif-bottom-item.active{color:#d85314}
-.mif-bottom-item.new .mif-bottom-icon{background:#e35a0e;color:#fff;border-color:#e35a0e}
-.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #d87538;outline-offset:2px}
+.mif-bottom-nav{background:#fff;border-top:1px solid #e5ecf7;box-shadow:0 -5px 22px #1b1b190b}
+.mif-bottom-item.active{color:#2166e8}
+.mif-bottom-item.new .mif-bottom-icon{background:#2166e8;color:#fff;border-color:#2166e8}
+.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app textarea:focus-visible,.mif-app select:focus-visible{outline:2px solid #2166e8;outline-offset:2px}
 @media (max-width:720px){
  .mif-body-operations,.mif-body-schedule{padding-inline:12px}
  .mif-dialog-wrap{padding:9px;place-items:center}
@@ -286,37 +286,37 @@
  .rawi-signup-types>button small{font-size:9px}
 }
 
-/* RAWI Enterprise only: chat-first layout without a top header. Keep approved orange identity. */
+/* RAWI ERP only: chat-first layout without a top header. Keep approved blue identity. */
 .mif-app .mif-body{padding-top:0}
 .mif-app .mif-body-chats{padding-top:6px;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .mif-app .mif-chat-page{height:calc(100dvh - 98px - env(safe-area-inset-bottom));min-height:260px}
 .mif-app .rawi-enterprise-tools{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:7px 3px;min-height:44px}
-.mif-app .rawi-chat-signin{border:1px solid #e8d3c4;background:#fff;color:#b94a0c;display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:12px;font-weight:650}
+.mif-app .rawi-chat-signin{border:1px solid #dce8fb;background:#fff;color:#2154a6;display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:12px;font-weight:650}
 .mif-app .rawi-identity-label{font-size:12px;color:#785640;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(100%,320px)}
 .mif-app .mif-history-overlay{top:0}
 .mif-app .mif-bottom-nav{height:84px;gap:3px}
 .mif-app .mif-bottom-nav .mif-bottom-item{flex:1;min-width:0}
 @media(max-width:620px){.mif-app .mif-body-chats{padding:4px 9px calc(85px + env(safe-area-inset-bottom))}.mif-app .mif-chat-page{height:calc(100dvh - 92px - env(safe-area-inset-bottom))}.mif-app .mif-bottom-nav{height:80px}.mif-app .mif-bottom-item{font-size:9px}.mif-app .rawi-identity-label{max-width:180px}}
 
-/* RAWI Enterprise: chat first from the top edge, clean controls and account-only sign in. */
+/* RAWI ERP: chat first from the top edge, clean controls and account-only sign in. */
 .mif-app .mif-chat-scroll.is-empty{justify-content:flex-start}
 .mif-app .mif-chat-welcome{margin:0;padding:12px 8px 10px;text-align:start}
 .mif-app .mif-rawi-brand{margin:0 0 12px;padding:6px 10px;background:transparent;box-shadow:none;border:0}
 .mif-app .mif-chat-welcome h1{margin:8px 0 0;font-size:clamp(22px,2.8vw,30px);text-align:start}
 .mif-app .rawi-enterprise-tools{justify-content:flex-start;min-height:46px}
-.mif-app .rawi-chat-install{margin-inline-start:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid #e4d8cf;border-radius:12px;background:#fff;color:#a8460b;padding:8px 12px;font-size:12px;font-weight:700}
+.mif-app .rawi-chat-install{margin-inline-start:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid #dee8f9;border-radius:12px;background:#fff;color:#1f53a9;padding:8px 12px;font-size:12px;font-weight:700}
 .mif-app .mif-login-page{margin:30px auto;width:min(100%,540px);align-items:stretch}
 .mif-app .mif-login-page .rawi-login-mark{width:60px;height:60px;object-fit:contain;align-self:center}
 .mif-app .rawi-account-form{display:grid;gap:14px;width:100%}
 .mif-app .rawi-account-form label{display:grid;gap:7px;font-size:13px;font-weight:650}
 .mif-app .rawi-account-form input{width:100%;min-height:45px;border:1px solid #dfd8d2;border-radius:10px;padding:10px 12px;background:#fff}
-.mif-app .rawi-account-form button{min-height:46px;border:0;background:#e35a0e;color:white;border-radius:11px;font-weight:800}
-.mif-app .mif-login-page .mif-auth-switch{min-height:40px;border:0;background:transparent;color:#a8460b}
+.mif-app .rawi-account-form button{min-height:46px;border:0;background:#2166e8;color:white;border-radius:11px;font-weight:800}
+.mif-app .mif-login-page .mif-auth-switch{min-height:40px;border:0;background:transparent;color:#1f53a9}
 @media(max-width:620px){.mif-app .mif-chat-welcome{padding-top:10px}.mif-app .rawi-chat-install span{display:none}.mif-app .rawi-chat-install{padding:9px}.mif-app .mif-chat-page{height:calc(100dvh - 88px - env(safe-area-inset-bottom))}}
 
 /* No sample records or preview screens appear as operational customer data. */
 .mif-app .rawi-need-account{min-height:calc(100dvh - 165px);display:flex;align-items:flex-start;justify-content:center;padding-top:36px}
-.mif-app .rawi-need-account button{display:flex;align-items:center;gap:9px;background:#e35a0e;color:#fff;border:0;border-radius:12px;min-height:46px;padding:11px 20px;font-weight:750}
+.mif-app .rawi-need-account button{display:flex;align-items:center;gap:9px;background:#2166e8;color:#fff;border:0;border-radius:12px;min-height:46px;padding:11px 20px;font-weight:750}
 
 /* RAWI ERP: approved stable blue/white brand, chat-first interaction, five-part bottom navigation. */
 .mif-app{--mif-accent:#2166e8;--rawi-blue:#2166e8;color:#1c2940}
@@ -341,3 +341,90 @@
 .mif-app .rawi-install-in-account{display:inline-flex;justify-content:center;align-items:center;gap:9px;min-height:45px;width:100%;border:1px solid #bdcef0;border-radius:12px;color:#2166e8;background:#f7faff;font-weight:800;margin-top:14px;padding:10px}
 .mif-app .mif-access-gate p{display:none}
 @media(max-width:620px){.mif-app .mif-chat-scroll.is-empty{padding-top:5px}.mif-app .mif-welcome-message p{font-size:19px}.mif-app .mif-bottom-item.new .mif-bottom-icon{height:65px;width:65px}}
+
+/* RAWI ERP approved interface — single blue/white language; no inherited MIF orange. */
+.mif-app{
+ --mif-accent:#2166e8;--rawi-blue:#2166e8;--rawi-blue-dark:#1749b0;
+ background:#f8fbff;color:#172642;
+}
+.mif-app .mif-body-chats{padding:8px clamp(12px,2.5vw,28px) calc(104px + env(safe-area-inset-bottom));}
+.mif-app .mif-chat-page{width:min(100%,860px);height:calc(100dvh - 111px - env(safe-area-inset-bottom));min-height:280px;gap:0}
+.mif-app .rawi-enterprise-tools{min-height:49px;padding:8px 5px;margin-bottom:0;gap:9px}
+.mif-app .mif-history-toggle{border:1px solid #e1eaf8;background:#fff;color:#354b72;border-radius:13px;font-weight:700}
+.mif-app .rawi-identity-label{color:#5f7294;font-size:12px}
+.mif-app .rawi-workspace-picker select{color:#1f4580;border-color:#d7e4f7;border-radius:10px}
+.mif-app .mif-chat-scroll{padding:12px clamp(2px,2vw,18px) 26px;overscroll-behavior:contain}
+.mif-app .mif-welcome-message{padding-top:12px}
+.mif-app .mif-welcome-message>img{width:45px;height:45px;border-radius:15px}
+.mif-app .mif-bubble.assistant>img{width:40px;height:40px;border-radius:14px;background:#2166e8}
+.mif-app .mif-bubble.assistant{gap:13px}
+.mif-app .mif-bubble.user{align-self:flex-start;background:#edf4ff;border:1px solid #dce8fc;border-radius:19px 19px 6px 19px;max-width:min(85%,680px);padding:12px 17px;color:#18365f}
+.mif-app .mif-chat-messages{gap:19px;padding:16px 0}
+.mif-app .mif-chat-messages p{line-height:1.85;font-size:14px}
+.mif-app .mif-composer{
+ width:100%;max-width:860px;min-height:116px;display:flex;flex-direction:column;
+ gap:2px;align-items:stretch;background:#fff;
+ border:1.5px solid #d7e5fa;border-radius:23px;
+ box-shadow:0 12px 40px #1c4e9a10,0 2px 8px #15283f08;
+ padding:13px 16px 11px;transition:border-color .18s,box-shadow .18s;
+}
+.mif-app .mif-composer:focus-within{border-color:#2166e8;box-shadow:0 0 0 3px #2166e81a,0 18px 42px #1b4db914}
+.mif-app .mif-composer textarea{
+ width:100%;min-height:49px;max-height:160px;padding:8px 3px 5px;
+ resize:none;overflow-y:auto;box-shadow:none;border:0;background:transparent;
+ color:#172642;font-size:15px;line-height:1.75;outline:none;
+}
+.mif-app .mif-composer textarea::placeholder{color:#8b9bb2;opacity:1}
+.mif-app .rawi-composer-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px}
+.mif-app .rawi-composer-brand{display:inline-flex;align-items:center;gap:7px;color:#7d8eab;font-size:11px;font-weight:750;letter-spacing:.03em}
+.mif-app .rawi-composer-brand img{width:22px;height:22px;border-radius:7px}
+.mif-app .rawi-composer-actions button{
+ flex:none;display:grid;place-items:center;margin-inline-start:auto;
+ width:42px;height:42px;background:#2166e8;color:#fff;border:0;
+ border-radius:14px;transition:transform .18s,background .18s;box-shadow:0 5px 12px #2166e823;
+}
+.mif-app .rawi-composer-actions button:disabled{background:#e8effb;color:#9aaccc;box-shadow:none;opacity:1}
+.mif-app .rawi-composer-actions button:not(:disabled):hover{background:#174db4;transform:translateY(-1px)}
+/* Account sign-in, signup, installation — all inside one focused card. */
+.mif-app .mif-login-page{
+ margin:clamp(10px,3.5vh,36px) auto;max-width:570px;width:min(100%,570px);
+ padding:clamp(22px,4vw,39px);border:1px solid #e0e9f7;border-radius:27px;
+ background:#fff;box-shadow:0 20px 66px #234d920c;display:flex;flex-direction:column;
+ gap:19px;
+}
+.mif-app .rawi-auth-brand{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;margin-bottom:2px}
+.mif-app .rawi-auth-brand img{width:68px;height:68px;object-fit:contain;border-radius:20px;box-shadow:0 8px 25px #2166e821}
+.mif-app .rawi-auth-brand strong{font-size:20px;font-weight:850;letter-spacing:.02em;color:#1b3b70}
+.mif-app .rawi-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border:1px solid #e6edf9;background:#f4f7fe;border-radius:15px}
+.mif-app .rawi-auth-tabs button{border:0;border-radius:11px;padding:12px 7px;background:transparent;color:#7b8aa2;font-size:13px;font-weight:750}
+.mif-app .rawi-auth-tabs button.selected{background:#fff;color:#2166e8;box-shadow:0 3px 12px #22354b10}
+.mif-app .rawi-account-form{display:flex;flex-direction:column;gap:16px;width:100%}
+.mif-app .rawi-account-form label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:750;color:#34496a}
+.mif-app .rawi-account-form input{
+ width:100%;min-height:52px;border:1px solid #dce5f4;border-radius:13px;
+ padding:12px 14px;background:#fcfdff;color:#142642;outline:none;font-size:14px;
+ transition:box-shadow .15s,border-color .15s
+}
+.mif-app .rawi-account-form input:focus{border-color:#2166e8;box-shadow:0 0 0 3px #2166e815}
+.mif-app .rawi-account-form button[type="submit"]{
+ min-height:52px;border:0;border-radius:14px;background:#2166e8;color:#fff;font-size:14px;
+ font-weight:850;margin-top:4px;box-shadow:0 8px 20px #2166e820
+}
+.mif-app .rawi-account-form button[type="submit"]:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.mif-app .rawi-auth-bottom{border-top:1px solid #e8eef8;padding-top:15px;display:flex;align-items:center;justify-content:center;gap:12px}
+.mif-app .rawi-auth-bottom .rawi-install-in-account{width:100%;margin:0;min-height:46px;background:#f6faff;border-color:#dce8fa;font-size:13px}
+.mif-app .mif-bottom-item.active{color:#2166e8}
+.mif-app .mif-bottom-item.new .mif-bottom-icon{width:66px;height:66px;background:#2166e8;color:#fff;border:5px solid white;box-shadow:0 8px 22px #2166e82c}
+.mif-app .mif-bottom-nav{background:#fff;border-top-color:#e5edf9}
+.mif-app .mif-logout{background:#f0f5ff;border-color:#d8e4f7;color:#2156ae}
+.mif-app .rawi-need-account button{background:#2166e8}
+.mif-app button:focus-visible,.mif-app input:focus-visible,.mif-app select:focus-visible,.mif-app textarea:focus-visible{outline:2px solid #2166e8;outline-offset:3px}
+@media(max-width:640px){
+ .mif-app .mif-body-chats{padding:5px 11px calc(96px + env(safe-area-inset-bottom))}
+ .mif-app .mif-chat-page{height:calc(100dvh - 100px - env(safe-area-inset-bottom));min-height:260px}
+ .mif-app .mif-composer{min-height:107px;padding:11px 13px 10px;border-radius:20px}
+ .mif-app .mif-composer textarea{min-height:42px;font-size:14px}
+ .mif-app .mif-login-page{margin:12px auto;padding:25px 20px;border-radius:22px}
+ .mif-app .mif-chat-scroll{padding:8px 3px 16px}
+}
+@media(max-height:560px){.mif-app .mif-chat-page{min-height:210px}}
