@@ -8,7 +8,7 @@ const defaultConnect={label:'',base_url:'',database_name:'',api_version:'json2',
 const defaultImplementation={title:'',client_name:'',connection_id:null,phase:'discovery',status:'planned',details:'',due_on:null};
 const defaultModule={technical_name:'',display_name:'',model_name:'record',odoo_version:'19',fields:[{name:'reference',label:'Reference',type:'Char'}]};
 const Field=({title,children,hint})=><label className="rawi-dev-field"><span>{title}</span>{children}{hint&&<small>{hint}</small>}</label>;
-export default function RawiDevelopers({notify=()=>{}}){
+export default function RawiDevelopers({notify=()=>{},workspaceId=null,onWorkspaceChange=null}){
  const {lang}=useSite(),L=(a,b)=>tr(lang,a,b);
  const [workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState(''),[tab,setTab]=useState('connections'),[connections,setConnections]=useState([]),[implementations,setImplementations]=useState([]),[active,setActive]=useState(''),[modules,setModules]=useState([]),[checks,setChecks]=useState([]),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');
  const [connection,setConnection]=useState(defaultConnect),[editingConnection,setEditingConnection]=useState(''),[moduleHasMore,setModuleHasMore]=useState(false),[implementation,setImplementation]=useState(defaultImplementation),[module,setModule]=useState(defaultModule),[filter,setFilter]=useState('');
@@ -16,6 +16,7 @@ export default function RawiDevelopers({notify=()=>{}}){
  const show=(msg,failed=false)=>{setError(failed?msg:'');setSuccess(failed?'':msg);notify(msg,failed)};
  const getWorkspaces=useCallback(async()=>{try{const r=await api('/api/admin/developer/workspaces'),list=r.data||[];setWorkspaces(list);setWorkspace(old=>list.some(w=>w.id===old)?old:list[0]?.id||'')}catch(e){setError(e.message)}},[]);
  useEffect(()=>{getWorkspaces()},[getWorkspaces]);
+ useEffect(()=>{if(workspaceId&&workspaces.some(w=>w.id===workspaceId)&&workspace!==workspaceId)setWorkspace(workspaceId)},[workspaceId,workspaces,workspace]);
  const load=useCallback(async()=>{if(!base)return;setLoading(true);try{const [a,b]=await Promise.all([api(base+'/connections'),api(base+'/implementations')]);setConnections(a.data||[]);setImplementations(b.data||[])}catch(e){setError(e.message)}finally{setLoading(false)}},[base]);
  useEffect(()=>{load();setModules([]);setModuleHasMore(false);setChecks([]);setActive('')},[load]);
  const call=async(fn)=>{setBusy(true);setError('');setSuccess('');try{return await fn()}catch(e){show(e.message,true);return null}finally{setBusy(false)}};
@@ -36,7 +37,7 @@ export default function RawiDevelopers({notify=()=>{}}){
  const menus=[['connections',L('قواعد أودو','Odoo databases'),Database],['modules',L('الموديولات','Modules'),Layers3],['implementation',L('التنفيذ','Implementation'),FolderKanban],['diagnostics',L('الفحص والأعطال','Diagnostics'),Activity]];
  return <div className="rawi-dev">
   <section className="rawi-dev-hero"><div><span><Code2 size={16}/> RAWI / DEVELOPERS / ODOO</span><h1>{L('مساحة المطوّرين','Developers workspace')}</h1><p>{L('اربط قواعد أودو، افحص صلاحيات الاتصال، راجع الموديولات، وأنشئ إضافات ومشروعات تنفيذ — من واجهة واحدة.','Connect Odoo databases, validate API access, inspect modules and manage addon development and implementations.')}</p></div><div className="rawi-dev-hero-aside"><ShieldCheck size={21}/><strong>{L('اتصال محمي','Secured connection')}</strong><small>{L('المفاتيح مشفّرة، واختبارات أودو للقراءة فقط','Encrypted keys; read-only Odoo tests')}</small></div></section>
-  <div className="rawi-dev-workspace"><span>{L('فريق العمل','Workspace')}</span><select value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select><button onClick={load}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button></div>
+  <div className="rawi-dev-workspace"><span>{L('فريق العمل','Workspace')}</span><select value={workspace} onChange={e=>{setWorkspace(e.target.value);onWorkspaceChange?.(e.target.value)}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select><button onClick={load}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button></div>
   <nav className="rawi-dev-nav">{menus.map(([k,label,Icon])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}><Icon size={18}/>{label}</button>)}</nav>
   {error&&<p role="alert" className="rawi-dev-error"><AlertCircle size={17}/>{error}</p>}
   {success&&<p role="status" className="rawi-dev-success"><CheckCircle2 size={17}/>{success}</p>}
