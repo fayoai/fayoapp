@@ -19,10 +19,15 @@ export async function enforceAuthLimit(sql,query,secret,ip,bucket,identity=''){
  RETURNING hits,expires_at`,[digest,bucket,interval]);
  return {allowed:Number(rows[0]?.hits||0)<=ceiling,retry_at:rows[0]?.expires_at||null};
 }
-export async function ensureEvaluationPlan(sql,query,settings){
- const rows=await query(sql,`INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active)
- VALUES('rawi-evaluation','RAWI evaluation','monthly',0,$1,true)
- ON CONFLICT(code) DO UPDATE SET code=EXCLUDED.code RETURNING id,active,message_limit`,[settings.limit]);
+export async function ensureEvaluationPlan(sql,query,settings,accountType='enterprise'){
+ if(!['enterprise','developer'].includes(accountType))throw new Error('Unsupported RAWI product');
+ const product=accountType==='developer'?'RAWI-DEVELOPERS':'RAWI-AI-ERP';
+ const code=accountType==='developer'?'rawi-developers-evaluation':'rawi-evaluation';
+ const title=accountType==='developer'?'RAWI Developers evaluation':'RAWI Enterprise evaluation';
+ const rows=await query(sql,`INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active,product_code)
+ VALUES($1,$2,'monthly',0,$3,true,$4)
+ ON CONFLICT(code) DO UPDATE SET code=EXCLUDED.code
+ RETURNING id,active,message_limit,product_code`,[code,title,settings.limit,product]);
  if(!rows[0]?.active)throw new Error('Evaluation plan is currently disabled by platform operator');
  return rows[0];
 }
