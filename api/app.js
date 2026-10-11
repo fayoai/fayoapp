@@ -17,7 +17,6 @@ import {installRawiTeam} from './rawi-team.js';
 import {attachTenantDb} from './tenant-runtime.js';
 import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './neon-tenant-databases.js';
 import {migrateTenantBatch} from './tenant-migrations.js';
-import {hashInvite} from './rawi-invitations.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -55,11 +54,10 @@ app.post('/api/admin/register',async c=>{
  if(!signupReady(settings))return fail(c,503,'Secure production registration is not enabled');
  const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
   name:z.string().trim().min(2).max(160),organization:z.string().trim().min(2).max(150),
-  account_type:z.literal('enterprise'),invitation:z.string().regex(/^[0-9a-f]{64}$/i)});
+  account_type:z.literal('enterprise')});
  const validated=schema.safeParse(await parse(c));
  if(!validated.success)return fail(c,400,'Invalid account registration');
  const user=validated.data;
- const inviteHash=await hashInvite(user.invitation,settings.SESSION_SECRET);
  if(user.account_type!==surface)return fail(c,403,'Application account mismatch');
  const ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP');
  if(!ip)return fail(c,403,'Unable to verify registration source');
@@ -70,12 +68,9 @@ app.post('/api/admin/register',async c=>{
  catch{return fail(c,503,'The account plan is unavailable')}
  const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt);
  const email=user.email.trim().toLowerCase();
- const statement=`WITH invitation AS(
-  SELECT id FROM mif_tenant_invitations
-  WHERE token_hash=$10 AND lower(email)=$1 AND application=$5 AND used_at IS NULL AND expires_at>now()
-  FOR UPDATE
- ), account AS(
-  INSERT INTO admins(email,password_hash,salt) SELECT $1,$2,$3 FROM invitation
+ const statement=`WITH account AS(
+  INSERT INTO admins(email,password_hash,salt)
+  SELECT $1,$2,$3 WHERE (SELECT count(*) FROM admins WHERE created_at>now()-interval '24 hours')<15
   ON CONFLICT(email) DO NOTHING RETURNING id,email
  ), workspace AS(
   INSERT INTO erp_workspaces(name,owner_id,currency)
@@ -96,19 +91,14 @@ app.post('/api/admin/register',async c=>{
    'rawi_'||CASE WHEN $5='developer' THEN 'd' ELSE 'e' END||'_'||replace(id::text,'-',''),'allocating'
   FROM workspace RETURNING workspace_id,database_name
  )
- ,consumed AS(
-  UPDATE mif_tenant_invitations i SET used_at=now(),used_by=account.id
-  FROM account,invitation WHERE i.id=invitation.id RETURNING i.id
- )
  SELECT account.id,account.email,registry.workspace_id,registry.database_name FROM account
- JOIN consumed ON TRUE
  JOIN workspace ON workspace.owner_id=account.id
  JOIN membership ON membership.workspace_id=workspace.id
  JOIN subscription ON subscription.workspace_id=workspace.id
  JOIN profile ON profile.admin_id=account.id
  JOIN registry ON registry.workspace_id=workspace.id`;
- const rows=await query(sql,statement,[email,passwordHash,salt,user.organization,surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID,inviteHash]);
- if(!rows.length)return fail(c,409,'Invitation is invalid, expired or already used');
+ const rows=await query(sql,statement,[email,passwordHash,salt,user.organization,surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
+ if(!rows.length)return fail(c,409,'Email is already registered or daily signup limit reached');
  const record=rows[0];
  // An uninitialized customer database must never accept ERP writes.
  try{
