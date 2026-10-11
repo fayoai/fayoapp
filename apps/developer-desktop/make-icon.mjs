@@ -1,0 +1,11 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {dirname,join,resolve} from 'node:path';
+import {Resvg} from '@resvg/resvg-js';
+const root=dirname(fileURLToPath(import.meta.url));
+const svgPath=resolve(root,'../../public/rawi-developer-mark.svg');
+const svg=readFileSync(svgPath,'utf8');
+if(!svg.includes('fill="#080808"')||!svg.includes('fill="#ffd21a"'))throw new Error('Approved RAWI Developer black/yellow identity is missing');
+const png=new Resvg(svg,{fitTo:{mode:'width',value:512},background:'rgba(0,0,0,0)'}).render().asPng();
+const dir=join(root,'build');mkdirSync(dir,{recursive:true});writeFileSync(join(dir,'icon.png'),png);
+console.log('RAWI Developer native icon generated from approved SVG (512px).');
