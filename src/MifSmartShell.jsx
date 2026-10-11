@@ -4,10 +4,11 @@ import AiErpWorkspace from './AiErpWorkspace.jsx';
 import MifSchedule from './MifSchedule.jsx';
 import {RawiTeamPanel,RawiNotificationsPanel} from './RawiPanels.jsx';
 
-import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,ArrowUp,Paperclip,Mic,Square,FileText,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2,Building2} from 'lucide-react';
+import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,ArrowUp,Paperclip,Mic,Square,FileText,BrainCircuit,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2,Building2} from 'lucide-react';
 import './mif-smart-shell.css';
 const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
 const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:'',description:''};
+const planDepartments={crm:['العملاء والفرص','CRM'],sales:['المبيعات','Sales'],purchases:['المشتريات','Purchases'],inventory:['المخزون','Inventory'],accounting:['المحاسبة','Accounting'],employees:['الموظفون','Employees'],payroll:['الرواتب','Payroll'],payments:['المدفوعات','Payments'],projects:['المشاريع','Projects'],expenses:['المصروفات','Expenses'],reports:['التقارير','Reports'],contacts:['جهات الاتصال','Contacts'],invoices:['الفواتير','Invoices'],activities:['أنشطة الأعمال','Business activities'],insights:['المؤشرات','Insights'],knowledge:['المعرفة','Knowledge']};
 const documentMimeByExtension=Object.freeze({pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',rtf:'application/rtf'});
 const maxDocumentSize=1572864,maxDocumentTotal=2621440,maxDocuments=2;
 const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
@@ -38,7 +39,7 @@ const nav=[['chats','المحادثات','Chats',MessageCircle],['operations','�
 const isInstalled=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||window.localStorage.getItem('rawi-erp-installed')==='1'}catch{return false}};
 export default function MifSmartShell(){
  const {lang,setLang}=useSite(),L=(a,e)=>tr(lang,a,e);
- const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false),[signupStep,setSignupStep]=useState('auth'),[verificationCode,setVerificationCode]=useState(''),[company,setCompany]=useState(blankCompany),[companyBusy,setCompanyBusy]=useState(false),[companyError,setCompanyError]=useState('');
+ const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false),[signupStep,setSignupStep]=useState('auth'),[verificationCode,setVerificationCode]=useState(''),[company,setCompany]=useState(blankCompany),[companyBusy,setCompanyBusy]=useState(false),[companyError,setCompanyError]=useState(''),[companyPlan,setCompanyPlan]=useState(null),[companyPlanBusy,setCompanyPlanBusy]=useState(false),[companyPlanError,setCompanyPlanError]=useState('');
  const [workspaces,setWorkspaces]=useState([]),[workspaceId,setWorkspaceId]=useState('');
  const [registrationEnabled,setRegistrationEnabled]=useState(null),[subscriptions,setSubscriptions]=useState([]);
  const [tenantSetup,setTenantSetup]=useState(null),[tenantGeneration,setTenantGeneration]=useState(0);
@@ -52,6 +53,25 @@ export default function MifSmartShell(){
   api('/api/admin/company/setup').then(r=>{if(r.data)setCompany(old=>({...old,...r.data,workspace_id:r.data.workspace_id,name:r.data.name||''}))}).catch(()=>setCompanyError(L('تعذر تحميل بيانات الشركة','Could not load company details')))
  },[signupStep,authed]);
  
+ useEffect(()=>{
+  if(!authed||signupStep!=='company'||!company.workspace_id||company.name.trim().length<2||company.activity.trim().length<2){
+   setCompanyPlan(null);setCompanyPlanBusy(false);return;
+  }
+  let alive=true,timer;
+  const name=company.name.trim(),activity=company.activity.trim(),workspace_id=company.workspace_id;
+  setCompanyPlanBusy(true);setCompanyPlanError('');
+  const analyze=async()=>{
+   try{
+    const result=await api('/api/admin/company/plan',{method:'POST',body:JSON.stringify({workspace_id,name,activity,language:lang})});
+    if(!alive)return;
+    if(result.pending){timer=setTimeout(analyze,Math.min(10000,Math.max(1200,result.retry_after_ms||1500)));return}
+    setCompanyPlan(result.plan?{...result.plan,name,activity}:null);
+    setCompanyPlanBusy(false);
+   }catch(e){if(!alive)return;setCompanyPlanBusy(false);setCompanyPlanError(L('تعذر تحليل النشاط الآن؛ سيتم حفظ التهيئة الأساسية عند إكمال الشركة.','Business analysis is currently unavailable; basic setup will be saved when you finish.'))}
+  };
+  timer=setTimeout(analyze,1100);
+  return()=>{alive=false;clearTimeout(timer)};
+ },[company.workspace_id,company.name,company.activity,signupStep,authed,lang]);
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e);setInstalled(false)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false);setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}};const display=window.matchMedia('(display-mode: standalone)');const onDisplay=()=>{if(display.matches)setInstalled(true)};display.addEventListener?.('change',onDisplay);window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{display.removeEventListener?.('change',onDisplay);window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
@@ -267,6 +287,16 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
       <label>{L('إيميلات التواصل','Contact emails')}<input maxLength={450} placeholder={L('افصل بينها بفاصلة','Separate with commas')} value={company.emails} onChange={e=>setCompany(v=>({...v,emails:e.target.value}))}/></label>
       <label className="rawi-company-wide">{L('نبذة عن النشاط','About the business')}<textarea rows={3} maxLength={2000} value={company.description} onChange={e=>setCompany(v=>({...v,description:e.target.value}))}/></label>
      </div>
+     {company.name.trim().length>=2&&company.activity.trim().length>=2&&<aside className="rawi-business-plan" aria-live="polite">
+      <div className="rawi-business-plan-head"><BrainCircuit size={19}/><strong>{L('تهيئة مساحة العمل حسب النشاط','Activity-based workspace setup')}</strong>
+       {companyPlanBusy&&<Loader2 size={15} className="mif-spinner"/>}
+      </div>
+      {companyPlan&&companyPlan.name===company.name.trim()&&companyPlan.activity===company.activity.trim()?<>
+       <p>{companyPlan.summary}</p>
+       <div className="rawi-business-departments">{(companyPlan.sections||[]).map(id=><span key={id}>{planDepartments[id]?L(...planDepartments[id]):id}</span>)}</div>
+       <small>{companyPlan.source==='ai'?L('تم التحليل بالذكاء الاصطناعي وسيُحفظ ترتيب الإدارات عند إكمال البيانات.','Analyzed with AI; department priorities will be saved when you finish.'):L('تهيئة مبدئية حسب النشاط؛ ستُستخدم حتى يتوفر مزود الذكاء الاصطناعي.','Basic activity-based setup, used until an AI provider is available.')}</small>
+      </>:<p>{companyPlanBusy?L('راوي يقرأ اسم الشركة والنشاط ويجهز الإدارات المناسبة...','Rawi is analyzing the company and preparing relevant departments...'):companyPlanError||L('جاري تجهيز مساحة العمل...','Preparing workspace...')}</p>}
+     </aside>}
      {companyError&&<p role="alert" className="mif-form-error">{companyError}</p>}
      <button type="submit" disabled={companyBusy||!company.workspace_id}>{companyBusy?<Loader2 className="mif-spinner" size={17}/>:<Check size={18}/>} {L('حفظ وبدء استخدام النظام','Save and start using Rawi ERP')}</button>
     </form>
