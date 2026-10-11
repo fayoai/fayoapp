@@ -3,7 +3,7 @@ import {getAIProviders,routeAI} from './ai-router.js';
 import {z} from 'zod';
 const uuid=z.string().uuid();
 const input=z.object({question:z.string().trim().min(1).max(2500)});
-const authInput=input.extend({thread_id:uuid.nullable().optional()});
+const authInput=input.extend({thread_id:uuid.nullable().optional(),workspace_id:uuid.nullable().optional()});
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
 const outputText=r=>(r.output||[]).flatMap(part=>part.content||[]).filter(part=>part.type==='output_text').map(part=>part.text||'').join('\n').trim();
