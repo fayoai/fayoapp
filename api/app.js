@@ -5,6 +5,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { seedCatalog, seedSettings } from './seed.js';
 import {installCommerce} from './commerce.js';
+import {installAiErp} from './ai-erp.js';
 
 const app = new Hono();
 const catalogSchema=z.object({sku:z.string().min(2).max(45),kind:z.enum(['service','product']),category:z.string().min(2).max(50),title_ar:z.string().min(2).max(160),title_en:z.string().min(2).max(160),description_ar:z.string().max(1500).default(''),description_en:z.string().max(1500).default(''),icon:z.string().max(48).default('layers'),price:z.number().nonnegative().max(100000000).nullable().default(null),currency:z.literal('SAR').default('SAR'),featured:z.boolean().default(false),active:z.boolean().default(true),sort_order:z.number().int().min(0).max(9999).default(0)});
@@ -69,4 +70,5 @@ app.post('/api/admin/articles',async c=>{const parsed=articleSchema.safeParse(aw
 app.patch('/api/admin/articles/:id',async c=>{const id=c.req.param('id');if(!idSchema.safeParse(id).success)return error(c,400,'Invalid article');const parsed=articleSchema.partial().safeParse(await readBody(c));if(!parsed.success||!Object.keys(parsed.data).length)return error(c,400,'Invalid article');const keys=Object.keys(parsed.data),vals=Object.values(parsed.data);const rows=await query(db(c),`UPDATE articles SET ${keys.map((key,i)=>key+'=$'+(i+1)).join(',')} WHERE id=$${keys.length+1} RETURNING *`,[...vals,id]);return rows.length?c.json({ok:true,data:rows[0]}):error(c,404,'Article not found');});
 app.put('/api/admin/settings/:key',async c=>{const key=c.req.param('key');if(!['contact','branding'].includes(key))return error(c,400,'Unsupported setting');const data=await readBody(c);if(typeof data!=='object'||data===null||Array.isArray(data)||JSON.stringify(data).length>3000||Object.values(data).some(v=>typeof v!=='string'))return error(c,400,'Invalid setting');await query(db(c),'INSERT INTO site_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT(key) DO UPDATE SET value=$2::jsonb,updated_at=now()',[key,JSON.stringify(data)]);return c.json({ok:true});});
 installCommerce(app,{db,env,query});
+installAiErp(app,{db,env,query});
 export default app;
