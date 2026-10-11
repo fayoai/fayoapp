@@ -56,6 +56,15 @@ export function installAiErp(app,{db,env,query}){
   const rows=await query(sql,"WITH w AS(INSERT INTO erp_workspaces(name,currency,owner_id) VALUES($1,$2,$3) RETURNING *),m AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,$3,'owner' FROM w RETURNING workspace_id),t AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'MIF Default' FROM w RETURNING id) SELECT w.* FROM w JOIN m ON m.workspace_id=w.id",[v.data.name,v.data.currency,c.get('adminId')]);
   return c.json({ok:true,data:rows[0]},201);
  });
+ app.put('/api/admin/erp/workspaces/:id/profile',async c=>{
+  const id=c.req.param('id');if(!uid.safeParse(id).success)return invalid(c,'Invalid workspace');
+  const v=z.object({legal_name:z.string().max(200),vat_number:z.string().max(40),address:z.string().max(500),phone:z.string().max(40)}).safeParse(await body(c));
+  if(!v.success)return invalid(c,'Invalid company details');
+  const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);
+  const x=v.data;
+  const rows=await query(sql,"UPDATE erp_workspaces SET legal_name=$1,vat_number=$2,address=$3,phone=$4 WHERE id=$5 AND EXISTS(SELECT 1 FROM erp_memberships WHERE workspace_id=$5 AND admin_id=$6 AND role IN('owner','admin')) RETURNING *",[x.legal_name,x.vat_number,x.address,x.phone,id,c.get('adminId')]);
+  return rows.length?c.json({ok:true,data:rows[0]}):invalid(c,'Workspace unavailable',404);
+ });
  app.get('/api/admin/erp/w/:workspace/overview',async c=>{
   const g=await gate(c);if(g.err)return g.err;
   const data=await query(g.sql,'SELECT (SELECT COUNT(*) FROM erp_contacts WHERE workspace_id=$1)::int contacts,(SELECT COUNT(*) FROM erp_invoices WHERE workspace_id=$1)::int invoices,(SELECT COUNT(*) FROM erp_tasks WHERE workspace_id=$1 AND status=$2)::int tasks,(SELECT COUNT(*) FROM erp_knowledge WHERE workspace_id=$1)::int knowledge',[g.id,'pending']);
