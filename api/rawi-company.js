@@ -39,6 +39,7 @@ export function installRawiCompany(app,{centralDb,env,query}){
   const wait=existing.setup_updated_at?8000-(Date.now()-new Date(existing.setup_updated_at).getTime()):0;
   if(wait>0)return c.json({ok:true,retry_after_ms:Math.ceil(wait),pending:true});
   let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
+  if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
   const plan=await generateBusinessPlan(d.name,d.activity,d.language,providers,routeAI);
   const saved=await query(sql,"UPDATE rawi_company_profiles p SET setup_plan=$3::jsonb,setup_inputs=$4::jsonb,"+
    "setup_source=$5,setup_updated_at=now() WHERE p.workspace_id=$1 AND p.completed_at IS NULL AND EXISTS "+
