@@ -41,7 +41,7 @@ test('Seven bottom tabs keep central New and route gated sections to sign-in wit
  assert.match(src,/tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel/);
  assert.match(src,/!checking&&!authed&&protectedTabs\.includes\(tab\)/);
  assert.match(src,/\[tab,setTab\]=useState\('new'\)/);
- assert.match(src,/const selectTab=key=>\{if\(key==='new'\)\{startNew\(\);return\}navigate\(key\)\}/);
+ assert.match(src,/const selectTab=key=>\{if\(session\?\.company_setup_required\)/);
  assert.doesNotMatch(src,/:authPanel/);
  assert.doesNotMatch(src,/form\.invitation/);
  const css=read('src/mif-smart-shell.css');
