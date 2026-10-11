@@ -12,3 +12,5 @@
 .mca-ready-card strong{font-size:14px}.mca-ready-card small{font-size:11px;color:#657477}
 .mca-ready-card p{font-size:12px;line-height:1.8;color:#69777a;margin:3px 0 0}
 @media(max-width:700px){.mca-ready-grid{grid-template-columns:1fr}.mca-ready-summary>div{padding:12px}.mca-ready-summary strong{font-size:20px}.mca-ready-summary span{font-size:10px}}
+
+.mca-quote-form{display:flex;align-items:end;gap:12px;flex-wrap:wrap;border-top:1px solid #f1e1d4;padding:16px;background:#fffaf7;border-radius:0 0 12px 12px}.mca-quote-form label{display:grid;gap:6px;font-size:12px;font-weight:750}.mca-quote-form input{border:1px solid #e7d2c1;border-radius:8px;padding:9px 11px;min-width:180px}.mca-quote-form button{background:#e95814;border:0;border-radius:8px;color:white;padding:11px 16px;cursor:pointer;font-size:12px;font-weight:750}.mca-quote-form small{width:100%;font-size:11px;color:#687577;line-height:1.7}.mca-order-end>button{background:#e95814;color:#fff;border-color:#e95814}
