@@ -7,13 +7,15 @@
   "main": "main.mjs",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable --publish never",
-    "dist:mac": "electron-builder --mac dmg zip --publish never",
-    "dist:linux": "electron-builder --linux AppImage deb --publish never"
+    "dist:win": "npm run icon && electron-builder --win nsis portable --publish never",
+    "dist:mac": "npm run icon && electron-builder --mac dmg zip --publish never",
+    "dist:linux": "npm run icon && electron-builder --linux AppImage deb --publish never",
+    "icon": "node make-icon.mjs"
   },
   "devDependencies": {
     "electron": "44.7.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "@resvg/resvg-js": "^2.6.2"
   },
   "build": {
     "appId": "com.mifsmart.rawi.developer",
@@ -24,7 +26,8 @@
     "files": [
       "main.mjs",
       "desktop-config.json",
-      "package.json"
+      "package.json",
+      "build/icon.png"
     ],
     "asar": true,
     "mac": {
@@ -46,6 +49,7 @@
         "deb"
       ],
       "category": "Development"
-    }
+    },
+    "icon": "build/icon.png"
   }
 }
