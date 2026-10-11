@@ -16,6 +16,8 @@ import {evaluationSettings,ensureEvaluationPlan,enforceAuthLimit} from './rawi-o
 import {installRawiReadiness} from './rawi-readiness.js';
 import {installRawiTeam} from './rawi-team.js';
 import {attachTenantDb} from './tenant-runtime.js';
+import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './neon-tenant-databases.js';
+import {migrateTenantBatch} from './tenant-migrations.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -33,7 +35,10 @@ async function equal(a,b){const x=new Uint8Array(await crypto.subtle.digest('SHA
 function originOK(c){const origin=c.req.header('origin');if(!origin)return true;try{const src=new URL(origin),dst=new URL(c.req.url);return src.origin===dst.origin||(['localhost','127.0.0.1'].includes(src.hostname)&&['localhost','127.0.0.1'].includes(dst.hostname))}catch{return false}}
 app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
-app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:false,evaluation_available:false,odoo_developer_supported:true}));
+function signupReady(settings){
+ try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&!!settings.CONNECTOR_ENCRYPTION_KEY&&!!neonTenantConfig(settings)&&settings.EMAIL_VERIFICATION_READY==='true'}catch{return false}
+}
+app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:true}));
 app.get('/api/health',async c=>{
  const kind=env(c).MIF_APP_SURFACE;
  const service=kind==='developer'?'RAWI Developer':kind==='enterprise'?'RAWI Enterprise':'MIF Smart';
@@ -44,29 +49,105 @@ app.get('/api/health',async c=>{
 app.post('/api/admin/bootstrap',async c=>{const sql=db(c),key=secret(c),bootstrap=env(c).ADMIN_BOOTSTRAP_TOKEN,ownerEmail=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();if(env(c).MIF_APP_SURFACE==='enterprise'||env(c).MIF_APP_SURFACE==='developer')return fail(c,404,'Not found');if(!sql||!key||!bootstrap||bootstrap.length<24)return fail(c,503,'Administrator setup unavailable');const input=await parse(c),v=loginData.safeParse(input);if(!v.success||input.password.length<12||typeof input.token!=='string'||!(await equal(input.token,bootstrap))||!ownerEmail||v.data.email.toLowerCase()!==ownerEmail)return fail(c,403,'Administrator setup denied');const count=await query(sql,'SELECT count(*)::int n FROM admins WHERE lower(email)=$1',[ownerEmail]);if(count[0].n)return fail(c,409,'Administrator already exists');const salt=crypto.randomUUID(),password_hash=await hashed(v.data.password,salt);await query(sql,'INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)',[v.data.email.toLowerCase(),password_hash,salt]);return c.json({ok:true})});
 // Customer accounts are independent from the platform operator's OpenAI settings.
 app.post('/api/admin/register',async c=>{
- const sql=db(c),key=secret(c),settings=env(c);
- if(!sql||!key)return fail(c,503,'Registration is unavailable');
- if(settings.REGISTRATION_ENABLED!=='true')return fail(c,503,'Account registration is not open yet');
- // SECURITY: The legacy signup path writes all customer business records to the central Neon database.
- // Never allow it to onboard production clients while per-tenant Neon databases are not provisioned.
- if(settings.MIF_APP_SURFACE==='enterprise'||settings.MIF_APP_SURFACE==='developer')return fail(c,503,'Independent customer database provisioning is required before registration');
- const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),name:z.string().trim().min(2).max(160),organization:z.string().trim().min(2).max(150),account_type:z.enum(['enterprise','developer'])});
- const v=schema.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter valid account and organization details');
- if((settings.MIF_APP_SURFACE==='enterprise'||settings.MIF_APP_SURFACE==='developer')&&v.data.account_type!==settings.MIF_APP_SURFACE)return fail(c,403,'Registration type does not match this RAWI application');
+ const sql=centralDb(c),key=secret(c),settings=env(c);
+ const surface=loginSurface(c);
+ if(!['enterprise','developer'].includes(surface))return fail(c,404,'Not found');
+ if(!signupReady(settings))return fail(c,503,'Secure production registration is not enabled');
+ const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
+  name:z.string().trim().min(2).max(160),organization:z.string().trim().min(2).max(150),
+  account_type:z.enum(['enterprise','developer'])});
+ const validated=schema.safeParse(await parse(c));
+ if(!validated.success)return fail(c,400,'Invalid account registration');
+ const user=validated.data;
+ if(user.account_type!==surface)return fail(c,403,'Application account mismatch');
  const ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP');
  if(!ip)return fail(c,403,'Unable to verify registration source');
- let attempt;try{attempt=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration')}catch{return fail(c,503,'Registration security is unavailable')}
- if(!attempt.allowed)return fail(c,429,'Too many account registrations; try later');
- const user=v.data;
- let evaluation,trial;try{trial=evaluationSettings(settings);evaluation=await ensureEvaluationPlan(sql,query,trial,user.account_type)}catch{return fail(c,503,'The evaluation plan is not configured')}
- const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt),email=user.email.toLowerCase();
- // The single statement creates all account records atomically.
- const stmt="WITH account AS(INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3) ON CONFLICT(email) DO NOTHING RETURNING id,email), workspace AS(INSERT INTO erp_workspaces(name,owner_id,currency) SELECT $4,id,'SAR' FROM account RETURNING id,owner_id), member AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id), trial AS(INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,period_starts_at,period_ends_at) SELECT id,$6,'trial',now(),now()+($7::int*interval '1 day') FROM workspace RETURNING workspace_id), profile AS(INSERT INTO rawi_account_profiles(admin_id,account_type) SELECT id,$5 FROM account RETURNING admin_id), templ AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'RAWI' FROM workspace RETURNING id) SELECT account.id,account.email FROM account JOIN workspace ON workspace.owner_id=account.id JOIN member ON member.workspace_id=workspace.id JOIN profile ON profile.admin_id=account.id JOIN trial ON trial.workspace_id=workspace.id JOIN templ ON TRUE";
- const rows=await query(sql,stmt,[email,passwordHash,salt,user.organization,user.account_type,evaluation.id,trial.days]);
- if(!rows.length)return fail(c,409,'Email address is already registered');
- const row=rows[0],token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(loginSurface(c))).setIssuedAt().setExpirationTime('8h').sign(key);
- setCookie(c,sessionCookieFor(loginSurface(c)),token,{httpOnly:true,sameSite:'Strict',secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});
- return c.json({ok:true,email:row.email},201);
+ let allowed;try{allowed=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration')}
+ catch{return fail(c,503,'Registration rate limit unavailable')}
+ if(!allowed.allowed)return fail(c,429,'Too many registration attempts');
+ let trial,plan;try{trial=evaluationSettings(settings);plan=await ensureEvaluationPlan(sql,query,trial,surface)}
+ catch{return fail(c,503,'The account plan is unavailable')}
+ const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt);
+ const email=user.email.trim().toLowerCase();
+ const statement=`WITH account AS(
+  INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3)
+  ON CONFLICT(email) DO NOTHING RETURNING id,email
+ ), workspace AS(
+  INSERT INTO erp_workspaces(name,owner_id,currency)
+  SELECT $4,id,'SAR' FROM account RETURNING id,owner_id
+ ), membership AS(
+  INSERT INTO erp_memberships(workspace_id,admin_id,role)
+  SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id
+ ), profile AS(
+  INSERT INTO rawi_account_profiles(admin_id,account_type)
+  SELECT id,$5 FROM account RETURNING admin_id
+ ), subscription AS(
+  INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,period_starts_at,period_ends_at)
+  SELECT id,$6,'trial',now(),now()+($7::int*interval '1 day')
+  FROM workspace RETURNING workspace_id
+ ), registry AS(
+  INSERT INTO mif_tenant_databases(workspace_id,application,neon_project_id,neon_branch_id,database_name,status)
+  SELECT id,$5,$8,$9,
+   'rawi_'||CASE WHEN $5='developer' THEN 'd' ELSE 'e' END||'_'||replace(id::text,'-',''),'allocating'
+  FROM workspace RETURNING workspace_id,database_name
+ )
+ SELECT account.id,account.email,registry.workspace_id,registry.database_name FROM account
+ JOIN workspace ON workspace.owner_id=account.id
+ JOIN membership ON membership.workspace_id=workspace.id
+ JOIN subscription ON subscription.workspace_id=workspace.id
+ JOIN profile ON profile.admin_id=account.id
+ JOIN registry ON registry.workspace_id=workspace.id`;
+ const rows=await query(sql,statement,[email,passwordHash,salt,user.organization,surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
+ if(!rows.length)return fail(c,409,'Email is already registered');
+ const record=rows[0];
+ // An uninitialized customer database must never accept ERP writes.
+ try{
+  await createNeonTenantDatabase(settings,record.workspace_id,surface);
+  await query(sql,`UPDATE mif_tenant_databases SET status='created',updated_at=now()
+   WHERE workspace_id=$1 AND status='allocating'`,[record.workspace_id]);
+ }catch(e){
+  console.error('Neon account database creation failed',e?.message);
+  await query(sql,`UPDATE mif_tenant_databases SET status='failed',last_error=$2,updated_at=now()
+   WHERE workspace_id=$1`,[record.workspace_id,'Neon allocation unavailable']).catch(()=>{});
+ }
+ const token=await new SignJWT({email:record.email}).setProtectedHeader({alg:'HS256'})
+  .setSubject(record.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(surface))
+  .setIssuedAt().setExpirationTime('8h').sign(key);
+ setCookie(c,sessionCookieFor(surface),token,{httpOnly:true,sameSite:'Strict',
+  secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});
+ return c.json({ok:true,email:record.email,workspace_id:record.workspace_id,provisioning:'pending'},202);
+});
+app.get('/api/admin/tenant/status',async c=>{
+ const surface=loginSurface(c),sql=centralDb(c);
+ if(!['enterprise','developer'].includes(surface)||!sql)return fail(c,404,'Not found');
+ const records=await query(sql,`SELECT d.workspace_id,d.status,d.migration_version,d.last_error,w.name
+ FROM mif_tenant_databases d JOIN erp_workspaces w ON w.id=d.workspace_id
+ JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND d.application=$2
+ ORDER BY w.created_at ASC LIMIT 20`,[c.get('adminId'),surface]);
+ return c.json({ok:true,data:records});
+});
+app.post('/api/admin/tenant/initialize',async c=>{
+ const surface=loginSurface(c),sql=centralDb(c),settings=env(c);
+ if(!['enterprise','developer'].includes(surface)||!sql)return fail(c,404,'Not found');
+ const records=await query(sql,`SELECT d.workspace_id,d.status,d.migration_version
+ FROM mif_tenant_databases d JOIN erp_workspaces w ON w.id=d.workspace_id
+ JOIN erp_memberships m ON m.workspace_id=w.id AND m.role='owner'
+ WHERE m.admin_id=$1 AND d.application=$2 ORDER BY w.created_at ASC LIMIT 1`,[c.get('adminId'),surface]);
+ if(!records.length)return fail(c,404,'No customer database');
+ const record=records[0];
+ if(record.status==='ready')return c.json({ok:true,status:'ready',workspace_id:record.workspace_id});
+ if(record.status==='allocating'||record.status==='failed'&&Number(record.migration_version||0)===0){
+  try{
+   await createNeonTenantDatabase(settings,record.workspace_id,surface);
+   await query(sql,`UPDATE mif_tenant_databases SET status='created',last_error='',updated_at=now()
+    WHERE workspace_id=$1`,[record.workspace_id]);
+  }catch{return fail(c,503,'Neon database allocation unavailable')}
+ }
+ try{
+  const result=await migrateTenantBatch({central:sql,query,settings,workspaceId:record.workspace_id});
+  return result.status==='busy'?fail(c,409,'Database setup is already running'):
+    c.json({ok:true,workspace_id:record.workspace_id,...result},result.status==='ready'?200:202);
+ }catch(e){console.error('Tenant migration failed',e?.message);return fail(c,503,'Neon database initialization failed')}
 });
 app.post('/api/admin/login',async c=>{const sql=db(c),key=secret(c);if(!sql||!key)return fail(c,503,'Admin login unavailable');const v=loginData.safeParse(await parse(c));if(!v.success)return fail(c,400,'Invalid credentials');let allowed;try{allowed=await enforceAuthLimit(sql,query,env(c).SESSION_SECRET,c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP')||'unavailable','login',v.data.email)}catch{return fail(c,503,'Login protection unavailable')}if(!allowed.allowed)return fail(c,429,'Too many login attempts; try again later');const found=await query(sql,'SELECT id,email,password_hash,salt FROM admins WHERE email=$1',[v.data.email.toLowerCase()]);const row=found[0];const hash=await hashed(v.data.password,row?.salt||'invalid-salt');if(!row||!(await equal(hash,row.password_hash)))return fail(c,401,'Invalid credentials');
  const surface=env(c).MIF_APP_SURFACE;
