@@ -6,9 +6,10 @@ const policy='You are RAWI (راوي), the professional Arabic-first assistant i
 const safeText=r=>(r.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim();
 export async function getAIProviders(sql,env,query){
  let rows=[];
- if(sql){rows=await query(sql,'SELECT code,model,encrypted_key,enabled,priority FROM mif_ai_providers WHERE enabled=true ORDER BY priority ASC,code ASC');}
+ if(sql){rows=await query(sql,'SELECT code,model,encrypted_key,enabled,priority FROM mif_ai_providers ORDER BY priority ASC,code ASC');}
  const providers=[];const seen=new Set();
  for(const p of rows){
+  if(!p.enabled)continue;
   const vars=managedEnv[p.code];if(!vars)continue;
   let key=env[vars[0]]||'';
   if(!key&&p.encrypted_key){try{key=await unseal(p.encrypted_key,env.CONNECTOR_ENCRYPTION_KEY)}catch{continue;}}
