@@ -50,10 +50,22 @@ export function installRawiCompany(app,{centralDb,env,query}){
  app.get('/api/admin/company/workspace-plan/:id',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
   const id=c.req.param('id');if(!z.string().uuid().safeParse(id).success)return fail(c,400,'Invalid company');
-  const rows=await query(sql,"SELECT p.setup_plan,p.setup_source,p.name,p.activity FROM rawi_company_profiles p "+
+  const rows=await query(sql,"SELECT p.setup_plan,p.setup_source,p.name,p.activity,m.role FROM rawi_company_profiles p "+
    "JOIN erp_memberships m ON m.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND m.admin_id=$2",
    [id,c.get('adminId')]);
-  return rows.length?c.json({ok:true,data:{...rows[0].setup_plan,source:rows[0].setup_source,name:rows[0].name,activity:rows[0].activity}}):fail(c,404,'Company not found');
+  if(!rows.length)return fail(c,404,'Company not found');
+  const company=rows[0];let plan=company.setup_plan||{},source=company.setup_source;
+  // Apply activity-led setup to companies registered before smart onboarding was added.
+  if(!Array.isArray(plan.sections)&&company.role==='owner'&&company.name?.trim()&&company.activity?.trim()){
+   let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
+   if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
+   const language=c.req.query('language')==='en'?'en':'ar';
+   plan=await generateBusinessPlan(company.name,company.activity,language,providers,routeAI);
+   source=plan.source;
+   await query(sql,"UPDATE rawi_company_profiles SET setup_plan=$2::jsonb,setup_inputs=$3::jsonb,setup_source=$4,setup_updated_at=now() "+
+    "WHERE workspace_id=$1 AND NOT (setup_plan ? 'sections')",[id,JSON.stringify(plan),JSON.stringify({name:company.name,activity:company.activity,language}),source]);
+  }
+  return c.json({ok:true,data:{...plan,source,name:company.name,activity:company.activity}});
  });
  app.post('/api/admin/company/complete',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
