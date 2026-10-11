@@ -40,11 +40,12 @@ test('Cannot create invoice for a customer outside the workspace',async()=>{
  assert.equal(response.status,400);
  assert.equal(calls.some(x=>x.sql.includes('INSERT INTO erp_invoices')),false);
 });
-test('AI replies require an enabled configured key',async()=>{
- const {app}=api((sql)=>sql.includes('SELECT role FROM erp_memberships')?[{role:'owner'}]:[]);
- const r=await req(app,'/api/admin/erp/w/'+ws+'/ask',{question:'Summarize all customers'});
- assert.equal(r.status,503);
- assert.match((await r.json()).error,/OpenAI/);
+test('Customer accounts cannot configure the operator OpenAI key through workspace API',async()=>{
+ const {app}=api(sql=>sql.includes('SELECT role FROM erp_memberships')?[{role:'owner'}]:[]);
+ const r=await req(app,'/api/admin/erp/w/'+ws+'/integrations/openai',{label:'OpenAI',secret:'sk-customer-key'},'PUT');
+ assert.equal(r.status,400);
+ const legacy=await req(app,'/api/admin/erp/w/'+ws+'/ask',{question:'Hello'});
+ assert.equal(legacy.status,404);
 });
 test('Scheduler uses one atomic due-task claim',async()=>{
  let statement='';
