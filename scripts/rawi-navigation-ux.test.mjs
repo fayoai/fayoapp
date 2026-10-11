@@ -11,7 +11,11 @@ test('Single chat input has one visual border, no nested brand bar, and stays ov
  assert.doesNotMatch(ui,/className="rawi-composer-actions"/);
  assert.match(css,/\.mif-chat-page\{[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto;/);
  assert.match(css,/\.mif-composer textarea\{[^}]*border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important/);
- assert.match(css,/\.mif-body-chats\{height:calc\(100dvh - 80px/);
+ assert.match(css,/\.mif-app\{height:100dvh;min-height:100dvh;max-height:100dvh;overflow:hidden/);
+ assert.match(css,/\.mif-body-chats\{height:auto;min-height:0/);
+ assert.match(css,/\.mif-chat-page>\.mif-composer\{grid-row:3;align-self:end/);
+ assert.match(ui,/<img src="\/rawi-erp-mark\.svg" alt="" width="32" height="32" style=/);
+ assert.match(css,/\.mif-app \.mif-login-page \.rawi-auth-heading>img\{[^}]*width:32px!important/);
 });
 test('Seven navigation tabs keep New centered and unauthenticated gated tabs display inline chat login',()=>{
  const ui=read('src/MifSmartShell.jsx');
@@ -73,4 +77,9 @@ test('Fresh RAWI greeting sits in the middle while the single message composer r
  assert.match(css,/\.mif-welcome-message p\{[^}]*margin:0/);
  assert.match(ui,/<RawiGreeting lang=\{lang\}\/>/);
  assert.equal((ui.match(/className="mif-composer"/g)||[]).length,1);
+});
+
+test('A chat error stays in the scroll region, not in a fourth grid row that displaces the composer',()=>{
+ const ui=read('src/MifSmartShell.jsx');
+ assert.match(ui,/\{chatError&&<div className="mif-chat-error" role="alert">\{chatError\}<\/div>\}\s*<\/div>\s*<form className="mif-composer"/);
 });
