@@ -19,8 +19,18 @@ test('Owner role cannot be escalated by adding a second owner or changing owner 
  assert.equal(update.status,400);
  assert.ok(!calls.some(x=>x.sql.startsWith('UPDATE erp_memberships')));
 });
-test('Existing registered account must be found before adding them to an organization',async()=>{
+test('Team creation cannot bypass the centralized identity system',async()=>{
  const {app,calls}=setup('owner'),endpoint='http://localhost/api/admin/erp/w/'+workspace+'/members';
  const r=await app.request(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'new@example.com',role:'viewer'})});
- assert.equal(r.status,409);assert.ok(calls.some(x=>x.sql.startsWith('INSERT INTO erp_memberships')));
+ assert.equal(r.status,503);
+ assert.ok(!calls.some(x=>x.sql.startsWith('INSERT INTO erp_memberships')));
+});
+test('Unregistered user is rejected before company database membership insertion',async()=>{
+ const app=new Hono(),calls=[];
+ app.use('/api/admin/*',async(c,next)=>{c.set('adminId',workspace);c.set('centralSQL',{central:true});await next()});
+ installRawiTeam(app,{db:()=>({tenant:true}),query:async(_sql,sql,args)=>{calls.push({sql,args});if(sql.startsWith('SELECT role FROM erp_memberships'))return [{role:'owner'}];return []}});
+ const r=await app.request('http://localhost/api/admin/erp/w/'+workspace+'/members',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'new@example.com',role:'viewer'})});
+ assert.equal(r.status,404);
+ assert.ok(calls.some(x=>x.sql.includes('JOIN rawi_account_profiles')));
+ assert.ok(!calls.some(x=>x.sql.startsWith('INSERT INTO erp_memberships')));
 });
