@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {createNeonTenantDatabase,tenantDatabaseName,neonTenantConfig} from './neon-tenant-databases.js';
 import {seal} from './ai-erp.js';
 import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
 const uuid=z.string().uuid();
@@ -76,6 +77,38 @@ export function installPlatformSaas(app,{db,env,query}){
   return rows.length?c.json({ok:true}):failed(c,404,'Plan not found');
  });
  app.get('/api/admin/platform/tenants',async c=>c.json({ok:true,data:await query(db(c),`SELECT w.id,w.name,w.created_at,a.email owner_email,COALESCE(ap.account_type,'enterprise') application,s.plan_id,s.status subscription_status,s.messages_used,s.period_starts_at,s.period_ends_at,p.title plan_title,p.message_limit FROM erp_workspaces w JOIN admins a ON a.id=w.owner_id LEFT JOIN rawi_account_profiles ap ON ap.admin_id=a.id LEFT JOIN mif_tenant_subscriptions s ON s.workspace_id=w.id LEFT JOIN mif_subscription_plans p ON p.id=s.plan_id ORDER BY w.created_at DESC LIMIT 500`)}));
+ app.get('/api/admin/platform/tenant-databases',async c=>{
+  const sql=db(c);
+  const rows=await query(sql,`SELECT d.workspace_id,w.name workspace_name,d.application,d.neon_project_id,d.neon_branch_id,d.database_name,d.status,d.migration_version,d.last_error,d.created_at,d.updated_at FROM mif_tenant_databases d JOIN erp_workspaces w ON w.id=d.workspace_id ORDER BY d.created_at DESC LIMIT 500`);
+  return c.json({ok:true,data:rows});
+ });
+ app.post('/api/admin/platform/tenants/:id/provision-database',async c=>{
+  const id=c.req.param('id'),settings=env(c);
+  if(!uuid.safeParse(id).success)return failed(c,400,'Invalid tenant');
+  try{neonTenantConfig(settings)}catch{return failed(c,503,'Neon provisioning is not configured')}
+  const sql=db(c);
+  const owners=await query(sql,`SELECT w.id,COALESCE(p.account_type,'enterprise') application FROM erp_workspaces w JOIN admins a ON a.id=w.owner_id LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE w.id=$1`,[id]);
+  if(!owners.length)return failed(c,404,'Tenant does not exist');
+  const application=owners[0].application;
+  const name=tenantDatabaseName(id,application);
+  const first=await query(sql,`INSERT INTO mif_tenant_databases(workspace_id,application,neon_project_id,neon_branch_id,database_name,status)
+   VALUES($1,$2,$3,$4,$5,'allocating') ON CONFLICT(workspace_id) DO NOTHING RETURNING workspace_id`,
+    [id,application,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID,name]);
+  if(!first.length){
+   const existing=await query(sql,'SELECT status,database_name,updated_at FROM mif_tenant_databases WHERE workspace_id=$1',[id]);
+   if(existing[0]?.status==='created'||existing[0]?.status==='ready')return c.json({ok:true,status:existing[0].status,database_name:existing[0].database_name});
+   return failed(c,409,'Database allocation already started; check status before retrying');
+  }
+  try{
+   const result=await createNeonTenantDatabase(settings,id,application);
+   await query(sql,`UPDATE mif_tenant_databases SET status='created',last_error='',updated_at=now() WHERE workspace_id=$1`,[id]);
+   // Created means a separate empty database exists; schema migration and routing have NOT been verified.
+   return c.json({ok:true,status:'created',database_name:result.database_name,application},201);
+  }catch(e){
+   await query(sql,`UPDATE mif_tenant_databases SET status='failed',last_error=$2,updated_at=now() WHERE workspace_id=$1`,[id,String(e?.message||'Neon provisioning failed').slice(0,250)]).catch(()=>{});
+   return failed(c,503,'Neon provisioning failed; inspect tenant database status');
+  }
+ });
  app.put('/api/admin/platform/tenants/:id/subscription',async c=>{
   const id=c.req.param('id'),v=subscriptionInput.safeParse(await payload(c));
   if(!uuid.safeParse(id).success||!v.success)return failed(c,400,'Invalid subscription');
