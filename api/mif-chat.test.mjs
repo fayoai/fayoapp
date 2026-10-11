@@ -32,3 +32,40 @@ test('Public marketing AI calls are tenant-free and metered only after a real pr
   assert.ok(!JSON.stringify(meter).includes('203.0.113.10'));
  }finally{globalThis.fetch=original}
 });
+
+test('Public RAWI PDF attachment reaches the configured AI provider without storing guest files',async()=>{
+ const original=globalThis.fetch;let received;const statements=[];
+ const app=new Hono();
+ installMifChat(app,{
+  db:()=>({}),
+  env:()=>({SESSION_SECRET:'a-strong-session-secret-at-least-thirty-two-characters',PUBLIC_CHAT_ENABLED:'true',MIF_APP_SURFACE:'enterprise',OPENAI_API_KEY:'test-secret'}),
+  query:async(_db,sql,args=[])=>{statements.push({sql,args});if(sql.startsWith('INSERT INTO mif_guest_usage'))return [{hits:1}];return []}
+ });
+ globalThis.fetch=async(_url,opts)=>{received=JSON.parse(opts.body);return {ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'PDF analyzed'}]}]})}};
+ try{
+  const pdf={name:'receipt.pdf',mime_type:'application/pdf',data:'data:application/pdf;base64,'+Buffer.from('%PDF-1.7').toString('base64')};
+  const response=await app.request('http://localhost/api/chat/public',{method:'POST',headers:{'content-type':'application/json','CF-Connecting-IP':'203.0.113.21'},body:JSON.stringify({question:'Summarize the file',documents:[pdf]})});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).answer,'PDF analyzed');
+  assert.deepEqual(received.input.at(-1).content[1],{type:'input_file',filename:'receipt.pdf',file_data:pdf.data});
+  assert.ok(!statements.some(x=>JSON.stringify(x).includes(pdf.data)));
+ }finally{globalThis.fetch=original}
+});
+test('Microphone fallback transcribes a bounded audio recording without a signed-in account',async()=>{
+ const original=globalThis.fetch;let endpoint,transcription;
+ const app=new Hono();
+ installMifChat(app,{
+  db:()=>({}),
+  env:()=>({SESSION_SECRET:'a-strong-session-secret-at-least-thirty-two-characters',PUBLIC_CHAT_ENABLED:'true',OPENAI_API_KEY:'voice-secret'}),
+  query:async(_db,sql)=>sql.startsWith('INSERT INTO mif_guest_usage')?[{hits:1}]:[]
+ });
+ globalThis.fetch=async(url,opts)=>{endpoint=url;transcription=opts.body;return {ok:true,json:async()=>({text:'Send the monthly report'})}};
+ try{
+  const form=new FormData();form.append('audio',new Blob([new Uint8Array(400)],{type:'audio/webm'}),'voice.webm');
+  const response=await app.request('http://localhost/api/chat/transcribe',{method:'POST',headers:{'CF-Connecting-IP':'203.0.113.22'},body:form});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).text,'Send the monthly report');
+  assert.equal(endpoint,'https://api.openai.com/v1/audio/transcriptions');
+  assert.equal(transcription.get('model'),'gpt-4o-mini-transcribe');
+ }finally{globalThis.fetch=original}
+});
