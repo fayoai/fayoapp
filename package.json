@@ -1,7 +1,7 @@
 {
   "name": "mif-smart-platform",
   "private": true,
-  "version": "8.0.0",
+  "version": "8.1.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"node --watch api/dev-server.mjs\" \"vite --host 0.0.0.0\"",
@@ -15,7 +15,9 @@
     "mobile:add:ios": "npx cap add ios",
     "mobile:sync": "npm run build && npx cap sync",
     "desktop:install": "npm --prefix apps/desktop install",
-    "desktop:run": "npm --prefix apps/desktop start"
+    "desktop:run": "npm --prefix apps/desktop start",
+    "mobile:prepare:enterprise": "node scripts/prepare-native.mjs",
+    "mobile:icons": "node scripts/native-icons.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",
@@ -37,6 +39,7 @@
     "wrangler": "^4.40.0",
     "@capacitor/cli": "8.5.2",
     "@capacitor/android": "8.5.2",
-    "@capacitor/ios": "8.5.2"
+    "@capacitor/ios": "8.5.2",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

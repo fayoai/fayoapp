@@ -20,7 +20,8 @@
       "/developer",
       "/developer/",
       "/mif",
-      "/mif/*"
+      "/mif/*",
+      "/sitemap.xml"
     ]
   }
 }

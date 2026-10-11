@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {notifyMifInquiry} from './mif-notifications.js';
 const name=z.string().trim().min(2).max(160);
 const id=z.string().uuid();
 const error=(c,status,message)=>c.json({ok:false,error:message},status);
@@ -25,8 +26,16 @@ export function installMifWebsite(app,{db,env,query}){
     expires_at=CASE WHEN mif_site_rate_limits.expires_at<now() THEN now()+interval '1 hour' ELSE mif_site_rate_limits.expires_at END RETURNING count`,[key]);
   if(Number(a[0]?.count)>6)return error(c,429,'Too many inquiries from this source');
   const x=data.data;
-  await query(sql,'INSERT INTO mif_site_inquiries(name,email,phone,company,product_code,message) VALUES($1,$2,$3,$4,$5,$6)',[x.name,x.email,x.phone,x.company,x.product_code,x.message]);
-  return c.json({ok:true},201);
+  const rows=await query(sql,'INSERT INTO mif_site_inquiries(name,email,phone,company,product_code,message) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[x.name,x.email,x.phone,x.company,x.product_code,x.message]);
+  if(!rows.length)return error(c,503,'Unable to save website enquiry');
+  const savedId=rows[0].id;
+  const send=async()=>{
+    const delivery=await notifyMifInquiry(env(c),x);
+    if(delivery.status==='not_configured')return;
+    await query(sql,'UPDATE mif_site_inquiries SET notification_status=$1,notified_at=CASE WHEN $1=$2 THEN now() ELSE NULL END WHERE id=$3',[delivery.status,'sent',savedId]).catch(()=>{});
+  };
+  try{c.executionCtx.waitUntil(send())}catch{await send()}
+  return c.json({ok:true,id:savedId},201);
  });
  // Owner-only APIs stay protected even if the marketing website is public.
  app.use('/api/admin/mif/*',async(c,next)=>{
@@ -78,8 +87,42 @@ export function installMifWebsite(app,{db,env,query}){
  });
  app.get('/api/admin/mif/inquiries',async c=>c.json({ok:true,data:await query(db(c),'SELECT * FROM mif_site_inquiries ORDER BY created_at DESC LIMIT 500')}));
  app.patch('/api/admin/mif/inquiries/:id',async c=>{
-  if(!id.safeParse(c.req.param('id')).success)return error(c,400,'Invalid inquiry');
-  const v=z.object({status:z.enum(['new','contacted','qualified','closed'])}).safeParse(await read(c));if(!v.success)return error(c,400,'Invalid status');
-  const r=await query(db(c),'UPDATE mif_site_inquiries SET status=$1 WHERE id=$2 RETURNING id',[v.data.status,c.req.param('id')]);return r.length?c.json({ok:true}):error(c,404,'Inquiry not found');
+  const inquiryId=c.req.param('id');
+  if(!id.safeParse(inquiryId).success)return error(c,400,'Invalid inquiry');
+  const v=z.object({
+    status:z.enum(['new','contacted','qualified','closed']).optional(),
+    internal_note:z.string().max(4000).optional(),
+    next_action_on:z.iso.date().nullable().optional()
+  }).refine(x=>Object.keys(x).length>0).safeParse(await read(c));
+  if(!v.success)return error(c,400,'Invalid inquiry update');
+  const x=v.data;
+  const hasDate=Object.prototype.hasOwnProperty.call(x,'next_action_on');
+  const rows=await query(db(c),`WITH previous AS MATERIALIZED (
+    SELECT id,status,internal_note,COALESCE(next_action_on::text,'') AS next_action FROM mif_site_inquiries WHERE id=$1 FOR UPDATE
+   ), changed AS (
+    UPDATE mif_site_inquiries SET status=COALESCE($2::text,status),internal_note=COALESCE($3::text,internal_note),
+    next_action_on=CASE WHEN $4::boolean THEN $5::date ELSE next_action_on END,updated_at=now()
+    WHERE id IN (SELECT id FROM previous) RETURNING id,status,internal_note,COALESCE(next_action_on::text,'') AS next_action
+   ), events AS (
+    INSERT INTO mif_site_inquiry_events(inquiry_id,actor_id,event_kind,old_value,new_value)
+    SELECT changed.id,$6::uuid,v.kind,v.old_value,v.new_value FROM changed JOIN previous USING(id)
+    CROSS JOIN LATERAL (VALUES
+      ('status',previous.status,changed.status),
+      ('note',previous.internal_note,changed.internal_note),
+      ('followup',previous.next_action,changed.next_action)
+    ) AS v(kind,old_value,new_value)
+    WHERE v.old_value IS DISTINCT FROM v.new_value RETURNING id
+   ) SELECT id FROM changed`,[inquiryId,x.status||null,x.internal_note??null,hasDate,x.next_action_on||null,c.get('adminId')]);
+  return rows.length?c.json({ok:true}):error(c,404,'Inquiry not found');
+ });
+ app.get('/api/admin/mif/inquiries/:id/events',async c=>{
+  const inquiryId=c.req.param('id');
+  if(!id.safeParse(inquiryId).success)return error(c,400,'Invalid inquiry');
+  const found=await query(db(c),'SELECT 1 FROM mif_site_inquiries WHERE id=$1',[inquiryId]);
+  if(!found.length)return error(c,404,'Inquiry not found');
+  const events=await query(db(c),`SELECT e.id,e.event_kind,e.old_value,e.new_value,e.created_at,a.email actor_email
+    FROM mif_site_inquiry_events e JOIN admins a ON a.id=e.actor_id
+    WHERE e.inquiry_id=$1 ORDER BY e.created_at DESC LIMIT 100`,[inquiryId]);
+  return c.json({ok:true,data:events});
  });
 }

@@ -19,7 +19,8 @@ export function installRawiReadiness(app,{db,env,query}){
     {code:'ai',ready:ai,required:true,ar:'مزوّد AI فعّال',en:'Enabled AI provider'},
     {code:'registration',ready:settings.REGISTRATION_ENABLED==='true',required:false,ar:'فتح التسجيل',en:'Registration enabled'},
     {code:'plans',ready:Number(counts[0]?.plans||0)>0,required:false,ar:'باقات الاشتراك',en:'Available subscription plan'},
-    {code:'site',ready:!!settings.SITE_ORIGIN?.startsWith('https://'),required:false,ar:'رابط الخدمة الآمن',en:'Canonical HTTPS site URL'}
+    {code:'site',ready:!!settings.SITE_ORIGIN?.startsWith('https://'),required:false,ar:'رابط الخدمة الآمن',en:'Canonical HTTPS site URL'},
+    {code:'inquiry_mail',ready:!!settings.RESEND_API_KEY&&!!settings.MAIL_FROM&&!!settings.MIF_INQUIRY_NOTIFY_EMAIL,required:false,ar:'بريد إشعارات طلبات الموقع',en:'Website inquiry mail notifications'}
   ];
   return c.json({ok:true,checks,counts:counts[0]||{},configuration_ready:checks.filter(x=>x.required).every(x=>x.ready),credits_verified:false,note:'Checks configuration, not actual Odoo access or regulatory readiness.'});
  });

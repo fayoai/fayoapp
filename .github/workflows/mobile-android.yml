@@ -20,12 +20,15 @@ jobs:
         run: node -e "const u=new URL(process.env.APP_URL); if(u.protocol!=='https:') process.exit(1)"
       - name: Install packages and build
         env:
-          VITE_API_BASE_URL: ${{ inputs.api_base_url }}
+          RAWI_PUBLIC_SITE_URL: ${{ inputs.api_base_url }}
+          RAWI_NATIVE_TARGET: enterprise
         run: |
           npm install --no-audit --no-fund
           npm run build
+          node scripts/prepare-native.mjs
           npx cap add android
           npx cap sync android
+          node scripts/native-icons.mjs
       - name: Build unsigned debug APK
         working-directory: android
         run: ./gradlew assembleDebug
