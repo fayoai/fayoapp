@@ -64,7 +64,7 @@ export function installMifChat(app,{db,env,query}){
   const v=input.safeParse(await parse(c));if(!v.success)return fail(c,400,'Enter a message to continue');
   // Guest chat is anonymous but rate-limited atomically using tenant-owned PostgreSQL.
   const sql=db(c),cfg=env(c);
-  if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED!=='true')return fail(c,503,'MIF Smart conversations are not configured yet');
+  if(!sql||!cfg.SESSION_SECRET||cfg.PUBLIC_CHAT_ENABLED==='false')return fail(c,503,'MIF Smart conversations are not configured yet');
   const ip=c.req.header('CF-Connecting-IP')||'';
   if(!ip)return fail(c,403,'Unable to verify visitor request');
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cfg.SESSION_SECRET+'|public-chat|'+ip));
