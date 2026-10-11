@@ -48,3 +48,21 @@ test('Onboarding UI previews analysis and operations rearranges existing departm
  assert.match(workspaceUI,/Recommended for your business/);
  assert.match(workspaceUI,/businessPlan\.summary/);
 });
+
+test('Previously registered companies receive a saved activity configuration on first workspace visit',async()=>{
+ const app=new Hono(),calls=[];
+ app.use('/api/admin/*',async(c,next)=>{c.set('adminId',user);await next()});
+ const query=async(_sql,text,args=[])=>{
+  calls.push({text,args});
+  if(text.includes('SELECT p.setup_plan,p.setup_source,p.name,p.activity,m.role'))
+   return [{setup_plan:{},setup_source:'basic',name:'Construction Group',activity:'Contracting and landscaping',role:'owner'}];
+  if(text.includes('SELECT code,model,encrypted_key'))return [];
+  return [];
+ };
+ installRawiCompany(app,{centralDb:()=>({}),env:c=>c.env||{},query});
+ const response=await app.request('http://localhost/api/admin/company/workspace-plan/'+workspace+'?language=en',{}, {MIF_APP_SURFACE:'enterprise'});
+ assert.equal(response.status,200);
+ const result=await response.json();
+ assert.equal(result.data.sections[0],'projects');
+ assert.ok(calls.some(x=>x.text.includes('UPDATE rawi_company_profiles SET setup_plan')));
+});
