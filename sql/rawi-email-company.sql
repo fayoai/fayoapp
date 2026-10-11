@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS rawi_company_profiles(
  completed_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS rawi_company_profiles_pending ON rawi_company_profiles(workspace_id) WHERE completed_at IS NULL;
+
+-- Activity-led workspace setup: only supported existing sections can be prioritized.
+ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_plan jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_inputs jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_source text NOT NULL DEFAULT 'basic';
+ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_updated_at timestamptz;
