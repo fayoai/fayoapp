@@ -6,7 +6,7 @@ import {RawiTeamPanel,RawiNotificationsPanel} from './RawiPanels.jsx';
 
 import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,Send,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2,Building2} from 'lucide-react';
 import './mif-smart-shell.css';
-const initialLogin={email:'',password:'',name:'',organization:'',account_type:'enterprise'};
+const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
 const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
 function RawiGreeting({lang}){
  const text=welcomeText[lang==='en'?'en':'ar'];
@@ -102,13 +102,13 @@ export default function MifSmartShell(){
  const install=async()=>{if(installed)return;if(installPrompt){setInstalling(true);try{await installPrompt.prompt();const result=await installPrompt.userChoice;if(result?.outcome==='accepted'){setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}}setInstallPrompt(null);setInstallOpen(false)}finally{setInstalling(false)}}else setInstallOpen(true)};
  const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
 const authPanel=<section className="mif-login-page rawi-login-compact" aria-label={L('الدخول أو إنشاء حساب','Sign in or sign up')}>
-  <div className="rawi-auth-heading"><strong>{L('سجّل الدخول للمتابعة','Sign in to continue')}</strong></div>
+  <div className="rawi-auth-heading"><img src="/rawi-erp-mark.svg" alt=""/><strong>{signup?L('إنشاء حساب جديد','Create an account'):L('تسجيل الدخول','Sign in')}</strong></div>
   <div className="rawi-auth-tabs" role="group" aria-label={L('الحساب','Account')}>
    <button type="button" className={!signup?'selected':''} aria-pressed={!signup} onClick={()=>{setSignup(false);setAuthError('')}}>{L('دخول','Sign in')}</button>
    <button type="button" className={signup?'selected':''} aria-pressed={signup} onClick={()=>{setSignup(true);setAuthError('')}}>{L('حساب جديد','New account')}</button>
   </div>
   <form className="rawi-account-form" onSubmit={submitAuth}>
-   {signup&&<div className="rawi-auth-split"><label>{L('الاسم','Name')}<input required autoComplete="name" minLength={2} maxLength={160} value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label><label>{L('الشركة','Company')}<input required autoComplete="organization" minLength={2} maxLength={150} value={form.organization} onChange={e=>setForm(v=>({...v,organization:e.target.value}))}/></label></div>}
+   {signup&&<label>{L('الاسم','Name')}<input required autoComplete="name" minLength={2} maxLength={160} value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>}
    <label>{L('البريد الإلكتروني','Email')}<input type="email" autoComplete="username" inputMode="email" required value={form.email} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
    <label>{L('كلمة المرور','Password')}<input type="password" autoComplete={signup?'new-password':'current-password'} minLength={signup?12:1} required value={form.password} onChange={e=>setForm(v=>({...v,password:e.target.value}))}/></label>
    {authError&&<p role="alert" className="mif-form-error">{authError}</p>}
@@ -116,7 +116,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
   </form>
  </section>;
  return <div className="mif-app" dir={lang==='ar'?'rtl':'ltr'}>
-  <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)}>
+  <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)+(!authed&&!checking&&protectedTabs.includes(tab)?' mif-body-auth':'')}>
    {(tab==='new'||tab==='thread')&&<section className="mif-chat-page">
     <div className="rawi-chat-tools rawi-enterprise-tools">
      {tenantSetup&&<span role="status" className="rawi-setup-state">{tenantSetup.status==='failed'?L('تعذر تهيئة القاعدة','Database setup failed'):L('تهيئة Neon','Preparing Neon')} {tenantSetup.step||''}</span>}
