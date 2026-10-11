@@ -39,3 +39,9 @@ CREATE TABLE IF NOT EXISTS mif_ai_usage(
 );
 CREATE INDEX IF NOT EXISTS mif_ai_usage_tenant_date ON mif_ai_usage(workspace_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS mif_ai_usage_provider_date ON mif_ai_usage(provider,created_at DESC);
+
+-- Add external and Cloudflare-hosted trial inference providers without losing existing settings.
+ALTER TABLE mif_ai_providers DROP CONSTRAINT IF EXISTS mif_ai_providers_code_check;
+ALTER TABLE mif_ai_providers ADD CONSTRAINT mif_ai_providers_code_check CHECK(code IN ('openai','anthropic','gemini','groq','openrouter','workers_ai'));
+ALTER TABLE mif_ai_usage DROP CONSTRAINT IF EXISTS mif_ai_usage_provider_check;
+ALTER TABLE mif_ai_usage ADD CONSTRAINT mif_ai_usage_provider_check CHECK(provider IN ('openai','anthropic','gemini','groq','openrouter','workers_ai'));
