@@ -6,5 +6,5 @@ import './styles.css';
 createRoot(document.getElementById('root')).render(<React.StrictMode><BrowserRouter><App/></BrowserRouter></React.StrictMode>);
 
 if ('serviceWorker' in navigator && (location.protocol==='https:' || ['localhost','127.0.0.1'].includes(location.hostname))) {
-  window.addEventListener('load',()=>navigator.serviceWorker.register(location.pathname==='/developer'||location.pathname.startsWith('/developer/')?'/developer/sw.js':'/sw.js').catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 }
