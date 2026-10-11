@@ -37,10 +37,40 @@ export function installCommerce(app,{db,env,query}){
   try{const origin=new URL(env(c).SITE_ORIGIN).origin;if(!origin.startsWith('https://'))throw Error('HTTPS required');const invoice=await gateway(c,'invoices',{method:'POST',body:JSON.stringify({amount:money.total_halalas,currency:'SAR',description:'MIF Smart '+reference,metadata:{order:reference},callback_url:origin+'/api/commerce/moyasar',success_url:origin+'/payment-result?reference='+reference+'&access='+encodeURIComponent(access),back_url:origin+'/store'})});const url=new URL(invoice.url);if(invoice.currency!=='SAR'||Number(invoice.amount)!==money.total_halalas||!invoice.id||url.protocol!=='https:'||url.hostname!=='checkout.moyasar.com')throw Error('Invalid invoice response');await query(sql,'UPDATE commerce_orders SET invoice_id=$1,checkout_url=$2 WHERE id=$3',[invoice.id,invoice.url,rows[0].id]);return c.json({...data,checkout_url:invoice.url},201)}catch{await query(sql,"UPDATE commerce_orders SET status='failed' WHERE id=$1",[rows[0].id]);return error(c,502,'Payment could not be started; contact support with '+reference)}
  });
  app.get('/api/commerce/order/:ref',async c=>{const ref=c.req.param('ref'),access=c.req.query('access');if(!/^MIF-\d{4}-[A-F0-9]{10}$/.test(ref)||!access||access.length>200)return error(c,404,'Not found');const sql=db(c);if(!sql)return error(c,503,'Database offline');const found=await query(sql,'SELECT * FROM commerce_orders WHERE reference=$1 AND secret_hash=$2',[ref,await digest(access)]);if(!found.length)return error(c,404,'Not found');const row=found[0];if(row.status==='awaiting_payment'&&row.invoice_id){try{await verify(c,row)}catch{}}const [fresh,items,subscriptions]=await Promise.all([
- query(sql,'SELECT reference,status,payment_method,total_halalas,created_at FROM commerce_orders WHERE id=$1',[row.id]),
+ query(sql,'SELECT reference,status,payment_method,total_halalas,subtotal_halalas,vat_halalas,created_at FROM commerce_orders WHERE id=$1',[row.id]),
  query(sql,'SELECT sku,cycle,quantity,unit_halalas,configuration FROM commerce_items WHERE order_id=$1 ORDER BY id',[row.id]),
  query(sql,'SELECT sku,cycle,status,starts_at,renews_at FROM commerce_subscriptions WHERE order_id=$1',[row.id])
- ]);return c.json({ok:true,order:{...fresh[0],items,subscriptions}})});
+ ]);const payment=await query(sql,"SELECT value FROM site_settings WHERE key='billing'");const billing=payment[0]?.value||{};const canGateway=/^sk_live_/.test(env(c).MOYASAR_SECRET_KEY||'')&&!!env(c).SITE_ORIGIN;return c.json({ok:true,order:{...fresh[0],items,subscriptions},methods:{gateway:canGateway,bank:!!billing.iban},bank_details:fresh[0]?.payment_method==='bank'?billing:{}})});
+ // Customer accepts a real, administrator-issued quotation using their private order access.
+ app.post('/api/commerce/order/:ref/accept',async c=>{
+  const ref=c.req.param('ref'),input=z.object({access:z.string().min(20).max(200),method:z.enum(['gateway','bank'])}).safeParse(await body(c));
+  if(!/^MIF-\\d{4}-[A-F0-9]{10}$/.test(ref)||!input.success)return error(c,400,'Invalid quotation acceptance');
+  const sql=db(c);if(!sql)return error(c,503,'Order service not connected');
+  const rows=await query(sql,'SELECT id,reference,total_halalas,status,payment_method FROM commerce_orders WHERE reference=$1 AND secret_hash=$2',[ref,await digest(input.data.access)]);
+  const order=rows[0];if(!order)return error(c,404,'Order not found');
+  if(order.status!=='quoted'||order.payment_method!=='quote'||!order.total_halalas||Number(order.total_halalas)<100)return error(c,409,'Quotation is not available for acceptance');
+  if(input.data.method==='bank'){
+   const b=await query(sql,"SELECT value FROM site_settings WHERE key='billing'");
+   if(!b[0]?.value?.iban)return error(c,503,'Bank transfer is not configured');
+   const accepted=await query(sql,"UPDATE commerce_orders SET status='awaiting_transfer',payment_method='bank' WHERE id=$1 AND status='quoted' RETURNING reference",[order.id]);
+   if(!accepted.length)return error(c,409,'Quotation has already been accepted');
+   return c.json({ok:true,reference:ref,status:'awaiting_transfer',bank_details:b[0].value});
+  }
+  const cfg=env(c);if(!/^sk_live_/.test(cfg.MOYASAR_SECRET_KEY||'')||!cfg.SITE_ORIGIN)return error(c,503,'Online payment is not available');
+  let origin;try{origin=new URL(cfg.SITE_ORIGIN).origin;if(!origin.startsWith('https://'))throw Error('HTTPS is required')}catch{return error(c,503,'Secure payment origin is not configured')}
+  const locked=await query(sql,"UPDATE commerce_orders SET status='awaiting_payment',payment_method='gateway' WHERE id=$1 AND status='quoted' RETURNING id",[order.id]);
+  if(!locked.length)return error(c,409,'Quotation has already been accepted');
+  try{
+   const inv=await gateway(c,'invoices',{method:'POST',body:JSON.stringify({amount:Number(order.total_halalas),currency:'SAR',description:'MIF Smart '+ref,metadata:{order:ref},callback_url:origin+'/api/commerce/moyasar',success_url:origin+'/payment-result?reference='+ref+'&access='+encodeURIComponent(input.data.access),back_url:origin+'/orders'})});
+   const url=new URL(inv.url);
+   if(inv.currency!=='SAR'||Number(inv.amount)!==Number(order.total_halalas)||!inv.id||url.protocol!=='https:'||url.hostname!=='checkout.moyasar.com')throw Error('Payment provider response invalid');
+   await query(sql,'UPDATE commerce_orders SET invoice_id=$1,checkout_url=$2 WHERE id=$3',[inv.id,inv.url,order.id]);
+   return c.json({ok:true,reference:ref,status:'awaiting_payment',checkout_url:inv.url});
+  }catch{
+   await query(sql,"UPDATE commerce_orders SET status='quoted',payment_method='quote' WHERE id=$1 AND status='awaiting_payment' AND invoice_id IS NULL",[order.id]);
+   return error(c,502,'Unable to initiate payment');
+  }
+ });
  app.get('/api/commerce/module/:sku/download',async c=>{
   const sql=db(c),reference=c.req.query('reference'),access=c.req.query('access'),sku=c.req.param('sku');if(!sql||!reference||!access||!/^MOD-[A-Z0-9-]{3,50}$/.test(sku))return error(c,404,'File not found');
   const orders=await query(sql,"SELECT id FROM commerce_orders WHERE reference=$1 AND secret_hash=$2 AND status IN('paid','fulfilled')",[reference,await digest(access)]);if(!orders.length)return error(c,403,'Purchase required');
@@ -98,6 +128,18 @@ export function installCommerce(app,{db,env,query}){
  app.put('/api/admin/commerce/prices/:sku/:cycle',async c=>{const {sku,cycle}=c.req.param(),v=await body(c);if(!cycles.includes(cycle)||!(offers.some(p=>p.sku===sku&&p.cycles.includes(cycle))||(await query(db(c),'SELECT 1 FROM commerce_modules WHERE sku=$1',[sku])).length))return error(c,400,'Invalid product');const parsed=z.object({amount:z.number().min(0).max(10000000).nullable(),active:z.boolean()}).safeParse(v);if(!parsed.success||parsed.data.active&&parsed.data.amount==null)return error(c,400,'Invalid price');await query(db(c),'INSERT INTO commerce_prices(sku,cycle,amount,active) VALUES($1,$2,$3,$4) ON CONFLICT(sku,cycle) DO UPDATE SET amount=$3,active=$4,updated_at=now()',[sku,cycle,parsed.data.amount,parsed.data.active]);return c.json({ok:true})});
  app.get('/api/admin/commerce/orders',async c=>c.json({ok:true,data:await query(db(c),`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('sku',i.sku,'cycle',i.cycle,'quantity',i.quantity,'configuration',i.configuration)) FROM commerce_items i WHERE i.order_id=o.id),'[]'::json) items FROM commerce_orders o ORDER BY o.created_at DESC LIMIT 300`)}));
  app.post('/api/admin/commerce/orders/:id/transfer',async c=>{if(!uuid.safeParse(c.req.param('id')).success)return error(c,400,'Invalid ID');const rows=await query(db(c),"UPDATE commerce_orders SET status='paid',paid_at=now() WHERE id=$1 AND payment_method='bank' AND status='awaiting_transfer' RETURNING id",[c.req.param('id')]);if(!rows.length)return error(c,409,'Not a pending bank transfer');await markPaid(c,rows[0]);return c.json({ok:true})});
+ app.post('/api/admin/commerce/orders/:id/quote',async c=>{
+  const id=c.req.param('id'),v=z.object({subtotal:z.number().min(1).max(100000000)}).safeParse(await body(c));
+  if(!uuid.safeParse(id).success||!v.success)return error(c,400,'Invalid quotation');
+  const h=Math.round(v.data.subtotal*100);if(Math.abs(h-v.data.subtotal*100)>.000001)return error(c,400,'Invalid currency precision');
+  const vat=Math.round(h*.15);const result=await query(db(c),"UPDATE commerce_orders SET status='quoted',subtotal_halalas=$1,vat_halalas=$2,total_halalas=$3 WHERE id=$4 AND payment_method='quote' AND status IN('new','quoted') RETURNING id,reference,total_halalas",[h,vat,h+vat,id]);
+  return result.length?c.json({ok:true,data:result[0]}):error(c,409,'Only open quotation requests may be priced');
+ });
+ app.post('/api/admin/commerce/orders/:id/fulfill',async c=>{
+  const id=c.req.param('id');if(!uuid.safeParse(id).success)return error(c,400,'Invalid ID');
+  const rows=await query(db(c),"UPDATE commerce_orders SET status='fulfilled' WHERE id=$1 AND status='paid' RETURNING reference",[id]);
+  return rows.length?c.json({ok:true,reference:rows[0].reference}):error(c,409,'Payment must be verified before fulfillment');
+ });
  app.get('/api/admin/commerce/subscriptions',async c=>c.json({ok:true,data:await query(db(c),'SELECT s.*,o.email,o.reference FROM commerce_subscriptions s JOIN commerce_orders o ON o.id=s.order_id ORDER BY s.starts_at DESC')}));
  app.get('/api/admin/commerce/modules',async c=>c.json({ok:true,data:await query(db(c),'SELECT * FROM commerce_modules ORDER BY created_at DESC')}));
  app.post('/api/admin/commerce/modules',async c=>{const r=z.object({sku:z.string().regex(/^MOD-[A-Z0-9-]{3,50}$/),slug:z.string().regex(/^[a-z0-9-]{3,70}$/),name_ar:z.string().min(2).max(160),name_en:z.string().min(2).max(160),description_ar:z.string().max(2000).default(''),odoo_versions:z.array(z.string().max(12)).max(15).default([]),licence:z.string().max(80).default('Proprietary'),version:z.string().max(30).default('1.0.0')}).safeParse(await body(c));if(!r.success)return error(c,400,'Invalid module');const x=r.data,k=Object.keys(x);const rows=await query(db(c),`INSERT INTO commerce_modules(${k.join(',')}) VALUES(${k.map((_,i)=>'$'+(i+1)).join(',')}) RETURNING *`,Object.values(x));return c.json({ok:true,data:rows[0]},201)});
