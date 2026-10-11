@@ -31,11 +31,11 @@ export async function getAIProviders(sql,env,query){
  }
  return providers;
 }
-async function requestProvider(provider,messages,instructions){
+async function requestProvider(provider,messages,instructions,maxTokens=800){
  const {code,key,model}=provider;
  if(code==='workers_ai'){
   if(!provider.binding?.run)throw Object.assign(new Error('Workers AI binding is unavailable'),{status:503});
-  const response=await provider.binding.run(model,{messages:[{role:'system',content:instructions},...messages],max_tokens:800});
+  const response=await provider.binding.run(model,{messages:[{role:'system',content:instructions},...messages],max_tokens:maxTokens});
   const answer=String(response?.response||response?.result?.response||'').trim();
   if(!answer)throw new Error('Workers AI returned no text');
   return {answer:answer.slice(0,12000),provider:code,model,input_tokens:0,output_tokens:0};
@@ -43,18 +43,18 @@ async function requestProvider(provider,messages,instructions){
  let url='',headers={'Content-Type':'application/json'},body;
  if(code==='openai'){
   url='https://api.openai.com/v1/responses';headers.Authorization='Bearer '+key;
-  body={model,input:messages,instructions,store:false,max_output_tokens:800};
+  body={model,input:messages,instructions,store:false,max_output_tokens:maxTokens};
  }else if(code==='anthropic'){
   url='https://api.anthropic.com/v1/messages';headers['x-api-key']=key;headers['anthropic-version']='2023-06-01';
-  body={model,max_tokens:800,system:instructions,messages};
+  body={model,max_tokens:maxTokens,system:instructions,messages};
  }else if(code==='groq'||code==='openrouter'){
   url=code==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://openrouter.ai/api/v1/chat/completions';
   headers.Authorization='Bearer '+key;
-  body={model,messages:[{role:'system',content:instructions},...messages],max_tokens:800,stream:false};
+  body={model,messages:[{role:'system',content:instructions},...messages],max_tokens:maxTokens,stream:false};
  }else if(code==='gemini'){
   if(!/^[a-zA-Z0-9._-]+$/.test(model))throw Error('Invalid model identifier');
   url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent';headers['x-goog-api-key']=key;
-  body={systemInstruction:{parts:[{text:instructions}]},contents:messages.map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:x.content}]})),generationConfig:{maxOutputTokens:800}};
+  body={systemInstruction:{parts:[{text:instructions}]},contents:messages.map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:x.content}]})),generationConfig:{maxOutputTokens:maxTokens}};
  }else throw Error('Unsupported AI provider');
  const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(28000)});
  if(!response.ok)throw Object.assign(new Error('Provider request failed'),{status:response.status});
@@ -64,7 +64,7 @@ async function requestProvider(provider,messages,instructions){
  const usage=code==='openai'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:code==='anthropic'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:(code==='groq'||code==='openrouter')?{input:result.usage?.prompt_tokens,output:result.usage?.completion_tokens}:{input:result.usageMetadata?.promptTokenCount,output:result.usageMetadata?.candidatesTokenCount};
  return {answer:answer.slice(0,12000),provider:code,model,input_tokens:Number(usage.input)||0,output_tokens:Number(usage.output)||0};
 }
-export async function routeAI(question,providers,history=[],context='',mode='enterprise',documents=[]){
+export async function routeAI(question,providers,history=[],context='',mode='enterprise',documents=[],maxTokens=800){
  if(!providers.length)throw Object.assign(new Error('RAWI AI service is not configured by MIF Smart'),{status:503});
  if(documents.length&&!providers.some(p=>p.code==='openai'))throw Object.assign(new Error('Document analysis requires an enabled OpenAI provider'),{status:503});
  const current=documents.length?[{type:'input_text',text:question},...documents.map(file=>({type:'input_file',filename:file.name,file_data:file.data}))]:question;
@@ -77,7 +77,7 @@ export async function routeAI(question,providers,history=[],context='',mode='ent
   const instruction=(mode==='mif-public'?mifPublicPolicy:mode==='enterprise-public'?enterpriseVisitorPolicy:policy)+(mode==='developer'?'\nDeveloper focus: Act as an Odoo development and implementation assistant for Odoo 17–20. Offer precise addon structures, security ACLs, views, migration plans, safe diagnostics and troubleshooting. Distinguish JSON-2 for Odoo 19+ from legacy JSON-RPC for older databases. Never assert an installation, deploy or database change has happened without verified tool results. For generated code, explain required staging tests.':'')+(safeContext?'\n'+(mode==='mif-public'?'Published MIF Smart website catalogue (public read-only data): ':'Read-only authorized tenant context: ')+String(safeContext).slice(0,3000):'');
   // Trial providers receive only the message explicitly being sent now, never old conversations.
   const requestMessages=freeTrialCodes.includes(providers[i].code)?[{role:'user',content:question}]:messages;
-  try{return await requestProvider(providers[i],requestMessages,instruction)}
+  try{return await requestProvider(providers[i],requestMessages,instruction,maxTokens)}
   catch(e){if(documents.length||i===providers.length-1)throw Object.assign(new Error(e.status===429?'AI service is busy; try again later':'RAWI could not answer at this time'),{status:e.status===429?429:502});}
  }
 }
