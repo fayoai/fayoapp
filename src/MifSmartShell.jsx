@@ -126,8 +126,8 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
     </div>
     <div className={'mif-chat-scroll'+(!messages.length?' is-empty':'')} ref={areaRef} aria-live="polite">
      {!messages.length?<RawiGreeting lang={lang}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt="RAWI"/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt="RAWI"/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
+     {chatError&&<div className="mif-chat-error" role="alert">{chatError}</div>}
     </div>
-    {chatError&&<div className="mif-chat-error" role="alert">{chatError}</div>}
     <form className="mif-composer" onSubmit={ask}><textarea ref={questionRef} rows={1} aria-label={L('رسالتك إلى راوي','Message RAWI')} value={question} placeholder={L('اكتب رسالتك...','Write a message...')} onChange={e=>setQuestion(e.target.value)} onInput={e=>{const node=e.currentTarget;node.style.height='auto';node.style.height=Math.min(node.scrollHeight,150)+'px'}} maxLength={2500} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask(e)}}}/><button type="submit" className="rawi-send" aria-label={L('إرسال','Send')} disabled={asking||!question.trim()}>{asking?<Loader2 size={18} className="mif-spinner"/>:<Send size={19}/>}</button></form>
 
    </section>}
