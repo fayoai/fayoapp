@@ -54,7 +54,7 @@ app.post('/api/admin/register',async c=>{
  if(surface!=='enterprise')return fail(c,404,'Not found');
  if(!signupReady(settings))return fail(c,503,'Email verification is not configured for registration');
  const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
-  name:z.string().trim().min(2).max(160),account_type:z.literal('enterprise')});
+  name:z.string().trim().min(2).max(160),account_type:z.literal('enterprise'),language:z.enum(['ar','en']).default('ar')});
  const v=schema.safeParse(await parse(c));if(!v.success)return fail(c,400,'Invalid account registration');
  const user=v.data,email=user.email.trim().toLowerCase(),ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Real-IP');
  if(!ip)return fail(c,403,'Unable to verify registration source');
@@ -72,7 +72,7 @@ app.post('/api/admin/register',async c=>{
   WHERE rawi_pending_signups.sent_at<now()-interval '60 seconds'
   RETURNING email`,[email,user.name,passwordHash,salt,codeHash]);
  if(!pending.length)return fail(c,429,'Please wait one minute before requesting another code');
- try{await deliverVerificationCode(settings,email,code)}
+ try{await deliverVerificationCode(settings,email,code,user.language)}
  catch(e){console.error('RAWI verification email delivery failed',e?.message);
   await query(sql,'DELETE FROM rawi_pending_signups WHERE email=$1 AND code_hash=$2',[email,codeHash]).catch(()=>{});
   return fail(c,503,'Could not send verification email. Please try again later')}
