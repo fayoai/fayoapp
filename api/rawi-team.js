@@ -37,7 +37,12 @@ export function installRawiTeam(app,{db,query}){
    ON CONFLICT(id) DO NOTHING`,[user.id,user.email]);
   const rows=await query(g.sql,`INSERT INTO erp_memberships(workspace_id,admin_id,role)
    VALUES($1,$2,$3) ON CONFLICT(workspace_id,admin_id) DO NOTHING RETURNING admin_id`,[g.w,user.id,x.role]);
-  return rows.length?c.json({ok:true},201):bad(c,409,'User already belongs to this organization');
+  if(!rows.length)return bad(c,409,'User already belongs to this organization');
+  // Both registries must agree: central membership authorizes database routing;
+  // the isolated membership controls every business operation.
+  await query(central,`INSERT INTO erp_memberships(workspace_id,admin_id,role)
+   VALUES($1,$2,$3) ON CONFLICT(workspace_id,admin_id) DO NOTHING`,[g.w,user.id,x.role]);
+  return c.json({ok:true},201);
  });
  app.patch('/api/admin/erp/w/:workspace/members/:member',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
@@ -46,11 +51,21 @@ export function installRawiTeam(app,{db,query}){
   if(!v.success)return bad(c,400,'Invalid role');
   const rows=await query(g.sql,`UPDATE erp_memberships SET role=$1
    WHERE workspace_id=$2 AND admin_id=$3 AND role<>'owner' RETURNING admin_id`,[v.data.role,g.w,c.req.param('member')]);
-  return rows.length?c.json({ok:true}):bad(c,404,'Member not found or organization owner cannot be modified');
+  if(!rows.length)return bad(c,404,'Member not found or organization owner cannot be modified');
+  const central=c.get('centralSQL');
+  if(!central)return bad(c,503,'Central identity provider unavailable');
+  await query(central,`UPDATE erp_memberships SET role=$1
+   WHERE workspace_id=$2 AND admin_id=$3 AND role<>'owner'`,[v.data.role,g.w,c.req.param('member')]);
+  return c.json({ok:true});
  });
  app.delete('/api/admin/erp/w/:workspace/members/:member',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
   if(!uuid.safeParse(c.req.param('member')).success)return bad(c,400,'Invalid member');
+  const central=c.get('centralSQL');
+  if(!central)return bad(c,503,'Central identity provider unavailable');
+  // Revoke routing first: even if tenant cleanup fails, access stays denied.
+  await query(central,`DELETE FROM erp_memberships
+   WHERE workspace_id=$1 AND admin_id=$2 AND role<>'owner'`,[g.w,c.req.param('member')]);
   const rows=await query(g.sql,`DELETE FROM erp_memberships
    WHERE workspace_id=$1 AND admin_id=$2 AND role<>'owner' RETURNING admin_id`,[g.w,c.req.param('member')]);
   return rows.length?c.json({ok:true}):bad(c,404,'Member not found or organization owner cannot be removed');
