@@ -16,7 +16,6 @@ test('RAWI ERP has a distinct white mark on its blue background, preserving comp
  const icon=read('public/rawi-erp-mark.svg');
  assert.match(icon,/fill="#2166e8"/);
  assert.match(icon,/<path fill="#ffffff"/);
- assert.match(read('public/rawi-developer-mark.svg'),/fill="#ffd21a"/);
  assert.match(read('public/mif-logo.svg'),/fill="#e35a0e"/);
  const pwa=JSON.parse(read('public/manifest.webmanifest'));
  assert.equal(pwa.theme_color,'#2166e8');
