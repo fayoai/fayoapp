@@ -136,19 +136,22 @@ jobs:
           NODE
       - name: Diagnose registration backend with disposable invalid-domain address
         shell: bash
+        env:
+          MIF_SESSION_SECRET: ${{ secrets.MIF_SESSION_SECRET }}
         run: |
           node --input-type=module <<'NODE'
-          import {randomBytes,randomUUID} from 'node:crypto';
+          import {randomBytes,randomUUID,createHash} from 'node:crypto';
           const email='rawi-test-'+randomUUID()+'@example.invalid';
           const password='A1!'+randomBytes(20).toString('base64url');
           try{
+            const signature=createHash('sha256').update(process.env.MIF_SESSION_SECRET+'|rawi-email-otp|'+email+'|internal-diag').digest('hex');
             const r=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/admin/register',{
-              method:'POST',headers:{'Content-Type':'application/json'},
+              method:'POST',headers:{'Content-Type':'application/json','X-Rawi-Probe':signature},
               body:JSON.stringify({name:'Diagnostic Check',email,password,account_type:'enterprise',language:'en'}),
               signal:AbortSignal.timeout(20000)
             });
             const data=await r.json();
-            console.log('Disposable registration smoke: HTTP '+r.status+' code='+(data.code||'none')+' error='+(data.error||'none'));
+            console.log('Disposable registration smoke: HTTP '+r.status+' code='+(data.code||'none')+' error='+(data.error||'none')+(data.debug?' diagnostic='+JSON.stringify(data.debug):''));
             if(r.status===202)console.log('::warning::The disposable request was accepted; no real user mailbox exists for example.invalid.');
           }catch(e){console.log('Disposable registration smoke could not run: '+e.message)}
           NODE
