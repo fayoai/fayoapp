@@ -77,21 +77,18 @@ CREATE TABLE IF NOT EXISTS site_settings (
 CREATE INDEX IF NOT EXISTS catalog_listing_idx ON catalog(kind, active, sort_order);
 CREATE INDEX IF NOT EXISTS leads_created_idx ON leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_created_idx ON orders(created_at DESC);
+-- Only the products explicitly included in the MIF Smart catalog are seeded.
+-- Keep pricing unset: no product is represented as paid-ready without approved prices.
 INSERT INTO catalog (sku,kind,category,title_ar,title_en,description_ar,description_en,icon,featured,sort_order) VALUES
-('MIF-SAAS','service','saas','أنظمة SaaS','SaaS Platforms','تطوير منصات أعمال مرنة ولوحات تحكم وتجارب مستخدم متكاملة.','Scalable business platforms, dashboards and seamless digital experiences.','blocks',true,1),
-('MIF-AI','service','ai','تدريب وحلول الذكاء الاصطناعي','AI Training & Solutions','برامج تدريب عملية وحلول أتمتة مدروسة للفرق والشركات.','Practical AI enablement and purposeful automation for businesses.','brain-circuit',true,2),
-('MIF-INFRA','service','infrastructure','السيرفرات والبريد المؤسسي','Servers & Business Email','تجهيز البنية التحتية والاستضافة والبريد المؤسسي وفق متطلبات عملك.','Infrastructure, hosting and business email configured around your needs.','server',true,3),
-('MIF-SMART','service','smart-home','المنازل الذكية','Smart Home','أنظمة تحكم متصلة للإضاءة والأمان والراحة.','Connected control for lighting, comfort and security.','house-plus',true,4),
-('MIF-CONTRACT','service','contracting','المقاولات والحلول الهندسية','Contracting','تنفيذ مشاريع متكاملة بمعايير تشغيلية دقيقة.','Integrated project delivery with thoughtful execution.','building-2',true,5),
-('MIF-GROW','service','consulting','التحول الرقمي والتوسع','Digital Transformation','استشارات وربط الأنظمة لتوسيع أعمالك دون تعقيد.','Consulting and integrations that scale with your ambitions.','workflow',true,6),
-('SKU-SERVER','product','infrastructure','تجهيز سيرفر أعمال','Business Server Setup','توريد وتجهيز خوادم أعمال وفق المواصفات المطلوبة.','Tailored business server procurement and setup.','server',true,11),
-('SKU-MAIL','product','infrastructure','البريد الإلكتروني للشركات','Business Email Suite','إعداد بريد احترافي بدومين شركتك مع سياسة حماية مناسبة.','Professional domain email, setup and sensible security.','mail',true,12),
-('SKU-AI-TEAM','product','ai','برنامج تدريب فريق على AI','AI Team Training','برنامج تدريبي مخصص حسب مستوى الفريق وأهدافه.','Customised AI training for your team and goals.','sparkles',true,13),
-('SKU-HOME','product','smart-home','باقة المنزل الذكي','Smart Living Package','تخطيط وتركيب حلول منزل ذكي قابلة للتوسع.','Planned, expandable smart-home installation.','house',true,14),
-('SKU-SAAS','product','saas','بناء منصة SaaS مخصصة','Custom SaaS Build','منصة مصممة لسير العمل الحقيقي مع قابلية للتطوير.','A SaaS experience built for your actual workflows.','layout-dashboard',true,15),
-('SKU-CLOUD','product','infrastructure','خدمات سحابية مُدارة','Managed Cloud Services','تهيئة ومتابعة وتشغيل البنية السحابية.','Cloud setup, management and operations.','cloud',false,16)
+('MIF-ERP','service','erp','Odoo Community المطوّر','Enhanced Odoo Community','Odoo Community مطوّر مع وحدات الأعمال حسب نطاق التنفيذ والترخيص.','Enhanced Odoo Community with licensed, scoped business modules.','boxes',true,1),
+('MIF-CONTROL','service','odoo-manager','MIF Odoo Control | إدارة الاستضافات','MIF Odoo Control | Odoo Hosting Management','إدارة استضافات ونسخ أودو والدومينات والنسخ الاحتياطية والصيانة.','Odoo hosting, instances, domains, backups and maintenance.','server',true,2),
+('MIF-PARTNERS','service','partners','Partner Cloud | SaaS لشركاء Odoo','Partner Cloud | Odoo Partner SaaS','إدارة الفرص والعملاء والمشاريع والاشتراكات والدعم لشركاء أودو.','CRM, projects, subscriptions and support for Odoo partners.','network',true,3),
+('MIF-MARKETING','service','marketing','MIF Marketing | منصة التسويق','MIF Marketing | Marketing SaaS','صفحات ومحتوى وعروض وفرص ومحادثات وتحليلات التسويق.','Marketing pages, content, offers, leads, chats and analytics.','message-circle',true,4),
+('MIF-HOSTING','service','infrastructure','استضافة وسيرفرات الأعمال','Business Servers & Hosting','تكوين استضافة السيرفرات حسب الموارد والبلد والنسخ الاحتياطية.','Configure hosting by resources, region and backup options.','server',true,5),
+('MIF-MODULES','service','modules','متجر موديولات Odoo','Odoo Modules Marketplace','إضافات أودو من تطويرنا مع توافق الإصدارات والتسليم بعد الشراء.','Our Odoo add-ons with version compatibility and post-payment delivery.','puzzle',true,6),
+('MIF-EMAIL','service','infrastructure','البريد الإلكتروني للشركات','Managed Business Email','البريد المؤسسي وإعداد الدومين وفق نطاق الخدمة.','Business email and domain setup within the agreed scope.','mail',false,7)
 ON CONFLICT(sku) DO NOTHING;
 INSERT INTO site_settings (key,value) VALUES
 ('contact','{"email":"","phone":"","whatsapp":"","address":"Saudi Arabia"}'::jsonb),
-('branding','{"tagline_ar":"نبتكر اليوم، لنمكّن الغد","tagline_en":"Intelligence in every connection"}'::jsonb)
+('branding','{"tagline_ar":"حلول تعمل بذكاء. أعمال تنمو بثقة.","tagline_en":"Smarter software. Stronger businesses."}'::jsonb)
 ON CONFLICT(key) DO NOTHING;
