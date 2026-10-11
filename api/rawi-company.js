@@ -43,7 +43,7 @@ export function installRawiCompany(app,{centralDb,env,query}){
   const existing=rows[0],inputs={name:d.name,activity:d.activity,language:d.language};
   if(blueprintReady(existing.setup_plan)&&existing.setup_inputs?.name===d.name&&
    existing.setup_inputs?.activity===d.activity&&existing.setup_inputs?.language===d.language)
-   return c.json({ok:true,plan:existing.setup_plan,source:existing.setup_source});
+   return c.json({ok:true,ready:true,plan:existing.setup_plan,source:existing.setup_source});
   // Avoid model charges for rapid successive keystrokes even from malicious clients.
   const wait=existing.setup_updated_at?8000-(Date.now()-new Date(existing.setup_updated_at).getTime()):0;
   if(wait>0)return c.json({ok:true,retry_after_ms:Math.ceil(wait),pending:true});
