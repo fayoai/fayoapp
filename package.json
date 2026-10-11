@@ -21,7 +21,10 @@
     "mobile:icons": "node scripts/native-icons.mjs",
     "smoke:surfaces": "node scripts/smoke-surfaces.mjs",
     "build:surfaces": "node scripts/build-surfaces.mjs",
-    "smoke:runtime": "node scripts/smoke-runtime.mjs"
+    "smoke:runtime": "node scripts/smoke-runtime.mjs",
+    "db:tenant:schema": "node scripts/generate-tenant-schema.mjs",
+    "pretest": "node scripts/generate-tenant-schema.mjs",
+    "prebuild": "node scripts/generate-tenant-schema.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",
