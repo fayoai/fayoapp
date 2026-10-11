@@ -26,6 +26,8 @@ jobs:
       - name: Deploy MIF Smart Worker with optional server-only runtime secrets
         shell: bash
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
           MIF_SESSION_SECRET: ${{ secrets.MIF_SESSION_SECRET }}
           MIF_ADMIN_BOOTSTRAP_TOKEN: ${{ secrets.MIF_ADMIN_BOOTSTRAP_TOKEN }}
@@ -62,9 +64,6 @@ jobs:
           else
             npx wrangler deploy
           fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Verify real production domain when configured
         shell: bash
         env:
