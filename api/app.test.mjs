@@ -6,7 +6,7 @@ test('ERP health is explicit when persistent storage is not connected',async()=>
  const res=await invoke('/api/health');
  assert.equal(res.status,503);
  const data=await res.json();
- assert.equal(data.service,'MIF Smart AI ERP');
+ assert.equal(data.service,'MIF Smart');
  assert.equal(data.database,'not_configured');
 });
 test('ERP routes require authorized session and do not leak workspace records',async()=>{
