@@ -38,6 +38,6 @@ test('RAWI ERP uses only its approved blue and white application mark',()=>{
  assert.match(mark,/fill="#2166e8"/);assert.match(mark,/fill="#ffffff"/);
 });
 test('RAWI signup selects plan only after account type is parsed',()=>{
- const source=readFileSync(new URL('./app.js',import.meta.url),'utf8'),p=source.indexOf("const user=validated.data;"),e=source.indexOf('ensureEvaluationPlan(sql,query,trial,surface)');
+ const source=readFileSync(new URL('./app.js',import.meta.url),'utf8'),p=source.indexOf('const user=v.data'),e=source.indexOf('ensureEvaluationPlan(sql,query,trial,surface)');
  assert.ok(p>0&&e>p,'Account type must be defined before selecting an Enterprise/Developer plan');
 });
