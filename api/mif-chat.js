@@ -184,7 +184,10 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    (SELECT count(*)::int FROM erp_employees WHERE workspace_id=w.id AND status='active') active_employees,
    (SELECT count(*)::int FROM rawi_activity_cases WHERE workspace_id=w.id AND status='in_progress') active_work_orders
    FROM erp_workspaces w WHERE w.id=$1`,[claim[0].workspace_id]);
-   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats}).slice(0,3000),'enterprise',v.data.documents||[]);
+   const companyInfo=await query(centralDb(c),"SELECT p.name,p.activity,p.setup_plan FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND m.admin_id=$2",[workspace,user]).catch(()=>[]);
+   const business=companyInfo[0]?{name:companyInfo[0].name,activity:companyInfo[0].activity,sector:companyInfo[0].setup_plan?.sector,
+    focus:companyInfo[0].setup_plan?.summary,prioritized_departments:companyInfo[0].setup_plan?.sections}:null;
+   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3000),'enterprise',v.data.documents||[]);
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
