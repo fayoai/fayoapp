@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {createNeonTenantDatabase,tenantDatabaseName,neonTenantConfig} from './neon-tenant-databases.js';
+import {migrateTenantBatch} from './tenant-migrations.js';
 import {seal} from './ai-erp.js';
 import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
 const uuid=z.string().uuid();
@@ -108,6 +109,19 @@ export function installPlatformSaas(app,{db,env,query}){
    await query(sql,`UPDATE mif_tenant_databases SET status='failed',last_error=$2,updated_at=now() WHERE workspace_id=$1`,[id,String(e?.message||'Neon provisioning failed').slice(0,250)]).catch(()=>{});
    return failed(c,503,'Neon provisioning failed; inspect tenant database status');
   }
+ });
+ app.post('/api/admin/platform/tenants/:id/initialize-database',async c=>{
+  const workspaceId=c.req.param('id');if(!uuid.safeParse(workspaceId).success)return failed(c,400,'Invalid tenant');
+  const central=db(c),settings=env(c);
+  if(!central||!settings.DATABASE_URL)return failed(c,503,'Database is unavailable');
+  const exists=await query(central,'SELECT status FROM mif_tenant_databases WHERE workspace_id=$1',[workspaceId]);
+  if(!exists.length)return failed(c,404,'Tenant database is not registered');
+  if(exists[0].status==='ready')return c.json({ok:true,status:'ready'});
+  try{
+   const result=await migrateTenantBatch({central,query,settings,workspaceId});
+   if(result.status==='busy')return failed(c,409,'Tenant migration is already running');
+   return c.json({ok:true,...result},result.status==='ready'?200:202);
+  }catch(e){console.error('Isolated tenant schema migration failed',e?.message);return failed(c,503,'Tenant database migration failed; see database status')}
  });
  app.put('/api/admin/platform/tenants/:id/subscription',async c=>{
   const id=c.req.param('id'),v=subscriptionInput.safeParse(await payload(c));
