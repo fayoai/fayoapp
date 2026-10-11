@@ -42,8 +42,9 @@ app.post('/api/admin/register',async c=>{
  if(!ip)return fail(c,403,'Unable to verify registration source');
  let attempt;try{attempt=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration')}catch{return fail(c,503,'Registration security is unavailable')}
  if(!attempt.allowed)return fail(c,429,'Too many account registrations; try later');
+ const user=v.data;
  let evaluation,trial;try{trial=evaluationSettings(settings);evaluation=await ensureEvaluationPlan(sql,query,trial,user.account_type)}catch{return fail(c,503,'The evaluation plan is not configured')}
- const user=v.data,salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt),email=user.email.toLowerCase();
+ const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt),email=user.email.toLowerCase();
  // The single statement creates all account records atomically.
  const stmt="WITH account AS(INSERT INTO admins(email,password_hash,salt) VALUES($1,$2,$3) ON CONFLICT(email) DO NOTHING RETURNING id,email), workspace AS(INSERT INTO erp_workspaces(name,owner_id,currency) SELECT $4,id,'SAR' FROM account RETURNING id,owner_id), member AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id), trial AS(INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,period_starts_at,period_ends_at) SELECT id,$6,'trial',now(),now()+($7::int*interval '1 day') FROM workspace RETURNING workspace_id), profile AS(INSERT INTO rawi_account_profiles(admin_id,account_type) SELECT id,$5 FROM account RETURNING admin_id), templ AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'RAWI' FROM workspace RETURNING id) SELECT account.id,account.email FROM account JOIN workspace ON workspace.owner_id=account.id JOIN member ON member.workspace_id=workspace.id JOIN profile ON profile.admin_id=account.id JOIN trial ON trial.workspace_id=workspace.id JOIN templ ON TRUE";
  const rows=await query(sql,stmt,[email,passwordHash,salt,user.organization,user.account_type,evaluation.id,trial.days]);
