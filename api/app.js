@@ -19,7 +19,7 @@ import {tenantDatabaseName,neonTenantConfig,createNeonTenantDatabase} from './ne
 import {migrateTenantBatch} from './tenant-migrations.js';
 import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailReady} from './rawi-email-verification.js';
 import {installRawiCompany} from './rawi-company.js';
-import {passwordHash} from './auth-password.js';
+import {passwordHash,PASSWORD_HASH_ITERATIONS} from './auth-password.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
 const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
@@ -40,7 +40,7 @@ app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('
 function signupReady(settings){
  try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&mailReady(settings)&&!!neonTenantConfig(settings)}catch{return false}
 }
-app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),odoo_developer_supported:false}));
+app.get('/api/public/rawi/status',c=>c.json({ok:true,registration_enabled:signupReady(env(c)),evaluation_available:signupReady(env(c)),password_kdf_iterations:PASSWORD_HASH_ITERATIONS,odoo_developer_supported:false}));
 app.get('/api/health',async c=>{
  const kind=env(c).MIF_APP_SURFACE;
  const service=kind==='enterprise'?'RAWI ERP':'MIF Smart';
