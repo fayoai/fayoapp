@@ -17,7 +17,8 @@ const checks=[
  ['MIF future application disabled',origin.mif+'/developer/',404],
  ['MIF blocks ERP tenant APIs',origin.mif+'/api/admin/erp/workspaces',404],
  ['MIF blocks tenant registration',origin.mif+'/api/admin/register',404],
- ['MIF owner setup',origin.mif+'/mif/owner-setup',200,'html']
+ ['MIF owner setup via admin',origin.mif+'/admin/setup',200,'html'],
+ ['Old owner setup redirects',origin.mif+'/mif/owner-setup',302,'/admin/setup']
 ];
 let failures=0;
 for(const [label,url,status,type] of checks){
