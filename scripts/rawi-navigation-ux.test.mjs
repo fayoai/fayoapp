@@ -21,10 +21,15 @@ test('Seven navigation tabs keep New centered and unauthenticated gated tabs dis
  assert.match(ui,/tab==='schedule'&&!checking&&authed&&<MifSchedule/);
  assert.match(ui,/tab==='team'&&!checking&&authed&&<RawiTeamPanel/);
  assert.match(ui,/tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel/);
- assert.match(ui,/if\(!authed\)\{setPostAuthTab/);
+ assert.match(ui,/\[tab,setTab\]=useState\('new'\)/);
+ assert.match(ui,/const selectTab=key=>\{if\(key==='new'\)\{startNew\(\);return\}navigate\(key\)\}/);
+ assert.match(ui,/tab==='chats'&&authed&&<section className="mif-chats-history"/);
+ assert.match(ui,/!checking&&!authed&&protectedTabs\.includes\(tab\)/);
  assert.match(ui,/const authPanel=<section/);
- assert.match(ui,/!authed&&!checking&&showAuth&&authPanel/);
  assert.doesNotMatch(ui,/:authPanel/);
+ assert.match(ui,/const privateChat=authed&&!!workspaceId/);
+ assert.match(ui,/const endpoint=privateChat\?'\/api\/admin\/chat\/send':'\/api\/chat\/public'/);
+ assert.match(ui,/navigate\('thread'\)/);
  assert.doesNotMatch(ui,/rawi-need-account/);
 });
 test('Login is compact, no invitation input, and PWA installation button is not shown when installed',()=>{
