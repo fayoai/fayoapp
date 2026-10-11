@@ -154,3 +154,8 @@
 .mif-chat-welcome h1{color:#232343}
 .mif-app .mif-account-avatar{background:#f0eeff;color:#5e55d2}
 @media(max-width:620px){.rawi-head-logo img{width:38px!important;height:38px!important}.rawi-head-logo>span{font-size:19px}.rawi-head-logo>span small{font-size:9px}}
+
+.rawi-chat-tools{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:3px 3px 9px}
+.rawi-workspace-picker{display:flex;align-items:center;gap:8px;font-size:11px;color:#73758b}
+.rawi-workspace-picker select{border:1px solid #dedff4;border-radius:9px;padding:8px 10px;background:white;color:#4c4874;max-width:220px;font-size:12px}
+@media(max-width:600px){.rawi-chat-tools{padding:3px 0 6px}.rawi-workspace-picker select{max-width:145px}}
