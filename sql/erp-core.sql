@@ -126,3 +126,5 @@ CREATE TABLE IF NOT EXISTS erp_expenses(
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS erp_expenses_tenant ON erp_expenses(workspace_id,created_at DESC);
+
+ALTER TABLE erp_invoices ADD COLUMN IF NOT EXISTS source_document_id uuid UNIQUE REFERENCES erp_documents(id);
