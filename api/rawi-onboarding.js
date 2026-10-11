@@ -20,9 +20,8 @@ export async function enforceAuthLimit(sql,query,secret,ip,bucket,identity=''){
  return {allowed:Number(rows[0]?.hits||0)<=ceiling,retry_at:rows[0]?.expires_at||null};
 }
 export async function ensureEvaluationPlan(sql,query,settings,application='enterprise'){
- if(!['enterprise','developer'].includes(application))throw new Error('Unsupported RAWI application');
- if(application==='developer'){
-  const rows=await query(sql,`INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active,application)
+ if(application!=='enterprise')throw new Error('Only RAWI ERP onboarding is enabled');
+ const rows=await query(sql,`INSERT INTO mif_subscription_plans(code,title,cycle,price_halalas,message_limit,active,application)
    VALUES('rawi-developer-evaluation','RAWI Developer evaluation','monthly',0,$1,true,'developer')
    ON CONFLICT(code) DO UPDATE SET code=EXCLUDED.code RETURNING id,active,message_limit`,[settings.limit]);
   if(!rows[0]?.active)throw new Error('Developer evaluation plan is disabled');
