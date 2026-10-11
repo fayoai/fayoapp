@@ -10,7 +10,7 @@ test('first owner bootstrap is accessible only in MIF SaaS',()=>{
 test('RAWI backend rejects cross-application login and sessions',()=>{
  const src=readFileSync(new URL('../api/app.js',import.meta.url),'utf8');
  assert.match(src,/profiles\[0\]\?\.account_type!==surface/);
- assert.match(src,/Registration type does not match this RAWI application/);
+ assert.match(src,/user.account_type!==surface/);
  assert.match(src,/Application account mismatch/);
  assert.match(src,/This sign-in is reserved for MIF Smart management/);
 });

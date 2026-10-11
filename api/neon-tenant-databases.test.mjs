@@ -46,7 +46,7 @@ test('Wrong Neon database owner fails verification',async()=>{
 test('Unprovisioned registration cannot create a shared central workspace',async()=>{
  const res=await app.request('https://enterprise.example/api/admin/register',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.88'},body:JSON.stringify({email:'test@example.com',password:'very-long-password-abc',name:'Tester',organization:'Demo',account_type:'enterprise'})},{DATABASE_URL:'postgresql://user:password@neon.example/central?sslmode=require',SESSION_SECRET:'s'.repeat(48),REGISTRATION_ENABLED:'true',MIF_APP_SURFACE:'enterprise'});
  assert.equal(res.status,503);
- assert.match((await res.json()).error,/Independent customer database provisioning/);
+ assert.match((await res.json()).error,/Secure production registration is not enabled/);
 });
 test('Registration sessions are scoped per application instead of MIF management',()=>{
  const source=String(requireSource);
