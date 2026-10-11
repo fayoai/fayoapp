@@ -48,7 +48,7 @@ export function installAiErp(app,{db,env,query}){
   return {sql,id};
  }
  const list=async(c,table,sort='created_at DESC')=>{const g=await gate(c);if(g.err)return g.err;if(table==='erp_tasks'||table==='erp_task_events')await runErpSchedule(g.sql).catch(e=>console.error('On-demand task processing failed',e.message));return c.json({ok:true,data:await query(g.sql,'SELECT * FROM '+table+' WHERE workspace_id=$1 ORDER BY '+sort+' LIMIT 500',[g.id])})};
- app.get('/api/admin/erp/workspaces',async c=>{const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);const data=await query(sql,'SELECT w.*,m.role FROM erp_workspaces w JOIN erp_memberships m ON w.id=m.workspace_id JOIN mif_tenant_databases d ON d.workspace_id=w.id AND d.status='ready' WHERE m.admin_id=$1 ORDER BY w.created_at DESC',[c.get('adminId')]);return c.json({ok:true,data})});
+ app.get('/api/admin/erp/workspaces',async c=>{const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);const data=await query(sql,'SELECT w.*,m.role FROM erp_workspaces w JOIN erp_memberships m ON w.id=m.workspace_id JOIN mif_tenant_databases d ON d.workspace_id=w.id AND d.status=\'ready\' WHERE m.admin_id=$1 ORDER BY w.created_at DESC',[c.get('adminId')]);return c.json({ok:true,data})});
  app.post('/api/admin/erp/workspaces',async c=>{
   if(['enterprise','developer'].includes(env(c).MIF_APP_SURFACE))return invalid(c,'New workspaces require independent Neon database provisioning',503);
   const v=z.object({name:z.string().trim().min(2).max(130),currency:z.literal('SAR').default('SAR')}).safeParse(await body(c));
