@@ -36,7 +36,7 @@ export default function MifCompanyAdmin(){
  {tab==='inquiries'&&<div className="mif-company-data-list">{leads.map(l=>{
  const edit=leadDrafts[l.id]||{status:l.status,internal_note:l.internal_note||'',next_action_on:l.next_action_on?String(l.next_action_on).slice(0,10):''};
  const change=(key,value)=>setLeadDrafts(all=>({...all,[l.id]:{...edit,[key]:value}}));
- return <article key={l.id}><div><h3>{l.name} <small>{l.status}</small></h3><p>{l.email} · {l.phone} · {l.company} · {l.product_code}</p><p>{l.message}</p>
+ return <article key={l.id}><div><h3>{l.name} <small>{l.status}</small></h3><p>{l.email} · {l.phone} · {l.company} · {l.product_code}</p><p>{l.message}</p><small>{L('إشعار البريد','Mail notification')}: {l.notification_status==='sent'?L('تم الإرسال','Sent'):l.notification_status==='failed'?L('تعذر الإرسال، الطلب محفوظ','Failed; inquiry saved'):L('غير مهيأ','Not configured')}</small>
  <div className="mif-company-inquiry-form"><label>{L('الحالة','Status')}<select value={edit.status} onChange={e=>change('status',e.target.value)}>{[['new',L('جديد','New')],['contacted',L('تم التواصل','Contacted')],['qualified',L('مؤهل','Qualified')],['closed',L('مغلق','Closed')]].map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
  <label>{L('المتابعة القادمة','Next follow-up')}<input type="date" value={edit.next_action_on} onChange={e=>change('next_action_on',e.target.value)}/></label>
  <label>{L('ملاحظات داخلية','Internal notes')}<textarea rows={2} maxLength={4000} value={edit.internal_note} onChange={e=>change('internal_note',e.target.value)}/></label>
