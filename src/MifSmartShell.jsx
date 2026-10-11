@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {api,useSite,tr} from './App.jsx';
 import AiErpWorkspace from './AiErpWorkspace.jsx';
+import MifSchedule from './MifSchedule.jsx';
 import {MessageCircle,Grid2X2,Plus,CalendarDays,UserRound,Send,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2} from 'lucide-react';
 import './mif-smart-shell.css';
 const initialLogin={email:'',password:'',name:'',organization:''};
@@ -70,7 +71,7 @@ export default function MifSmartShell(){
     <div className="mif-chat-footnote">{authed?L('محادثاتك محفوظة في حسابك.','Your chats are saved to your account.'):L('سجّل الدخول لحفظ محادثاتك واستخدام بيانات أعمالك.','Sign in to save chats and use your business records.')}</div>
    </section>}
    {(tab==='operations'||tab==='integrations')&&(authed?<AiErpWorkspace key={tab} mode={tab} notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
-   {tab==='schedule'&&(authed?<AiErpWorkspace key="schedule" mode="schedule" notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
+   {tab==='schedule'&&(authed?<MifSchedule notify={setNotice}/>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
    {tab==='account'&&(authed?<section className="mif-account"><div className="mif-account-avatar"><UserRound size={32}/></div><h2>{L('حسابي','My account')}</h2><div className="mif-account-detail"><span>{L('البريد الإلكتروني','Email')}</span><strong>{session.email||'—'}</strong></div><div className="mif-account-detail"><span>{L('اللغة','Language')}</span><button onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'العربية':'English'}</button></div><button className="mif-logout" onClick={logout}><LogOut size={18}/>{L('تسجيل الخروج','Sign out')}</button></section>:<AccountGate L={L} onLogin={()=>setAuthOpen(true)}/>)}
   </main>
   <nav className="mif-bottom-nav" aria-label={L('التنقل الرئيسي','Main navigation')}>{nav.map(([id,ar,en,Icon])=><button key={id} onClick={()=>selectTab(id)} aria-label={L(ar,en)} aria-current={tab===id?'page':undefined} className={'mif-bottom-item '+(tab===id?'active ':'')+(id==='new'?'new':'')}><span className="mif-bottom-icon"><Icon size={id==='new'?29:23} strokeWidth={id==='new'?2.6:1.9}/></span><span className="mif-bottom-label">{L(ar,en)}</span></button>)}</nav>
