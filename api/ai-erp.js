@@ -25,6 +25,21 @@ async function cipherKey(master){
 }
 const toB64=a=>btoa(String.fromCharCode(...a));
 const fromB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+// Provider credentials remain encrypted without requiring an unrelated signup setting.
+// Keep SESSION_SECRET stable; changing it requires re-entering provider credentials.
+export function providerEncryptionKey(settings){
+ if(typeof settings.CONNECTOR_ENCRYPTION_KEY==='string'&&settings.CONNECTOR_ENCRYPTION_KEY.length>=32)return settings.CONNECTOR_ENCRYPTION_KEY;
+ if(typeof settings.SESSION_SECRET==='string'&&settings.SESSION_SECRET.length>=32)return 'mif-smart/ai-provider-secrets/v1/'+settings.SESSION_SECRET;
+ throw Error('AI provider encryption secret is not configured');
+}
+export async function unsealProviderSecret(value,settings){
+ const preferred=providerEncryptionKey(settings);
+ try{return await unseal(value,preferred)}catch(e){
+  const fallback='mif-smart/ai-provider-secrets/v1/'+String(settings.SESSION_SECRET||'');
+  if(fallback!==preferred&&String(settings.SESSION_SECRET||'').length>=32)return unseal(value,fallback);
+  throw e;
+ }
+}
 export async function seal(value,master){
  const k=await cipherKey(master),iv=crypto.getRandomValues(new Uint8Array(12));
  const v=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(value)));

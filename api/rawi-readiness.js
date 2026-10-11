@@ -14,7 +14,7 @@ export function installRawiReadiness(app,{db,env,query}){
     {code:'database',ready:true,required:true,ar:'اتصال قاعدة البيانات',en:'Database connection'},
     {code:'session',ready:!!settings.SESSION_SECRET&&settings.SESSION_SECRET.length>=32,required:true,ar:'سر جلسات الدخول',en:'Session secret'},
     {code:'owner',ready:!!settings.PLATFORM_OWNER_EMAIL?.trim(),required:true,ar:'بريد مالك المنصة',en:'Platform owner identity'},
-    {code:'encryption',ready:!!settings.CONNECTOR_ENCRYPTION_KEY&&settings.CONNECTOR_ENCRYPTION_KEY.length>=32,required:true,ar:'تشفير بيانات الربط',en:'Connector encryption'},
+    {code:'encryption',ready:!!settings.CONNECTOR_ENCRYPTION_KEY&&settings.CONNECTOR_ENCRYPTION_KEY.length>=32||!!settings.SESSION_SECRET&&settings.SESSION_SECRET.length>=32,required:true,ar:'تشفير بيانات الربط',en:'Connector encryption'},
     {code:'ai',ready:ai,required:true,ar:'مزوّد AI فعّال',en:'Enabled AI provider'},
     {code:'registration',ready:settings.REGISTRATION_ENABLED==='true',required:false,ar:'فتح التسجيل (التحقق بالبريد مطلوب قبل التشغيل التجاري)',en:'Registration enabled (email verification required before commercial use)'},
     {code:'public_chat',ready:settings.PUBLIC_CHAT_ENABLED==='true'&&ai,required:false,ar:'مساعد AI العام في موقع MIF',en:'Public MIF website AI assistant'},

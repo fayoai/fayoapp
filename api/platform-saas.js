@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {createNeonTenantDatabase,tenantDatabaseName,neonTenantConfig} from './neon-tenant-databases.js';
 import {migrateTenantBatch} from './tenant-migrations.js';
 import {hashInvite,newInviteToken} from './rawi-invitations.js';
-import {seal} from './ai-erp.js';
+import {seal,providerEncryptionKey} from './ai-erp.js';
 import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
 const uuid=z.string().uuid();
 const failed=(c,status,error)=>c.json({ok:false,error},status);
@@ -43,7 +43,7 @@ export function installPlatformSaas(app,{db,env,query}){
   const existing=await query(sql,'SELECT encrypted_key FROM mif_ai_providers WHERE code=$1',[code]);
   if(x.secret){
    if(secretVar)return failed(c,409,'Credential is managed by hosting secrets');
-   try{encrypted=await seal(x.secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch{return failed(c,503,'Secret encryption not configured')}
+   try{encrypted=await seal(x.secret,providerEncryptionKey(env(c)))}catch{return failed(c,503,'Secret encryption not configured')}
   }else encrypted=existing[0]?.encrypted_key||'';
   if(x.enabled&&code==='workers_ai'&&!env(c).AI?.run)return failed(c,400,'Configure Cloudflare Workers AI binding before enabling');
   if(x.enabled&&code!=='workers_ai'&&!encrypted&&!secretVar)return failed(c,400,'Set an API key before enabling this provider');

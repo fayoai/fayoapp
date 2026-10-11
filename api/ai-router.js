@@ -1,4 +1,4 @@
-import {unseal} from './ai-erp.js';
+import {unsealProviderSecret} from './ai-erp.js';
 export const providerCodes=['openai','anthropic','gemini','groq','openrouter','workers_ai'];
 export const freeTrialCodes=['gemini','groq','openrouter','workers_ai'];
 const managedEnv={openai:['OPENAI_API_KEY','OPENAI_MODEL'],anthropic:['ANTHROPIC_API_KEY','ANTHROPIC_MODEL'],gemini:['GEMINI_API_KEY','GEMINI_MODEL'],groq:['GROQ_API_KEY','GROQ_MODEL'],openrouter:['OPENROUTER_API_KEY','OPENROUTER_MODEL'],workers_ai:['','','']};
@@ -16,7 +16,7 @@ export async function getAIProviders(sql,env,query){
   const vars=managedEnv[p.code];if(!vars)continue;
   if(p.code==='workers_ai'){if(env.AI?.run)providers.push({code:p.code,model:p.model||defaults.workers_ai,binding:env.AI});continue;}
   let key=env[vars[0]]||'';
-  if(!key&&p.encrypted_key){try{key=await unseal(p.encrypted_key,env.CONNECTOR_ENCRYPTION_KEY)}catch{continue;}}
+  if(!key&&p.encrypted_key){try{key=await unsealProviderSecret(p.encrypted_key,env)}catch{continue;}}
   if(key){providers.push({code:p.code,model:env[vars[1]]||p.model,key});seen.add(p.code);}
  }
  // Environment secrets are an explicit operator-controlled fallback, not a public setting.
@@ -24,7 +24,7 @@ export async function getAIProviders(sql,env,query){
  // Preserve the previously stored OpenAI credential until the operator migrates it.
  if(sql&&!rows.some(p=>p.code==='openai')&&!env.OPENAI_API_KEY){
   try{const saved=await query(sql,"SELECT encrypted_value,metadata FROM mif_platform_settings WHERE name='openai'");
-   if(saved[0]?.encrypted_value){const key=await unseal(saved[0].encrypted_value,env.CONNECTOR_ENCRYPTION_KEY);
+   if(saved[0]?.encrypted_value){const key=await unsealProviderSecret(saved[0].encrypted_value,env);
     if(key)providers.push({code:'openai',model:saved[0].metadata?.model||defaults.openai,key});
    }
   }catch{}

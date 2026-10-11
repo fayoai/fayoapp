@@ -1,4 +1,4 @@
-import {seal,unseal} from './ai-erp.js';
+import {seal,unsealProviderSecret,providerEncryptionKey} from './ai-erp.js';
 import {getAIProviders,routeAI} from './ai-router.js';
 import {z} from 'zod';
 import {documentsSchema} from './rawi-documents.js';
@@ -36,7 +36,7 @@ async function platformCredentials(sql,settings,query){
  try{
   const rows=await query(sql,"SELECT encrypted_value,metadata FROM mif_platform_settings WHERE name='openai'");
   if(!rows[0]?.encrypted_value)return {};
-  return {OPENAI_API_KEY:await unseal(rows[0].encrypted_value,settings.CONNECTOR_ENCRYPTION_KEY),OPENAI_MODEL:rows[0]?.metadata?.model||'gpt-4.1-mini'};
+  return {OPENAI_API_KEY:await unsealProviderSecret(rows[0].encrypted_value,settings),OPENAI_MODEL:rows[0]?.metadata?.model||'gpt-4.1-mini'};
  }catch{return {}}
 }
 export function installMifChat(app,{db,env,query,centralDb=db}){
@@ -57,7 +57,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
   if(env(c).OPENAI_API_KEY)return fail(c,409,'OpenAI is managed by Worker secret; update it on the hosting account');
   const v=z.object({secret:z.string().min(15).max(4000),model:z.string().regex(/^[a-zA-Z0-9._-]{2,90}$/).default('gpt-4.1-mini')}).safeParse(await parse(c));
   if(!v.success)return fail(c,400,'Invalid OpenAI configuration');
-  let encrypted;try{encrypted=await seal(v.data.secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch{return fail(c,503,'Encryption service is not configured')}
+  let encrypted;try{encrypted=await seal(v.data.secret,providerEncryptionKey(env(c)))}catch{return fail(c,503,'Encryption service is not configured')}
   const rows=await query(sql,"INSERT INTO mif_platform_settings(name,encrypted_value,metadata) VALUES('openai',$1,$2::jsonb) ON CONFLICT(name) DO UPDATE SET encrypted_value=EXCLUDED.encrypted_value,metadata=EXCLUDED.metadata,updated_at=now() RETURNING name",[encrypted,JSON.stringify({model:v.data.model})]);
   return c.json({ok:true,configured:!!rows.length,model:v.data.model});
  });
