@@ -61,10 +61,15 @@ app.post('/api/admin/register',async c=>{
  let allowed;try{allowed=await enforceAuthLimit(sql,query,settings.SESSION_SECRET,ip,'registration',email)}
  catch{return fail(c,503,'Registration protection is unavailable')}
  if(!allowed.allowed)return fail(c,429,'Too many requests. Try again later');
+ let stage='account_lookup';
+ try{
  const exists=await query(sql,'SELECT 1 FROM admins WHERE email=$1 LIMIT 1',[email]);
  if(exists.length)return fail(c,409,'Email is already registered');
+ stage='otp_generation';
  const code=createSixDigitCode(),codeHash=await hashVerificationCode(settings.SESSION_SECRET,email,code);
+ stage='password_hash';
  const salt=crypto.randomUUID(),passwordHash=await hashed(user.password,salt);
+ stage='pending_record';
  const pending=await query(sql,`INSERT INTO rawi_pending_signups(email,full_name,password_hash,salt,code_hash,expires_at)
   VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')
   ON CONFLICT(email) DO UPDATE SET full_name=EXCLUDED.full_name,password_hash=EXCLUDED.password_hash,
@@ -77,6 +82,7 @@ app.post('/api/admin/register',async c=>{
   await query(sql,'DELETE FROM rawi_pending_signups WHERE email=$1 AND code_hash=$2',[email,codeHash]).catch(()=>{});
   return fail(c,503,'Could not send verification email. Please try again later')}
  return c.json({ok:true,email,verification_required:true,expires_in_seconds:600},202);
+ }catch(e){console.error('RAWI registration failed in '+stage,e?.message);return c.json({ok:false,error:'Registration is temporarily unavailable',code:'SIGNUP_'+stage.toUpperCase()},503)}
 });
 app.post('/api/admin/verify-email',async c=>{
  const sql=centralDb(c),settings=env(c),surface=loginSurface(c);
