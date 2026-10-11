@@ -53,7 +53,7 @@ app.post('/api/admin/register',async c=>{
  if(surface!=='enterprise')return fail(c,404,'Not found');
  if(!signupReady(settings))return fail(c,503,'Secure production registration is not enabled');
  const schema=z.object({email:z.email().max(180),password:z.string().min(12).max(200),
-  name:z.string().trim().min(2).max(160),organization:z.string().trim().min(2).max(150),
+  name:z.string().trim().min(2).max(160),
   account_type:z.literal('enterprise')});
  const validated=schema.safeParse(await parse(c));
  if(!validated.success)return fail(c,400,'Invalid account registration');
@@ -97,7 +97,7 @@ app.post('/api/admin/register',async c=>{
  JOIN subscription ON subscription.workspace_id=workspace.id
  JOIN profile ON profile.admin_id=account.id
  JOIN registry ON registry.workspace_id=workspace.id`;
- const rows=await query(sql,statement,[email,passwordHash,salt,user.organization,surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
+ const rows=await query(sql,statement,[email,passwordHash,salt,user.name.slice(0,150),surface,plan.id,trial.days,settings.NEON_PROJECT_ID,settings.NEON_BRANCH_ID]);
  if(!rows.length)return fail(c,409,'Email is already registered or daily signup limit reached');
  const record=rows[0];
  // An uninitialized customer database must never accept ERP writes.
