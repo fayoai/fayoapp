@@ -7,6 +7,8 @@ test('ERP installs as a single standalone application on supported devices',()=>
  const manifest=JSON.parse(read('public/manifest.webmanifest'));
  assert.equal(manifest.display,'standalone');
  assert.equal(manifest.name,'MIF Smart AI ERP');
+ assert.equal(manifest.icons.every(i=>i.src==='/mif-app-icon.svg'),true);
+ assert.equal(manifest.shortcuts.every(s=>s.url==='/'||s.url.startsWith('/erp')),true);
  assert.equal(manifest.start_url,'/');
  for(const icon of manifest.icons)assert.equal(existsSync(path.join(root,'public',icon.src.slice(1))),true);
  const config=JSON.parse(read('capacitor.config.json'));

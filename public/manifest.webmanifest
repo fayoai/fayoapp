@@ -2,7 +2,7 @@
   "id": "/",
   "name": "MIF Smart AI ERP",
   "short_name": "MIF AI ERP",
-  "description": "AI-native integrated ERP for customers, sales, purchases, accounting, inventory, HR and projects",
+  "description": "MIF Smart AI ERP — Integrated AI business operating system",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,8 +10,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#111117",
-  "theme_color": "#e3530c",
+  "background_color": "#151f24",
+  "theme_color": "#e35a0e",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
@@ -21,45 +21,30 @@
   ],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "src": "/mif-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/mif-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "المتجر | Store",
-      "short_name": "Store",
-      "url": "/store",
+      "name": "MIF Smart AI ERP",
+      "short_name": "AI ERP",
+      "url": "/",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
-          "sizes": "192x192"
+          "src": "/mif-app-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
         }
       ]
-    },
-    {
-      "name": "طلباتي | My orders",
-      "short_name": "Orders",
-      "url": "/orders"
-    },
-    {
-      "name": "لوحة الإدارة",
-      "short_name": "Console",
-      "url": "/admin"
     }
   ]
 }

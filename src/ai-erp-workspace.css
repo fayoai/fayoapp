@@ -7,3 +7,8 @@
 .erp-print-paper.erp-layout-minimal header{border-bottom:1px solid #e0e1dd}
 .erp-print-paper.erp-layout-minimal h2{color:#273238}
 .erp-print-paper.erp-layout-minimal .erp-print-totals div:last-child{color:#273238}
+
+.erp-assistant-mark{width:26px;height:28px;object-fit:contain;background:#fff4ed;padding:3px;border-radius:8px;flex:none}
+.erp-intro-logo{width:34px;height:35px;object-fit:contain;background:#fff4ed;padding:4px;border-radius:8px;flex:none}
+.erp-chat-intro img{width:91px;height:96px;object-fit:contain;background:#fff4ed;border-radius:18px;padding:12px}
+.erp-launch-logo img{width:88px;height:100px;object-fit:contain}
