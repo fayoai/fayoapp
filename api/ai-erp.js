@@ -50,7 +50,7 @@ export function installAiErp(app,{db,env,query}){
  const list=async(c,table,sort='created_at DESC')=>{const g=await gate(c);if(g.err)return g.err;return c.json({ok:true,data:await query(g.sql,'SELECT * FROM '+table+' WHERE workspace_id=$1 ORDER BY '+sort+' LIMIT 500',[g.id])})};
  app.get('/api/admin/erp/workspaces',async c=>{const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);const data=await query(sql,'SELECT w.*,m.role FROM erp_workspaces w JOIN erp_memberships m ON w.id=m.workspace_id WHERE m.admin_id=$1 ORDER BY w.created_at DESC',[c.get('adminId')]);return c.json({ok:true,data})});
  app.post('/api/admin/erp/workspaces',async c=>{
-  const v=z.object({name:z.string().trim().min(2).max(130),currency:z.enum(['SAR','USD','EUR','AED','EGP']).default('SAR')}).safeParse(await body(c));
+  const v=z.object({name:z.string().trim().min(2).max(130),currency:z.literal('SAR').default('SAR')}).safeParse(await body(c));
   if(!v.success)return invalid(c,'Invalid workspace');
   const sql=db(c);if(!sql)return invalid(c,'Database unavailable',503);
   const rows=await query(sql,"WITH w AS(INSERT INTO erp_workspaces(name,currency,owner_id) VALUES($1,$2,$3) RETURNING *),m AS(INSERT INTO erp_memberships(workspace_id,admin_id,role) SELECT id,$3,'owner' FROM w RETURNING workspace_id),t AS(INSERT INTO erp_invoice_templates(workspace_id,name) SELECT id,'MIF Default' FROM w RETURNING id) SELECT w.* FROM w JOIN m ON m.workspace_id=w.id",[v.data.name,v.data.currency,c.get('adminId')]);
@@ -76,10 +76,19 @@ export function installAiErp(app,{db,env,query}){
  app.get('/api/admin/erp/w/:workspace/templates',c=>list(c,'erp_invoice_templates'));
  app.post('/api/admin/erp/w/:workspace/templates',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;
-  const v=z.object({name:z.string().min(2).max(100),primary_color:z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#e95814'),header_text:z.string().max(600).default(''),footer_text:z.string().max(600).default('')}).safeParse(await body(c));
+  const v=z.object({name:z.string().min(2).max(100),primary_color:z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#e95814'),header_text:z.string().max(600).default(''),footer_text:z.string().max(600).default(''),logo_url:z.union([z.literal(''),z.url()]).default(''),layout:z.enum(['modern','classic','minimal']).default('modern')}).safeParse(await body(c));
   if(!v.success)return invalid(c,'Invalid template');
-  const x=v.data;const data=await query(g.sql,'INSERT INTO erp_invoice_templates(workspace_id,name,primary_color,header_text,footer_text) VALUES($1,$2,$3,$4,$5) RETURNING *',[g.id,x.name,x.primary_color,x.header_text,x.footer_text]);
+  const x=v.data;const data=await query(g.sql,'INSERT INTO erp_invoice_templates(workspace_id,name,primary_color,header_text,footer_text,logo_url,settings) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) RETURNING *',[g.id,x.name,x.primary_color,x.header_text,x.footer_text,x.logo_url,JSON.stringify({layout:x.layout})]);
   return c.json({ok:true,data:data[0]},201);
+ });
+ app.put('/api/admin/erp/w/:workspace/templates/:record',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  if(!uid.safeParse(c.req.param('record')).success)return invalid(c,'Invalid invoice template');
+  const v=z.object({name:z.string().min(2).max(100),primary_color:z.string().regex(/^#[0-9a-fA-F]{6}$/),header_text:z.string().max(600),footer_text:z.string().max(600),logo_url:z.union([z.literal(''),z.url()]),layout:z.enum(['modern','classic','minimal'])}).safeParse(await body(c));
+  if(!v.success)return invalid(c,'Invalid invoice template');
+  const x=v.data;
+  const rows=await query(g.sql,'UPDATE erp_invoice_templates SET name=$1,primary_color=$2,header_text=$3,footer_text=$4,logo_url=$5,settings=$6::jsonb WHERE workspace_id=$7 AND id=$8 RETURNING *',[x.name,x.primary_color,x.header_text,x.footer_text,x.logo_url,JSON.stringify({layout:x.layout}),g.id,c.req.param('record')]);
+  return rows.length?c.json({ok:true,data:rows[0]}):invalid(c,'Template not found',404);
  });
  app.get('/api/admin/erp/w/:workspace/invoices',async c=>{
   const g=await gate(c);if(g.err)return g.err;
