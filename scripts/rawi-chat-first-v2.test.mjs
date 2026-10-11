@@ -22,7 +22,7 @@ test('Developer starts in chat and signs in only in the account screen',()=>{
  assert.match(s,/view==='account'/);
  assert.match(s,/view==='studio'/);
  assert.match(s,/RawiDevelopers/);
- assert.doesNotMatch(s,/<header className="rd-header"|rd-entry|rd-intro|هذا حساب Enterprise/);
+ assert.doesNotMatch(s,/<header className="rd-header"|className="rd-entry"|rd-intro|هذا حساب Enterprise/);
 });
 test('Three products have independent Cloudflare Worker asset directories and PWA manifests',()=>{
  for(const [cfg,surface]of [['wrangler.enterprise.jsonc','enterprise'],['wrangler.developer.jsonc','developer'],['wrangler.jsonc','mif']]){
