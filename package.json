@@ -10,7 +10,7 @@
     "test": "node --test api/*.test.mjs scripts/*.test.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "deploy": "npm run build && wrangler deploy",
-    "check": "npm run test && npm run build",
+    "check": "npm run test && npm run build && npm run build:surfaces",
     "smoke:public": "node scripts/smoke-public.mjs",
     "mobile:add:android": "npx cap add android",
     "mobile:add:ios": "npx cap add ios",
@@ -19,7 +19,8 @@
     "desktop:run": "npm --prefix apps/desktop start",
     "mobile:prepare:enterprise": "node scripts/prepare-native.mjs",
     "mobile:icons": "node scripts/native-icons.mjs",
-    "smoke:surfaces": "node scripts/smoke-surfaces.mjs"
+    "smoke:surfaces": "node scripts/smoke-surfaces.mjs",
+    "build:surfaces": "node scripts/build-surfaces.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.1",
