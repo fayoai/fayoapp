@@ -10,6 +10,7 @@ const checks=[
  ['RAWI ERP blocks developer API',origin.erp+'/api/admin/developer/platforms',404],
  ['MIF homepage',origin.mif+'/mif',200,'html'],
  ['MIF SaaS',origin.mif+'/mif/console',200,'html'],
+ ['MIF products manager',origin.mif+'/mif/console/products',200,'html'],
  ['MIF home route',origin.mif+'/',302,'/mif'],
  ['MIF future application disabled',origin.mif+'/developer/',404],
  ['MIF blocks ERP tenant APIs',origin.mif+'/api/admin/erp/workspaces',404],
