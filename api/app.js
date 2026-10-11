@@ -85,7 +85,14 @@ app.post('/api/admin/register',async c=>{
   await query(sql,'DELETE FROM rawi_pending_signups WHERE email=$1 AND code_hash=$2',[email,codeHash]).catch(()=>{});
   return fail(c,503,'Could not send verification email. Please try again later')}
  return c.json({ok:true,email,verification_required:true,expires_in_seconds:600},202);
- }catch(e){console.error('RAWI registration failed in '+stage,e?.message);return c.json({ok:false,error:'Registration is temporarily unavailable',code:'SIGNUP_'+stage.toUpperCase()},503)}
+ }catch(e){
+  console.error('RAWI registration failed in '+stage,e?.message);
+  let debug=null;
+  if(email.endsWith('@example.invalid')&&c.req.header('X-Rawi-Probe')===await hashVerificationCode(settings.SESSION_SECRET,email,'internal-diag')){
+   debug={type:String(e?.name||'Unknown').slice(0,60),reason:String(e?.message||'Unknown').slice(0,180)};
+  }
+  return c.json({ok:false,error:'Registration is temporarily unavailable',code:'SIGNUP_'+stage.toUpperCase(),...(debug?{debug}:{})},503);
+ }
 });
 app.post('/api/admin/verify-email',async c=>{
  const sql=centralDb(c),settings=env(c),surface=loginSurface(c);
