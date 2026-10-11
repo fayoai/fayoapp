@@ -2,10 +2,9 @@ name: Deploy MIF Smart to Cloudflare
 on:
   workflow_dispatch:
   push:
-    branches: [mif-smart-platform, main]
+    branches: [mif-smart-platform]
 jobs:
   deploy:
-    if: ${{ vars.CF_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
