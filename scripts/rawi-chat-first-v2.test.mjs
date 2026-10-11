@@ -5,9 +5,9 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('Enterprise starts in chat with the exact requested welcome and branded icon',()=>{
  const s=read('src/MifSmartShell.jsx');
  assert.match(s,/setTab\]=useState\('chats'\)/);
- assert.match(s,/كيف أستطيع مساعدتك اليوم؟/);
- assert.match(s,/rawi-mark\.svg/);
- assert.match(s,/rawi-chat-install/);
+ assert.match(s,/كيف أقدر أساعدك اليوم؟/);
+ assert.match(s,/rawi-erp-mark\.svg/);
+ assert.match(s,/rawi-install-in-account/);
  assert.doesNotMatch(s,/rawi-chat-signin|mif-chat-footnote|<header className="mif-topbar"/);
  assert.match(s,/mif-login-page/);
  assert.doesNotMatch(s,/GuestPreview/);

@@ -8,7 +8,7 @@ test('Enterprise and Developer mobile apps use distinct approved identifiers and
  const d=prepareNativeConfig('developer','https://app.example.org',enterprise,developer);
  assert.equal(e.appId,'com.mifsmart.rawi');assert.equal(d.appId,'com.mifsmart.rawideveloper');
  assert.equal(e.server.url,'https://app.example.org/');assert.equal(d.server.url,'https://app.example.org/developer/');
- assert.equal(e.plugins.SplashScreen.backgroundColor,'#e35a0e');assert.equal(d.plugins.SplashScreen.backgroundColor,'#080808');
+ assert.equal(e.plugins.SplashScreen.backgroundColor,'#2166e8');assert.equal(d.plugins.SplashScreen.backgroundColor,'#080808');
  assert.equal(d.server.cleartext,false);
 });
 test('Native builds reject non-HTTPS origins and unknown application targets',()=>{
@@ -18,11 +18,11 @@ test('Native builds reject non-HTTPS origins and unknown application targets',()
  assert.throws(()=>prepareNativeConfig('enterprise-or-developer','https://app.example.org',enterprise,developer));
 });
 test('Native launcher renders use only approved RAWI source marks without changing their colors',()=>{
- const e=readFileSync(new URL('../public/rawi-mark.svg',import.meta.url),'utf8');
+ const e=readFileSync(new URL('../public/rawi-erp-mark.svg',import.meta.url),'utf8');
  const d=readFileSync(new URL('../public/rawi-developer-mark.svg',import.meta.url),'utf8');
  const nativeEnterprise=approvedNativeSvg('enterprise',e);
  const nativeDeveloper=approvedNativeSvg('developer',d);
- assert.match(nativeEnterprise,/#e35a0e/);
+ assert.match(nativeEnterprise,/#2166e8/);
  assert.match(nativeDeveloper,/#080808/);assert.match(nativeDeveloper,/#ffd21a/);
  assert.match(nativeEnterprise,/viewBox="254 165 742 742"/);
  assert.match(nativeDeveloper,/viewBox="254 165 742 742"/);

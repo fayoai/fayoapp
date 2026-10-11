@@ -1,36 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {seoForPage,sitemapXML} from '../worker/mif-seo.js';
+import {MIF_PRODUCT_GROUPS,MIF_PRODUCTS,productBySlug} from '../src/mif-product-catalog.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-test('Marketing lists exactly the requested Odoo Community identity, not MIF ERP',()=>{
- const sql=read('sql/mif-website.sql'),site=read('src/MifCompany.jsx');
- assert.match(sql,/ODOO-COMMUNITY-ENHANCED/);
- assert.match(sql,/Odoo Community المطوّر/);
- assert.match(sql,/ON CONFLICT\(code\) DO NOTHING/);
- assert.doesNotMatch(sql,/MIF ERP/);
- assert.match(site,/odoo-community-enhanced/);
- assert.match(site,/encodeURIComponent\(product.code\)/);
- assert.match(site,/get\('product'\)/);
+test('MIF Smart product architecture is frozen to three requested families and seven products',()=>{
+ assert.deepEqual(MIF_PRODUCT_GROUPS.map(x=>x.products.length),[3,3,1]);
+ assert.deepEqual(MIF_PRODUCT_GROUPS.map(x=>x.id),['rawi-ai','odoo','marketing']);
+ assert.deepEqual(MIF_PRODUCTS.map(x=>x.slug),['rawi-erp','rawi-dev','rawi-copilot','odoo-community','odoo-saas','odoo-my-saas','marketing']);
+ const live=MIF_PRODUCTS.filter(x=>x.active);
+ assert.equal(live.length,1);
+ assert.equal(live[0].slug,'rawi-erp');
+ assert.equal(MIF_PRODUCTS.find(x=>x.slug==='odoo-community').title_ar,'Odoo Community المطوّر');
+ assert.match(MIF_PRODUCTS.find(x=>x.slug==='rawi-copilot').summary_ar,/Odoo وGmail وOutlook/);
+ assert.match(MIF_PRODUCTS.find(x=>x.slug==='marketing').summary_ar,/واتساب/);
+ assert.equal(productBySlug('rawi').slug,'rawi-erp');
 });
-test('MIF public page hosts an actual endpoint-backed interactive AI widget, not scripted replies',()=>{
- const source=read('src/MifWebsiteAssistant.jsx'),site=read('src/MifCompany.jsx');
- assert.match(site,/<MifWebsiteAssistant\/>/);
- assert.match(source,/api\('\/api\/chat\/public'/);
- assert.match(source,/result\.answer/);
- assert.match(source,/aria-live="polite"/);
- assert.match(source,/لا تشارك بيانات سرية/);
- assert.doesNotMatch(source,/setTimeout|fakeAnswer|mockResponse/);
+test('Website presents only RAWI ERP as available and marks all remaining products coming soon',()=>{
+ const site=read('src/MifCompany.jsx');
+ assert.match(site,/MIF_PRODUCT_GROUPS\.map/);
+ assert.match(site,/MIF_PRODUCTS/);
+ assert.match(site,/p\.active\?'a':'div'/);
+ assert.match(site,/قريباً/);
+ assert.match(site,/rawi-erp-mark\.svg/);
+ assert.match(site,/mif-logo\.svg/);
+ assert.doesNotMatch(site,/<MifWebsiteAssistant\/>/);
+ assert.doesNotMatch(site,/MIF ERP/);
 });
-test('Enhanced Odoo Community has a canonical marketing page and published sitemap eligibility',()=>{
- const meta=seoForPage('/mif/products/odoo-community-enhanced');
- assert.equal(meta.index,true);
- assert.match(meta.title,/Odoo Community/);
- assert.match(sitemapXML('https://mif.example.com',[],[{slug:'odoo-community-enhanced',published:true}]),/mif\/products\/odoo-community-enhanced/);
-});
-test('Approved RAWI Enterprise and Developer graphics are referenced without brand mutation',()=>{
- const site=read('src/MifCompany.jsx'),css=read('src/mif-company.css');
- assert.match(site,/rawi-mark\.svg/);
- assert.match(site,/rawi-developer-mark\.svg/);
- assert.match(css,/--mif-org:#e35a0e/);
+test('Existing company and future-product logo colors stay unchanged',()=>{
+ const mif=read('public/mif-logo.svg'),legacy=read('public/rawi-mark.svg'),developer=read('public/rawi-developer-mark.svg');
+ assert.match(mif,/fill="#e35a0e"/);
+ assert.match(legacy,/fill="#e35a0e"/);
+ assert.match(developer,/fill="#080808"/);
+ assert.match(developer,/fill="#ffd21a"/);
+ assert.match(read('src/mif-company.css'),/--mif-org:#e35a0e/);
 });

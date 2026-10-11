@@ -1,9 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 const root=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-test('RAWI Enterprise original orange logo and manifest stay untouched',()=>{
+test('RAWI ERP uses blue PWA branding while retaining the legacy orange asset',()=>{
  const logo=root('public/rawi-mark.svg'),manifest=JSON.parse(root('public/manifest.webmanifest'));
  assert.match(logo,/fill="#e35a0e"/);assert.match(logo,/fill="#ffffff"/);
- assert.equal(manifest.id,'/');assert.equal(manifest.theme_color,'#e35a0e');assert.equal(manifest.start_url,'/');
+ assert.equal(manifest.id,'/');assert.equal(manifest.theme_color,'#2166e8');assert.equal(manifest.start_url,'/');
 });
 test('Developer uses identical approved symbol in distinct black and yellow identity',()=>{
  const original=root('public/rawi-mark.svg'),developer=root('public/rawi-developer-mark.svg');

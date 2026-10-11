@@ -7,9 +7,9 @@ const rawiStyles=[
  'src/guest-preview.css','src/mif-schedule.css','src/rawi-advanced.css',
  'src/rawi-developers.css','src/rawi-insights.css'
 ];
-test('RAWI main interface uses original orange as the active product color',()=>{
+test('RAWI ERP uses approved blue without modifying other products',()=>{
  const s=source('src/mif-smart-shell.css');
- assert.match(s,/--mif-accent:\s*#e35a0e/);
+ assert.match(s,/--mif-accent:#2166e8/);
  assert.match(s,/\.rawi-signup-types\s*>\s*button\.selected/);
  assert.match(s,/\.mif-dialog form input:focus/);
  assert.match(s,/\.mif-composer:focus-within/);
@@ -24,12 +24,12 @@ test('Existing approved RAWI logo remains an untouched orange SVG asset',()=>{
  assert.match(logo,/fill="#e35a0e"/);
  assert.match(logo,/<path fill="#ffffff"/);
 });
-test('Installed RAWI app and mobile splash retain original orange theme',()=>{
+test('Installed RAWI ERP uses the blue and white icon on all supported app surfaces',()=>{
  const manifest=JSON.parse(source('public/manifest.webmanifest'));
  const capacitor=JSON.parse(source('capacitor.config.json'));
- assert.equal(manifest.theme_color,'#e35a0e');
- assert.equal(capacitor.plugins.SplashScreen.backgroundColor,'#e35a0e');
- assert.ok(manifest.icons.every(icon=>icon.src==='/rawi-mark.svg'));
+ assert.equal(manifest.theme_color,'#2166e8');
+ assert.equal(capacitor.plugins.SplashScreen.backgroundColor,'#2166e8');
+ assert.ok(manifest.icons.every(icon=>icon.src==='/rawi-erp-mark.svg'));
 });
 test('Registration and Odoo developer forms keep their functional fields and responsive layouts',()=>{
  const shell=source('src/MifSmartShell.jsx');

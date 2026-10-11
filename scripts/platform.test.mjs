@@ -5,11 +5,11 @@ import path from 'node:path';
 const root=process.cwd(),read=p=>readFileSync(path.join(root,p),'utf8');
 test('RAWI is the independent client application and MIF Smart retains corporate ownership',()=>{
  const manifest=JSON.parse(read('public/manifest.webmanifest'));
- assert.equal(manifest.short_name,'RAWI');
+ assert.equal(manifest.short_name,'RAWI ERP');
  assert.match(manifest.name,/RAWI/);
  assert.equal(manifest.start_url,'/');
  assert.equal(manifest.display,'standalone');
- assert.ok(manifest.icons.every(i=>i.src==='/rawi-mark.svg'));
+ assert.ok(manifest.icons.every(i=>i.src==='/rawi-erp-mark.svg'));
  assert.match(read('src/MifCompany.jsx'),/mif-logo.svg/);
  assert.match(read('src/MifCompany.jsx'),/mif\/products/);
  assert.match(read('src/App.jsx'),/MifCompany/);
@@ -24,10 +24,10 @@ test('Chat-first app installs from bottom navigation',()=>{
  assert.match(shell,/mif-bottom-nav/);
  assert.match(shell,/authed&&/);
  assert.match(shell,/beforeinstallprompt/);
- assert.match(shell,/rawi-mark.svg/);
+ assert.match(shell,/rawi-erp-mark.svg/);
  assert.doesNotMatch(shell,/mif-logo.svg/);
  assert.doesNotMatch(shell,/\/mif\/console/);
- assert.match(shell,/className="rawi-chat-install"/);
+ assert.match(shell,/className="rawi-install-in-account"/);
  assert.doesNotMatch(shell,/MIF Smart AI ERP|Odoo Community|<CommerceStore/);
 });
 test('Only installed applications are offered for download',()=>{
