@@ -1,0 +1,144 @@
+/* Dedicated RAWI Developers application. No styles from this file alter RAWI Enterprise or MIF Smart. */
+.rawi-dev-app{--dev-bg:#0b0b0d;--dev-surface:#151517;--dev-panel:#1d1d20;--dev-line:#343439;--dev-yellow:#ffd637;--dev-yellow-soft:#fff1af;--dev-ink:#f2f2ef;--dev-dim:#a5a5aa;font-family:'IBM Plex Sans Arabic','DM Sans',sans-serif;min-height:100vh;background:var(--dev-bg);color:var(--dev-ink);direction:inherit}
+.rawi-dev-app *{box-sizing:border-box}
+.rawi-dev-app button,.rawi-dev-app input,.rawi-dev-app select,.rawi-dev-app textarea{font:inherit}
+.rawi-dev-app button{cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.rawi-dev-app button:disabled{opacity:.5;cursor:default}
+.rawi-dev-app a{color:inherit;text-decoration:none}
+.rawi-dev-app :focus-visible{outline:2px solid var(--dev-yellow);outline-offset:3px}
+.rawi-dev-loading{display:flex;justify-content:center;align-items:center;flex-direction:column;gap:15px}
+.rawi-dev-loading img{height:100px;width:100px;border-radius:24px}
+.rawi-dev-onboarding{padding:clamp(16px,3vw,45px);display:grid;place-items:center;background:radial-gradient(ellipse at 20% 35%,#3d301020,transparent 42%),#0b0b0c}
+.rawi-dev-auth-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(330px,.8fr);width:min(100%,1150px);overflow:hidden;min-height:640px;background:#121214;border:1px solid #333338;border-radius:23px;box-shadow:0 30px 100px #0008}
+.rawi-dev-auth-intro{padding:clamp(25px,5vw,60px);background:linear-gradient(155deg,#181819 0%,#101012 67%,#30290f 100%);position:relative;display:flex;flex-direction:column;align-items:flex-start}
+.rawi-dev-auth-intro>img{width:84px;height:84px;border-radius:20px}
+.rawi-dev-brand{display:flex;flex-direction:column;gap:2px;margin-top:15px}
+.rawi-dev-brand>span{font-size:22px;font-weight:900}.rawi-dev-brand>span strong{color:var(--dev-yellow)}
+.rawi-dev-brand small{font-size:10px;letter-spacing:2.3px;color:#a6a7a9}
+.rawi-dev-auth-intro h1{font-size:clamp(28px,3.5vw,44px);line-height:1.4;margin:48px 0 10px;font-weight:850}
+.rawi-dev-auth-intro p{max-width:560px;line-height:2;font-size:14px;color:#c4c4c8;margin:0 0 27px}
+.rawi-dev-auth-intro>small{color:#8c8c8f;font-size:11px;margin-top:auto;padding-top:25px}
+.rawi-dev-auth-capabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%}
+.rawi-dev-auth-capabilities>div{display:flex;align-items:center;gap:11px;background:#ffffff09;border:1px solid #ffffff1c;border-radius:11px;padding:14px;font-size:12px;font-weight:700}
+.rawi-dev-auth-capabilities svg{color:var(--dev-yellow);flex-shrink:0}
+.rawi-dev-auth-panel{padding:clamp(24px,4vw,49px);display:flex;justify-content:center;flex-direction:column;gap:14px;background:#171719}
+.rawi-dev-auth-panel header{display:flex;align-items:center;gap:15px;margin-bottom:18px}
+.rawi-dev-auth-panel header img{width:54px;height:54px;border-radius:12px}
+.rawi-dev-auth-panel header small{display:block;letter-spacing:1.5px;color:var(--dev-yellow);font-size:10px;margin-bottom:7px}
+.rawi-dev-auth-panel h2{font-size:22px;margin:0;line-height:1.45}
+.rawi-dev-auth-panel>p{color:var(--dev-dim);font-size:14px;line-height:1.8}
+.rawi-dev-auth-panel form{display:grid;gap:16px}
+.rawi-dev-auth-panel form label{font-size:13px;color:#d3d3d6;display:grid;gap:8px;font-weight:650}
+.rawi-dev-auth-panel form input{height:50px;width:100%;background:#111113;border:1px solid #3a3a40;color:white;border-radius:11px;padding:12px 15px;font-size:14px}
+.rawi-dev-auth-panel form input:focus{outline:0;border-color:#dfbd3e;box-shadow:0 0 0 3px #ffd6371a}
+.rawi-dev-auth-panel form>button{width:100%;min-height:50px;border:1px solid var(--dev-yellow);border-radius:11px;background:var(--dev-yellow);color:#101011;font-size:14px;font-weight:850;display:flex;align-items:center;justify-content:center;gap:11px;margin-top:7px}
+.rawi-dev-auth-panel form>button:hover:not(:disabled){background:#ffe479}
+.rawi-dev-auth-panel form>p{color:#ffbe76;font-size:12px;line-height:1.6}
+.rawi-dev-auth-panel>button{border:1px solid #3a3a40;background:#272729;color:var(--dev-yellow);border-radius:10px;padding:13px}
+.rawi-dev-auth-panel>a{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:12px;border:1px solid #3a3a40;color:#e5e5e8}
+.rawi-dev-auth-switch{margin-top:3px;background:transparent!important;border:0!important;color:var(--dev-yellow)!important}
+.rawi-dev-enterprise-link{color:#aaaaad!important;font-size:12px;border:0!important}
+.rawi-dev-shell{display:flex;min-height:100vh;align-items:stretch}
+.rawi-dev-sidebar{width:244px;min-width:244px;position:sticky;top:0;height:100vh;background:#0c0c0e;border-inline-end:1px solid #333338;padding:25px 16px 19px;display:flex;flex-direction:column}
+.rawi-dev-logo{display:flex;align-items:center;gap:12px;padding:5px 5px 29px}
+.rawi-dev-logo img{height:53px;width:53px;border-radius:13px}
+.rawi-dev-logo strong{font-size:18px;font-weight:900;letter-spacing:.1px;white-space:nowrap}
+.rawi-dev-logo strong span{color:var(--dev-yellow)}
+.rawi-dev-logo small{display:block;color:#83838a;font-size:8px;letter-spacing:1px;margin-top:6px;white-space:nowrap}
+.rawi-dev-menu-label{padding:12px 13px;font-size:10px;color:#79797c;letter-spacing:1.3px;font-weight:800}
+.rawi-dev-sidebar nav{display:grid;gap:7px}
+.rawi-dev-sidebar nav button{height:49px;display:flex;align-items:center;gap:12px;border-radius:10px;border:1px solid transparent;background:none;text-align:start;padding:0 15px;font-size:13px;color:#a6a6ad;font-weight:700}
+.rawi-dev-sidebar nav button svg{flex-shrink:0}
+.rawi-dev-sidebar nav button:hover{color:white;background:#222224}
+.rawi-dev-sidebar nav button.active{color:#151515;background:var(--dev-yellow);border-color:var(--dev-yellow);font-weight:850}
+.rawi-dev-sidebar-bottom{display:grid;gap:12px;margin-top:auto}
+.rawi-dev-sidebar-bottom>div{border:1px solid #38383b;background:#1a1a1c;border-radius:9px;padding:12px;color:#9f9fa4;line-height:1.5;display:flex;align-items:center;gap:7px;font-size:10px}
+.rawi-dev-sidebar-bottom>div svg{color:var(--dev-yellow)}
+.rawi-dev-sidebar-bottom>button{color:#dedee1;background:#252528;border:1px solid #363639;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;font-size:12px}
+.rawi-dev-main{flex:1;min-width:0;min-height:100vh;background:#101012}
+.rawi-dev-topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #303033;background:#151517;padding:17px clamp(16px,2.5vw,33px);min-height:84px}
+.rawi-dev-topbar>div:first-child{display:flex;flex-direction:column;gap:6px}
+.rawi-dev-topbar>div:first-child span{color:#8f8f95;font-size:10px;letter-spacing:1px}
+.rawi-dev-topbar>div:first-child strong{font-size:16px}
+.rawi-dev-top-actions{display:flex;align-items:center;gap:10px}
+.rawi-dev-top-actions select,.rawi-dev-top-actions button{background:#262629;color:#dddde0;border:1px solid #404044;border-radius:9px;min-height:41px;padding:8px 12px;font-size:12px;min-width:0}
+.rawi-dev-top-actions select{max-width:260px}
+.rawi-dev-top-actions img{height:37px;width:37px;border-radius:10px}
+.rawi-dev-content{padding:clamp(16px,2.6vw,31px);margin:0 auto;max-width:1580px;min-height:calc(100vh - 84px)}
+.rawi-dev-banner{background:linear-gradient(115deg,#25251a 0%,#1c1c1e 75%);border:1px solid #46402c;border-radius:18px;padding:clamp(22px,4vw,39px);display:flex;align-items:center;justify-content:space-between;gap:15px;overflow:hidden}
+.rawi-dev-banner>div{max-width:730px}
+.rawi-dev-banner small{font-size:11px;letter-spacing:1px;color:#dcc875}
+.rawi-dev-banner h1{font-size:clamp(27px,3.8vw,43px);margin:10px 0 6px;line-height:1.5}
+.rawi-dev-banner p{font-size:13px;line-height:1.95;color:#bdbdc0}
+.rawi-dev-banner button{background:var(--dev-yellow);color:#171717;font-size:13px;font-weight:850;border:0;border-radius:10px;padding:14px 20px;display:flex;gap:9px;align-items:center;margin-top:17px}
+.rawi-dev-banner>img{width:140px;height:140px;border-radius:25px;opacity:.85}
+.rawi-dev-overview-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:19px 0}
+.rawi-dev-overview-cards button{min-width:0;min-height:140px;text-align:start;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:11px;border:1px solid #37373b;background:#1c1c1e;border-radius:15px;padding:20px;color:#f3f3f5}
+.rawi-dev-overview-cards button:hover{border-color:#aa922f}
+.rawi-dev-overview-cards svg:first-child{color:var(--dev-yellow)}
+.rawi-dev-overview-cards strong{font-size:14px}
+.rawi-dev-overview-cards small{font-size:11px;color:#9999a0}
+.rawi-dev-overview-cards button>svg:last-child{position:absolute;inset-inline-end:15px;bottom:15px;color:#69696c}
+.rawi-dev-info{border:1px solid #37373a;background:#1b1b1d;border-radius:15px;padding:22px}
+.rawi-dev-info>div{display:flex;align-items:center;gap:10px}
+.rawi-dev-info svg{color:var(--dev-yellow)}
+.rawi-dev-info h3{margin:0;font-size:16px}
+.rawi-dev-info p{color:#b0b0b6;font-size:12px;line-height:1.8;margin:12px 0 0}
+.rawi-dev-chat-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:15px;min-height:min(720px,calc(100vh - 165px));}
+.rawi-dev-chat-history,.rawi-dev-ai-chat{background:#1b1b1d;border:1px solid #373739;border-radius:15px;overflow:hidden}
+.rawi-dev-chat-history{padding:16px;display:flex;flex-direction:column;gap:8px;max-height:750px;overflow-y:auto}
+.rawi-dev-chat-history>div{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:15px}
+.rawi-dev-chat-history strong{font-size:13px}
+.rawi-dev-chat-history button{background:#28282a;color:#c2c2c5;border:1px solid #38383b;border-radius:9px;padding:12px;text-align:start;font-size:11px;line-height:1.7}
+.rawi-dev-chat-history>div button{padding:8px}
+.rawi-dev-chat-history button.active{background:#39321a;color:#ffe27c;border-color:#625423}
+.rawi-dev-chat-history small{font-size:11px;color:#8b8b91}
+.rawi-dev-ai-chat{display:flex;flex-direction:column;min-height:560px}
+.rawi-dev-ai-chat>header{display:flex;align-items:center;gap:12px;border-bottom:1px solid #3a3a3c;padding:16px}
+.rawi-dev-ai-chat>header img{width:43px;height:43px;border-radius:10px}
+.rawi-dev-ai-chat>header strong{display:block;font-size:13px}
+.rawi-dev-ai-chat>header small{color:#9999a0;font-size:10px;display:block;margin-top:5px}
+.rawi-dev-ai-chat>header>button{margin-inline-start:auto;background:#272729;color:#e2e2e5;border:1px solid #404044;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:7px}
+.rawi-dev-chat-messages{flex:1;min-height:240px;overflow-y:auto;padding:23px;scrollbar-width:thin;display:flex;flex-direction:column;gap:14px}
+.rawi-dev-chat-messages article{max-width:85%;padding:16px 18px;border-radius:13px;background:#29292c;border:1px solid #3b3b3e}
+.rawi-dev-chat-messages article.user{align-self:flex-start;background:#37301b;border-color:#675828}
+.rawi-dev-chat-messages article.assistant{align-self:flex-end}
+.rawi-dev-chat-messages article strong{font-size:11px;color:var(--dev-yellow)}
+.rawi-dev-chat-messages article p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;font-size:13px;margin:7px 0 0}
+.rawi-dev-chat-empty{margin:auto;text-align:center;max-width:420px}
+.rawi-dev-chat-empty svg{color:var(--dev-yellow)}
+.rawi-dev-chat-empty h2{font-size:23px}
+.rawi-dev-chat-empty p{font-size:13px;color:#aaaab0;line-height:1.9}
+.rawi-dev-ai-chat form{border-top:1px solid #38383a;padding:14px;display:flex;align-items:flex-end;gap:12px}
+.rawi-dev-ai-chat form textarea{flex:1;resize:vertical;min-height:66px;max-height:160px;border:1px solid #434346;border-radius:12px;background:#131315;color:#f5f5f5;padding:14px;font-size:13px;min-width:0}
+.rawi-dev-ai-chat form button{background:var(--dev-yellow);color:#141414;border:0;border-radius:10px;padding:14px}
+.rawi-dev-account{border:1px solid #3c3c3e;border-radius:16px;background:#1c1c1e;padding:clamp(20px,3.5vw,37px);max-width:760px}
+.rawi-dev-account>img{width:65px;height:65px;border-radius:16px}
+.rawi-dev-account h1{font-size:22px}
+.rawi-dev-account>div{border-top:1px solid #38383a;padding:16px 0;display:flex;justify-content:space-between;gap:15px;font-size:13px;overflow-wrap:anywhere}
+.rawi-dev-account>div span{color:#9999a0}
+.rawi-dev-account>button{display:inline-flex;gap:9px;align-items:center;margin:10px 9px 0 0;padding:12px;border-radius:9px;background:#303032;border:1px solid #444448;color:#eee}
+.rawi-dev-app-error,.rawi-dev-app-notice{padding:13px 16px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:13px 0;font-size:12px;line-height:1.8}
+.rawi-dev-app-error{background:#432324;color:#ffb1ab;border:1px solid #79413f}.rawi-dev-app-notice{background:#302a13;color:#ffe78a;border:1px solid #6d5d22}
+/* Override only the existing Odoo Studio embedded INSIDE standalone RAWI Developers. */
+.rawi-dev-app .rawi-dev{max-width:none;color:#eee;--rawi-orange:#ffd637;background:transparent;margin:0 auto}
+.rawi-dev-app .rawi-dev-hero{background:linear-gradient(120deg,#222223,#282319);border-color:#514729;color:#f5f5f5;box-shadow:none}
+.rawi-dev-app .rawi-dev-hero h1,.rawi-dev-app .rawi-dev-hero strong{color:white}
+.rawi-dev-app .rawi-dev-hero span,.rawi-dev-app .rawi-dev-hero svg{color:var(--dev-yellow)}
+.rawi-dev-app .rawi-dev-hero p,.rawi-dev-app .rawi-dev-hero small{color:#b8b8bb}
+.rawi-dev-app .rawi-dev-workspace,.rawi-dev-app .rawi-dev-panel,.rawi-dev-app .rawi-dev-connection{background:#1c1c1f;border-color:#39393b;color:#efeff0;box-shadow:none}
+.rawi-dev-app .rawi-dev-panel h2,.rawi-dev-app .rawi-dev-panel h3,.rawi-dev-app .rawi-dev-connection strong{color:#f1f1f3}
+.rawi-dev-app .rawi-dev-field,.rawi-dev-app .rawi-dev-workspace span,.rawi-dev-app .rawi-dev-hint{color:#c2c2c5}
+.rawi-dev-app .rawi-dev-field small,.rawi-dev-app .rawi-dev-connection p,.rawi-dev-app .rawi-dev-connection small{color:#9c9ca0}
+.rawi-dev-app .rawi-dev input,.rawi-dev-app .rawi-dev textarea,.rawi-dev-app .rawi-dev select{color:#f6f6f5;background:#151517;border-color:#45454a}
+.rawi-dev-app .rawi-dev input:focus,.rawi-dev-app .rawi-dev textarea:focus,.rawi-dev-app .rawi-dev select:focus{border-color:#ffd637;box-shadow:0 0 0 3px #ffd63720}
+.rawi-dev-app .rawi-dev-nav button,.rawi-dev-app .rawi-dev-actions button,.rawi-dev-app .rawi-dev-workspace button,.rawi-dev-app .rawi-dev-panel>button,.rawi-dev-app .rawi-dev form button{background:#29292b;border-color:#48484a;color:#f2f2f3}
+.rawi-dev-app .rawi-dev-nav button.active,.rawi-dev-app .rawi-dev form button[type=submit]{background:var(--dev-yellow);color:#151515;border-color:var(--dev-yellow)}
+.rawi-dev-app .rawi-dev-status{background:#302915;color:#ffde69}
+.rawi-dev-app .rawi-dev-modules>div,.rawi-dev-app .rawi-dev-check{background:#232325;color:#eeeeef;border-color:#414144}
+.rawi-dev-app .rawi-dev-panel svg,.rawi-dev-app .rawi-dev-panel h2 svg{color:var(--dev-yellow)}
+.rawi-dev-app .rawi-dev-error{background:#422727;color:#ffb8a9;border-color:#764845}
+.rawi-dev-app .rawi-dev-success{background:#383017;color:#ffe27a;border-color:#71632c}
+@media(max-width:1050px){.rawi-dev-overview-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.rawi-dev-auth-layout{grid-template-columns:1fr 1fr}.rawi-dev-sidebar{width:215px;min-width:215px}.rawi-dev-chat-layout{grid-template-columns:190px minmax(0,1fr)}}
+@media(max-width:780px){.rawi-dev-auth-layout{grid-template-columns:1fr}.rawi-dev-auth-intro{padding:30px}.rawi-dev-auth-intro h1{margin-top:19px}.rawi-dev-sidebar{width:72px;min-width:72px;padding:16px 9px}.rawi-dev-sidebar .rawi-dev-logo>div,.rawi-dev-menu-label,.rawi-dev-sidebar nav button span,.rawi-dev-sidebar-bottom>div{display:none}.rawi-dev-sidebar .rawi-dev-logo{padding:3px 0 24px;justify-content:center}.rawi-dev-sidebar nav button{justify-content:center;padding:0}.rawi-dev-sidebar-bottom>button{font-size:0}.rawi-dev-topbar{padding:12px 15px}.rawi-dev-top-actions select{max-width:160px}.rawi-dev-banner>img{width:95px;height:95px}.rawi-dev-chat-layout{grid-template-columns:1fr}.rawi-dev-chat-history{max-height:110px;display:flex;flex-direction:row;overflow-x:auto;align-items:center}.rawi-dev-chat-history>div{margin:0;min-width:170px}.rawi-dev-chat-history>button{min-width:140px}.rawi-dev-ai-chat{min-height:480px}}
+@media(max-width:480px){.rawi-dev-sidebar{width:56px;min-width:56px;padding:12px 5px}.rawi-dev-sidebar nav button{height:43px}.rawi-dev-logo img{height:40px;width:40px}.rawi-dev-content{padding:13px}.rawi-dev-topbar>div:first-child span{font-size:9px}.rawi-dev-topbar>div:first-child strong{font-size:12px}.rawi-dev-top-actions{gap:5px}.rawi-dev-top-actions select{max-width:110px;padding:7px}.rawi-dev-top-actions img{display:none}.rawi-dev-banner{padding:18px}.rawi-dev-banner>img{display:none}.rawi-dev-banner h1{font-size:25px}.rawi-dev-overview-cards{gap:8px}.rawi-dev-overview-cards button{min-height:135px;padding:13px}.rawi-dev-overview-cards strong{font-size:12px}.rawi-dev-overview-cards small{font-size:10px}.rawi-dev-auth-intro{padding:23px}.rawi-dev-auth-panel{padding:22px}.rawi-dev-auth-capabilities{gap:7px}.rawi-dev-auth-capabilities>div{padding:9px;font-size:11px}.rawi-dev-chat-messages{padding:13px}}
