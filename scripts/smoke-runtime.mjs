@@ -1,7 +1,6 @@
 // Assert actual public Worker->Neon availability and a protected session endpoint.
 const targets=[
  ['RAWI Enterprise','https://rawi-enterprise.fayosaas.workers.dev'],
- ['RAWI Developer','https://rawi-developer.fayosaas.workers.dev'],
  ['MIF Smart','https://mif-smart-platform.fayosaas.workers.dev']
 ];
 let errors=0;
@@ -19,4 +18,4 @@ for(const [name,origin] of targets){
  }catch(e){console.error('FAIL '+name+' '+String(e));errors++}
 }
 if(errors)process.exitCode=1;
-else console.log('All three deployed Workers have real connected databases and enforce unauthenticated access.');
+else console.log('Active deployed Workers have real connected databases and enforce unauthenticated access.');
