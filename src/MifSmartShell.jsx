@@ -218,6 +218,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
     <label>{L('البريد الإلكتروني','Email')}<input type="email" autoComplete="username" inputMode="email" required value={form.email} onChange={e=>setForm(v=>({...v,email:e.target.value}))}/></label>
     <label>{L('كلمة المرور','Password')}<input type="password" autoComplete={signup?'new-password':'current-password'} minLength={signup?12:1} required value={form.password} onChange={e=>setForm(v=>({...v,password:e.target.value}))}/></label>
     {authError&&<p role="alert" className="mif-form-error">{authError}</p>}
+    {signup&&registrationEnabled===false&&<p className="rawi-signup-unavailable">{L('إنشاء الحسابات متوقف مؤقتًا حتى يتم تفعيل إرسال رموز البريد الإلكتروني.','Sign-up is temporarily unavailable until verification email delivery is configured.')}</p>}
     <button type="submit" disabled={authBusy||(signup&&registrationEnabled===false)}>{authBusy&&<Loader2 size={17} className="mif-spinner"/>}{signup?L('إرسال رمز التأكيد','Send verification code'):L('تسجيل الدخول','Sign in')}</button>
    </form>
   </>}
