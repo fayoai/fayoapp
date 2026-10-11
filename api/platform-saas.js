@@ -4,12 +4,12 @@ import {providerCodes} from './ai-router.js';
 const uuid=z.string().uuid();
 const failed=(c,status,error)=>c.json({ok:false,error},status);
 const payload=async c=>{try{return await c.req.json()}catch{return {}}};
-const model=z.string().regex(/^[a-zA-Z0-9._-]{2,100}$/);
+const model=z.string().regex(/^[a-zA-Z0-9._@/:-]{2,150}$/);
 const providerInput=z.object({model,enabled:z.boolean(),priority:z.number().int().min(1).max(999),secret:z.string().min(12).max(4000).optional()});
 const planInput=z.object({code:z.string().regex(/^[a-z0-9-]{2,40}$/),title:z.string().trim().min(2).max(120),cycle:z.enum(['monthly','yearly']),price_halalas:z.number().int().min(0).max(1000000000),message_limit:z.number().int().min(1).max(1000000),active:z.boolean()});
 const subscriptionInput=z.object({plan_id:uuid,status:z.enum(['trial','active','past_due','suspended','cancelled']),period_ends_at:z.iso.datetime({offset:true}),reset_usage:z.boolean().default(false)});
-const names={openai:'OpenAI',anthropic:'Anthropic Claude',gemini:'Google Gemini'};
-const keyVars={openai:'OPENAI_API_KEY',anthropic:'ANTHROPIC_API_KEY',gemini:'GEMINI_API_KEY'};
+const names={openai:'OpenAI',anthropic:'Anthropic Claude',gemini:'Google Gemini',groq:'GroqCloud',openrouter:'OpenRouter',workers_ai:'Cloudflare Workers AI'};
+const keyVars={openai:'OPENAI_API_KEY',anthropic:'ANTHROPIC_API_KEY',gemini:'GEMINI_API_KEY',groq:'GROQ_API_KEY',openrouter:'OPENROUTER_API_KEY',workers_ai:''};
 export function installPlatformSaas(app,{db,env,query}){
  app.use('/api/admin/platform/*',async(c,next)=>{
   const sql=db(c),email=env(c).PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
@@ -30,7 +30,7 @@ export function installPlatformSaas(app,{db,env,query}){
  });
  app.get('/api/admin/platform/providers',async c=>{
   const rows=await query(db(c),'SELECT code,model,priority,enabled,length(encrypted_key)>0 configured,updated_at FROM mif_ai_providers ORDER BY priority,code');
-  return c.json({ok:true,data:providerCodes.map(code=>{const x=rows.find(r=>r.code===code);return {code,label:names[code],model:x?.model||'',priority:x?.priority||100,enabled:!!x?.enabled,configured:!!x?.configured||!!env(c)[keyVars[code]],managed_by:env(c)[keyVars[code]]?'environment':'platform',updated_at:x?.updated_at||null};})});
+  return c.json({ok:true,data:providerCodes.map(code=>{const x=rows.find(r=>r.code===code);return {code,label:names[code],model:x?.model||'',priority:x?.priority||100,enabled:!!x?.enabled,configured:code==='workers_ai'?!!env(c).AI?.run:!!x?.configured||!!env(c)[keyVars[code]],managed_by:code==='workers_ai'?'binding':env(c)[keyVars[code]]?'environment':'platform',updated_at:x?.updated_at||null};})});
  });
  app.put('/api/admin/platform/providers/:code',async c=>{
   const code=c.req.param('code');
@@ -42,9 +42,10 @@ export function installPlatformSaas(app,{db,env,query}){
    if(secretVar)return failed(c,409,'Credential is managed by hosting secrets');
    try{encrypted=await seal(x.secret,env(c).CONNECTOR_ENCRYPTION_KEY)}catch{return failed(c,503,'Secret encryption not configured')}
   }else encrypted=existing[0]?.encrypted_key||'';
-  if(x.enabled&&!encrypted&&!secretVar)return failed(c,400,'Set an API key before enabling this provider');
+  if(x.enabled&&code==='workers_ai'&&!env(c).AI?.run)return failed(c,400,'Configure Cloudflare Workers AI binding before enabling');
+  if(x.enabled&&code!=='workers_ai'&&!encrypted&&!secretVar)return failed(c,400,'Set an API key before enabling this provider');
   await query(sql,'INSERT INTO mif_ai_providers(code,model,encrypted_key,enabled,priority) VALUES($1,$2,$3,$4,$5) ON CONFLICT(code) DO UPDATE SET model=$2,encrypted_key=$3,enabled=$4,priority=$5,updated_at=now()',[code,x.model,encrypted,x.enabled,x.priority]);
-  return c.json({ok:true,configured:!!encrypted||!!secretVar});
+  return c.json({ok:true,configured:code==='workers_ai'?!!env(c).AI?.run:!!encrypted||!!secretVar});
  });
  app.get('/api/admin/platform/plans',async c=>c.json({ok:true,data:await query(db(c),'SELECT id,code,title,cycle,price_halalas,message_limit,active,created_at FROM mif_subscription_plans ORDER BY created_at DESC')}));
  app.post('/api/admin/platform/plans',async c=>{
@@ -73,7 +74,7 @@ export function installPlatformSaas(app,{db,env,query}){
  app.get('/api/admin/platform/usage',async c=>c.json({ok:true,data:await query(db(c),`SELECT u.workspace_id,w.name workspace_name,u.provider,u.model,count(*)::int requests,sum(u.input_tokens)::bigint input_tokens,sum(u.output_tokens)::bigint output_tokens FROM mif_ai_usage u LEFT JOIN erp_workspaces w ON w.id=u.workspace_id WHERE u.created_at>now()-interval '30 days' GROUP BY u.workspace_id,w.name,u.provider,u.model ORDER BY requests DESC LIMIT 150`)}));
  app.get('/api/admin/platform/ready',async c=>{
   const rows=await query(db(c),'SELECT code,enabled,length(encrypted_key)>0 configured FROM mif_ai_providers');
-  const configured=rows.some(r=>r.enabled&&(r.configured||!!env(c)[keyVars[r.code]]))||providerCodes.some(code=>!!env(c)[keyVars[code]]);
+  const configured=rows.some(r=>r.enabled&&(r.code==='workers_ai'?!!env(c).AI?.run:r.configured||!!env(c)[keyVars[r.code]]))||providerCodes.filter(code=>code!=='workers_ai').some(code=>!!env(c)[keyVars[code]]);
   return c.json({ok:true,model_ready:configured,db_ready:true,credentials_hidden:true});
  });
 }
