@@ -134,6 +134,24 @@ jobs:
           }
           console.log('RAWI email-code registration is enabled in the deployed Enterprise Worker.');
           NODE
+      - name: Diagnose registration backend with disposable invalid-domain address
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {randomBytes,randomUUID} from 'node:crypto';
+          const email='rawi-test-'+randomUUID()+'@example.invalid';
+          const password='A1!'+randomBytes(20).toString('base64url');
+          try{
+            const r=await fetch('https://rawi-enterprise.fayosaas.workers.dev/api/admin/register',{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({name:'Diagnostic Check',email,password,account_type:'enterprise',language:'en'}),
+              signal:AbortSignal.timeout(20000)
+            });
+            const data=await r.json();
+            console.log('Disposable registration smoke: HTTP '+r.status+' code='+(data.code||'none')+' error='+(data.error||'none'));
+            if(r.status===202)console.log('::warning::The disposable request was accepted; no real user mailbox exists for example.invalid.');
+          }catch(e){console.log('Disposable registration smoke could not run: '+e.message)}
+          NODE
       - name: Verify real production domain when configured
         shell: bash
         env:
