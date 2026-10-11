@@ -1,4 +1,4 @@
--- ERP core operational modules; workspace isolation by foreign keys.
+-- ERP core operational modules with workspace isolation
 CREATE TABLE IF NOT EXISTS erp_items(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  workspace_id uuid NOT NULL REFERENCES erp_workspaces(id) ON DELETE CASCADE,
