@@ -36,6 +36,14 @@ export function installMifWebsite(app,{db,env,query}){
   if(!row.length)return error(c,403,'MIF operator only');
   await next();
  });
+ app.get('/api/admin/mif/database',async c=>{
+  const sql=db(c);
+  const [info,counts]=await Promise.all([
+   query(sql,"SELECT current_database() database_name,current_setting('server_version') server_version,pg_size_pretty(pg_database_size(current_database())) database_size"),
+   query(sql,"SELECT (SELECT count(*)::int FROM erp_workspaces) AS workspaces,(SELECT count(*)::int FROM mif_products) AS products,(SELECT count(*)::int FROM mif_site_inquiries) AS inquiries,(SELECT count(*)::int FROM mif_ai_usage) AS ai_requests,(SELECT count(*)::int FROM mif_tenant_subscriptions) AS subscriptions")
+  ]);
+  return c.json({ok:true,storage:'neon-postgresql',connected:true,database:{...info[0],...counts[0]}});
+ });
  app.get('/api/admin/mif/settings',async c=>c.json({ok:true,data:await getSite(db(c))}));
  app.put('/api/admin/mif/settings/:key',async c=>{
   const key=c.req.param('key');if(!['identity','contact','seo'].includes(key))return error(c,400,'Unknown website section');
