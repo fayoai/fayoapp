@@ -23,7 +23,7 @@ jobs:
             echo "::error::Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository Actions Secrets."
             exit 1
           fi
-      - name: Deploy independent Enterprise, Developer and MIF SaaS Workers
+      - name: Deploy only RAWI ERP and MIF SaaS Workers
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
           if(Object.keys(values).length)writeFileSync(process.env.SECRET_FILE,JSON.stringify(values),{mode:0o600});
           console.log('Configured Worker runtime binding names: '+(Object.keys(values).join(', ')||'none; existing Worker secrets will be retained'));
           NODE
-          for config in wrangler.enterprise.jsonc wrangler.developer.jsonc wrangler.jsonc; do
+          for config in wrangler.enterprise.jsonc wrangler.jsonc; do
             echo "Deploying independently configured Worker: $config"
             if [[ -f "$SECRET_FILE" ]]; then
               npx wrangler deploy --config "$config" --secrets-file "$SECRET_FILE"
@@ -71,7 +71,13 @@ jobs:
               npx wrangler deploy --config "$config"
             fi
           done
-      - name: Test three deployed Worker boundaries
+      - name: Permanently decommission inactive RAWI Dev Worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler delete --name rawi-developer --force
+      - name: Test active MIF and RAWI ERP Worker boundaries
         run: npm run smoke:surfaces
       - name: Verify real database-backed application runtimes
         shell: bash
