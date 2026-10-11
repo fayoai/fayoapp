@@ -3,7 +3,7 @@
   "name": "RAWI Developers | راوي للمطورين",
   "short_name": "RAWI Dev",
   "description": "Independent Odoo development, integrations and AI engineering studio",
-  "start_url": "/developers",
+  "start_url": "/developers/",
   "scope": "/developers",
   "display": "standalone",
   "background_color": "#0b0b0c",
@@ -31,7 +31,7 @@
   "shortcuts": [
     {
       "name": "RAWI Developers",
-      "url": "/developers",
+      "url": "/developers/",
       "icons": [
         {
           "src": "/developers/rawi-dev-mark.svg",
