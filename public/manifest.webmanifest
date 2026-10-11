@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "MIF Smart AI ERP",
-  "short_name": "MIF AI ERP",
-  "description": "MIF Smart AI ERP — Integrated AI business operating system",
+  "name": "MIF Smart",
+  "short_name": "MIF Smart",
+  "description": "MIF Smart — Intelligent conversations and business operations",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -35,8 +35,8 @@
   ],
   "shortcuts": [
     {
-      "name": "MIF Smart AI ERP",
-      "short_name": "AI ERP",
+      "name": "MIF Smart",
+      "short_name": "MIF Smart",
       "url": "/",
       "icons": [
         {
