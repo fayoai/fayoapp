@@ -54,9 +54,9 @@ export default function RawiDeveloperApp(){
   }catch(e){setMessages(m=>m.slice(0,-1));setQuestion(q);setError(e.message)}finally{setSending(false)}
  };
  const openThread=async id=>{setHistoryOpen(false);setView('chats');setError('');
-  try{const r=await api('/api/admin/chat/threads/'+id);setActiveThread(id);setMessages(r.data||[])}catch(e){setError(e.message)}
+  try{const r=await api('/api/admin/chat/threads/'+id+'?workspace_id='+encodeURIComponent(workspace));setActiveThread(id);setMessages(r.data||[])}catch(e){setError(e.message)}
  };
- const deleteThread=async id=>{try{await api('/api/admin/chat/threads/'+id,{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(activeThread===id)fresh()}catch(e){setError(e.message)}};
+ const deleteThread=async id=>{try{await api('/api/admin/chat/threads/'+id+'?workspace_id='+encodeURIComponent(workspace),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(activeThread===id)fresh()}catch(e){setError(e.message)}};
  const install=async()=>{if(installPrompt){try{await installPrompt.prompt();await installPrompt.userChoice;setInstallPrompt(null)}catch(e){setError(e.message)}}else setInstallInfo(true)};
  return <div className="rd-app rd-chat-first" dir={lang==='ar'?'rtl':'ltr'}>
   <main className={'rd-primary rd-primary-'+view}>

@@ -15,9 +15,11 @@ import {installRawiDeveloper} from './rawi-developer.js';
 import {evaluationSettings,ensureEvaluationPlan,enforceAuthLimit} from './rawi-onboarding.js';
 import {installRawiReadiness} from './rawi-readiness.js';
 import {installRawiTeam} from './rawi-team.js';
+import {attachTenantDb} from './tenant-runtime.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
-const db=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
+const centralDb=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
+const db=c=>c.get('tenantSQL')||centralDb(c);
 const query=(sql,text,args=[])=>sql.query(text,args);
 const secret=c=>{const s=env(c).SESSION_SECRET;return s?.length>=32?encoder.encode(s):null};
 const loginSurface=c=>['mif','enterprise','developer'].includes(env(c).MIF_APP_SURFACE)?env(c).MIF_APP_SURFACE:'mif';
@@ -83,7 +85,10 @@ app.use('/api/admin/*',async(c,next)=>{if(['login','bootstrap','register'].inclu
   const profiles=await query(sql,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[payload.sub]);
   if(profiles[0]?.account_type!==surface)return fail(c,403,'Application account mismatch');
  }
- await next()}catch{return fail(c,401,'Session expired')}});
+ const routing=await attachTenantDb(c,{central:centralDb(c),query,settings:env(c)});
+ if(routing)return fail(c,routing.status,routing.error);
+ c.set('centralSQL',centralDb(c));
+ await next()}catch(e){console.error('Secure session or tenant routing failed',e?.message);return fail(c,503,'Secure session or database routing unavailable')}});
 app.post('/api/admin/logout',c=>{deleteCookie(c,sessionCookieFor(loginSurface(c)),{path:'/'});return c.json({ok:true})});
 app.get('/api/admin/my-subscription',async c=>{
  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
@@ -99,12 +104,12 @@ app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Dat
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
-installMifChat(app,{db,env,query});
+installMifChat(app,{db,env,query,centralDb});
 installPlatformSaas(app,{db,env,query});
 installRawiReadiness(app,{db,env,query});
 installMifWebsite(app,{db,env,query});
 installRawiAdvanced(app,{db,query});
 installRawiInsights(app,{db,query});
 installRawiActivities(app,{db,query});
-installRawiDeveloper(app,{db,env,query});
+installRawiDeveloper(app,{db,env,query,centralDb});
 export default app;
