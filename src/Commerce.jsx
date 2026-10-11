@@ -1,13 +1,14 @@
 import React,{useState,useEffect,useMemo} from 'react';
 import {Link,useParams,useSearchParams} from 'react-router-dom';
-import {Boxes,Network,MessagesSquare,Server,Puzzle,Mail,ServerCog,Search,ShoppingCart,Plus,Minus,X,Trash2,Check,CheckCircle2,ShieldCheck,ArrowUpLeft,CreditCard,Landmark,FileText,LockKeyhole,CalendarClock,MonitorCog,ArrowRight,Clock3,ChevronLeft} from 'lucide-react';
+import {BrainCircuit,Boxes,Network,MessagesSquare,Server,Puzzle,Mail,ServerCog,Search,ShoppingCart,Plus,Minus,X,Trash2,Check,CheckCircle2,ShieldCheck,ArrowUpLeft,CreditCard,Landmark,FileText,LockKeyhole,CalendarClock,MonitorCog,ArrowRight,Clock3,ChevronLeft} from 'lucide-react';
 import {offers,cycles,cycleLabels,hostingChoices} from '../api/commerce-model.js';
 import {defaultProductConfig,validateProductConfig,needsTailoredQuote} from '../api/product-config.js';
 import ProductRequirements from './ProductRequirements.jsx';
 import {api,useSite,tr} from './App.jsx';
 import './commerce.css';
-const icons={Boxes,Network,MessagesSquare,Server,Puzzle,Mail,ServerCog};
+const icons={BrainCircuit,Boxes,Network,MessagesSquare,Server,Puzzle,Mail,ServerCog};
 const productDelivery={
+ 'MIF-AI-ERP':{lead:['منصة أعمال ذكية مع إعداد منفصل للمستخدمين والربط والصلاحيات.','AI ERP with scoped user setup, provider credentials and access permissions.'],steps:[['إنشاء مساحة العمل وربط قاعدة البيانات','Create workspace and connect persistent database'],['إعداد OpenAI والأنظمة المطلوبة بصلاحيات حقيقية','Configure OpenAI and authorized integrations'],['اختبار الفواتير والمهام وتدفقات العمل قبل الإطلاق','Validate invoicing, tasks and business workflows before launch']]},
  'MIF-ERP':{lead:['حل قابل للتهيئة وفق عمليات شركتك وليس ترخيص Enterprise.','A configurable Odoo Community implementation, not an Enterprise licence.'],steps:[['تحديد الوحدات والمستخدمين والعمليات','Confirm modules, users and workflows'],['مراجعة توافق الإضافات وحقوق استخدامها','Verify add-on compatibility and licences'],['الاتفاق على الترحيل والتدريب وتاريخ التسليم','Agree migration, training and delivery milestones']]},
  'MIF-CONTROL':{lead:['نطاق الإدارة يعتمد على صلاحيات السيرفرات وواجهات الربط الفعلية.','Management capabilities depend on actual server permissions and integrations.'],steps:[['تحديد بيئات أودو ومزودي الاستضافة','Confirm Odoo environments and providers'],['مراجعة الوصول والنسخ الاحتياطي ومتطلبات الأمان','Review access, backup and security'],['اختبار الوظائف المتفق عليها قبل التسليم','Validate agreed functions before delivery']]},
  'MIF-PARTNERS':{lead:['منصة تشغيل لشركاء أودو بنطاق يتم اعتماده في العرض.','An Odoo partner platform with a quotation-approved delivery scope.'],steps:[['تحديد فرق العمل والعملاء والصلاحيات','Define teams, customers and permissions'],['اعتماد الاشتراكات ومراحل المشاريع والدعم','Agree subscriptions, project stages and support'],['مراجعة الربط والاستضافة قبل الإطلاق','Validate integrations and hosting before launch']]},
@@ -17,6 +18,7 @@ const productDelivery={
  'MIF-EMAIL':{lead:['خدمة إعداد بريد مؤسسي؛ التوريد يخضع لنطاق وعرض سعر واضحين.','Business email setup subject to an agreed scope and quote.'],steps:[['تحديد الدومين وعدد الحسابات','Confirm domain and mailbox count'],['تحديد الحماية والترحيل والإدارة','Agree security, migration and management'],['اختبار DNS والتسليم مع العميل','Test DNS and complete handover']]}
 };
 const productFeatures={
+ 'MIF-AI-ERP':[['مساعد OpenAI للبحث والعمل مع بيانات المؤسسة','OpenAI assistant with workspace context'],['إدارة العملاء والأشخاص والفواتير وقوالبها','Contacts, invoices and branded templates'],['جدولة المهام وحفظ معرفة المؤسسة','Scheduled tasks and business knowledge'],['تكاملات Odoo وERPNext وZoho والبريد','Odoo, ERPNext, Zoho and email connectors']],
  'MIF-ERP':[['المبيعات والمشتريات والمخزون','Sales, purchases and inventory'],['المحاسبة والتقارير حسب نطاق التنفيذ','Accounting and reporting within licensed scope'],['الموارد البشرية والمشاريع وسير العمل','HR, projects and business workflows'],['إعداد البيانات وترحيلها والتدريب','Migration, onboarding and training']],
  'MIF-CONTROL':[['إدارة السيرفرات والحاويات','Servers and containers'],['الدومينات وربط بيئات العملاء','Domains and tenant routing'],['النسخ الاحتياطي والصيانة','Backups and maintenance'],['تحديثات الإصدارات ومتابعة التشغيل','Release and uptime operations']],
  'MIF-PARTNERS':[['العملاء والفرص والمشاريع','Customers, leads and projects'],['الاشتراكات والتجديدات وعروض الأسعار','Subscriptions, renewals and quotations'],['تذاكر الدعم والمحادثات','Helpdesk and customer conversations'],['إدارة بيئات العملاء والاستضافات','Customer tenant and hosting control']],
