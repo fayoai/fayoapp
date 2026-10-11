@@ -9,6 +9,7 @@ export default function RawiDeveloperApp(){
  const {lang,setLang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [view,setView]=useState('chats'),[session,setSession]=useState(null),[checking,setChecking]=useState(true);
  const [signup,setSignup]=useState(false),[form,setForm]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [tenantSetup,setTenantSetup]=useState(null),[tenantGeneration,setTenantGeneration]=useState(0);
  const [registration,setRegistration]=useState(false),[workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState(''),[subscriptions,setSubscriptions]=useState([]);
  const [threads,setThreads]=useState([]),[historyOpen,setHistoryOpen]=useState(false),[activeThread,setActiveThread]=useState('');
  const [messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[sending,setSending]=useState(false),[installPrompt,setInstallPrompt]=useState(null),[installInfo,setInstallInfo]=useState(false);
@@ -24,7 +25,26 @@ export default function RawiDeveloperApp(){
    const xs=w.data||[];setWorkspaces(xs);setWorkspace(old=>xs.some(x=>x.id===old)?old:xs[0]?.id||'');
    setSubscriptions(s.data||[])
   }).catch(e=>setError(e.message))
- },[developer]);
+ },[developer,tenantGeneration]);
+ useEffect(()=>{
+  if(!developer){setTenantSetup(null);return}
+  let active=true;
+  const run=async()=>{
+   try{
+    const status=await api('/api/admin/tenant/status');
+    const pending=(status.data||[]).find(x=>x.status!=='ready');
+    if(!pending||!active)return;
+    for(let attempt=0;attempt<12&&active;attempt++){
+     setTenantSetup({status:'migrating',step:attempt+1});
+     const response=await api('/api/admin/tenant/initialize',{method:'POST',body:'{}'});
+     if(!active)return;
+     if(response.status==='ready'){setTenantSetup(null);setTenantGeneration(n=>n+1);return}
+    }
+    if(active)setTenantSetup({status:'pending'});
+   }catch(e){if(active)setTenantSetup({status:'failed'})}
+  };
+  run();return()=>{active=false};
+ },[developer,session?.email]);
  useEffect(()=>{if(!developer||!workspace){setThreads([]);return}
   api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspace)).then(r=>setThreads(r.data||[])).catch(e=>setError(e.message))
  },[developer,workspace]);
@@ -61,7 +81,7 @@ export default function RawiDeveloperApp(){
  return <div className="rd-app rd-chat-first" dir={lang==='ar'?'rtl':'ltr'}>
   <main className={'rd-primary rd-primary-'+view}>
    {view==='chats'&&<section className="rd-chat-page">
-    <div className="rd-chat-tools">
+    <div className="rd-chat-tools">{tenantSetup&&<span role="status" className="rd-setup-state">{tenantSetup.status==='failed'?L('تعذر تهيئة القاعدة','Database setup failed'):L('تهيئة Neon','Preparing Neon')} {tenantSetup.step||''}</span>}
      {developer&&<><button type="button" onClick={()=>setHistoryOpen(v=>!v)} aria-label={L('المحادثات السابقة','Previous chats')}><Menu size={18}/></button>
       {workspaces.length>0&&<select aria-label={L('مساحة العمل','Workspace')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}</>}
      <button className="rd-download" type="button" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={18}/><span>{L('تنزيل التطبيق','Install app')}</span></button>
