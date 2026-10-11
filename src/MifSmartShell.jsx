@@ -7,6 +7,7 @@ import {RawiTeamPanel,RawiNotificationsPanel} from './RawiPanels.jsx';
 import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,ArrowUp,Paperclip,Mic,Square,FileText,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2,Building2} from 'lucide-react';
 import './mif-smart-shell.css';
 const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
+const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:'',description:''};
 const documentMimeByExtension=Object.freeze({pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',rtf:'application/rtf'});
 const maxDocumentSize=1572864,maxDocumentTotal=2621440,maxDocuments=2;
 const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
@@ -37,7 +38,7 @@ const nav=[['chats','المحادثات','Chats',MessageCircle],['operations','�
 const isInstalled=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||window.localStorage.getItem('rawi-erp-installed')==='1'}catch{return false}};
 export default function MifSmartShell(){
  const {lang,setLang}=useSite(),L=(a,e)=>tr(lang,a,e);
- const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false);
+ const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false),[signupStep,setSignupStep]=useState('auth'),[verificationCode,setVerificationCode]=useState(''),[company,setCompany]=useState(blankCompany),[companyBusy,setCompanyBusy]=useState(false),[companyError,setCompanyError]=useState('');
  const [workspaces,setWorkspaces]=useState([]),[workspaceId,setWorkspaceId]=useState('');
  const [registrationEnabled,setRegistrationEnabled]=useState(null),[subscriptions,setSubscriptions]=useState([]);
  const [tenantSetup,setTenantSetup]=useState(null),[tenantGeneration,setTenantGeneration]=useState(0);
@@ -46,7 +47,10 @@ export default function MifSmartShell(){
  const [integrationOpen,setIntegrationOpen]=useState(false),[notice,setNotice]=useState('');
  const areaRef=useRef(null),questionRef=useRef(null),requestRef=useRef(null),fileRef=useRef(null),speechRef=useRef(null),recorderRef=useRef(null),recordTimeoutRef=useRef(null);
  const device=useMemo(platform,[]),authed=!!session;
- const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
+ const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);if(r.company_setup_required){setSignupStep('company');setTab('company')}return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
+ useEffect(()=>{if(signupStep!=='company'||!authed)return;
+  api('/api/admin/company/setup').then(r=>{if(r.data)setCompany(old=>({...old,...r.data,workspace_id:r.data.workspace_id,name:r.data.name||''}))}).catch(()=>setCompanyError(L('تعذر تحميل بيانات الشركة','Could not load company details')))
+ },[signupStep,authed]);
  
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
@@ -81,11 +85,37 @@ export default function MifSmartShell(){
  useEffect(()=>{if((tab==='new'||tab==='thread')&&typeof window!=='undefined'&&window.matchMedia?.('(pointer:fine)').matches)questionRef.current?.focus({preventScroll:true})},[checking,tab]);
  useEffect(()=>{const handler=()=>{const view=new URL(window.location.href).searchParams.get('view');setTab([...protectedTabs,'new','thread'].includes(view)?view:'new')};window.addEventListener('popstate',handler);return()=>window.removeEventListener('popstate',handler)},[]);
  const navigate=key=>{setIntegrationOpen(false);setChatError('');setTab(key);const url=new URL(window.location.href);url.searchParams.set('view',key);window.history.pushState({},'',url)};
- const selectTab=key=>{if(key==='new'){startNew();return}navigate(key)};
+ const selectTab=key=>{if(session?.company_setup_required){navigate('company');return}if(key==='new'){startNew();return}navigate(key)};
  const startNew=()=>{if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');setDocuments([]);setChatError('');navigate('new')};
  const openThread=async id=>{if(!authed)return;if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');navigate('thread');try{const r=await api('/api/admin/chat/threads/'+encodeURIComponent(id));setActive(id);setMessages(r.data||[])}catch(e){setChatError(e.message)}};
- const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})})}else{await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})})}if(!await refreshSession())throw new Error(L('تعذر بدء الجلسة، حاول مرة أخرى.','Could not start a session. Try again.'));setForm(initialLogin);setSignup(false)}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
- const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);startNew();setThreads([]);setIntegrationOpen(false)};
+ const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{
+  if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));
+   const result=await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})});
+   if(!result.verification_required)throw new Error(L('لم يتم بدء التحقق من البريد','Email verification could not be started'));
+   setSignupStep('verify');setVerificationCode('');return;
+  }
+  await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})});
+  if(!await refreshSession())throw new Error(L('تعذر بدء الجلسة، حاول مرة أخرى.','Could not start a session. Try again.'));
+  setForm(initialLogin);setSignup(false);
+ }catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
+ const confirmEmail=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{
+  const result=await api('/api/admin/verify-email',{method:'POST',body:JSON.stringify({email:form.email,code:verificationCode})});
+  if(!result.company_setup_required)throw new Error(L('تعذر التحقق من الحساب','Account verification failed'));
+  setCompany({...blankCompany,workspace_id:result.workspace_id});
+  setSignupStep('company');setForm(initialLogin);setSignup(false);
+  await refreshSession();navigate('company');
+ }catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
+ const resendCode=async()=>{setAuthBusy(true);setAuthError('');try{await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form})})}catch(e){setAuthError(e.message)}finally{setAuthBusy(false)}};
+ const submitCompany=async e=>{e.preventDefault();setCompanyBusy(true);setCompanyError('');try{
+  await api('/api/admin/company/complete',{method:'POST',body:JSON.stringify(company)});
+  const ok=await refreshSession();if(!ok)throw new Error(L('تعذر تحديث الجلسة','Could not refresh session'));
+  setSignupStep('auth');startNew();
+ }catch(e){setCompanyError(e.message)}finally{setCompanyBusy(false)}};
+ const selectCompanyLogo=async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>175000){setCompanyError(L('الشعار يجب أن يكون PNG أو JPG أو WebP وأقل من 175 كيلوبايت.','Use a PNG, JPG or WebP logo under 175 KB.'));return}
+  const reader=new FileReader();reader.onload=()=>setCompany(v=>({...v,logo_data:String(reader.result||'')}));reader.onerror=()=>setCompanyError(L('تعذر قراءة الشعار','Could not read logo'));reader.readAsDataURL(file);
+ };
+ const logout=async()=>{try{await api('/api/admin/logout',{method:'POST'})}catch{}setSession(null);setSignupStep('auth');startNew();setThreads([]);setIntegrationOpen(false)};
  const ask=async e=>{
   e?.preventDefault?.();const text=question.trim()||(documents.length?L('حلل المستندات المرفقة','Analyze the attached documents'):'');if(!text||asking||filesBusy||text.length>2500)return;
   const pendingDocs=documents.map(({name,mime_type,data})=>({name,mime_type,data}));
