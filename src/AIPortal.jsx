@@ -60,7 +60,7 @@ export default function AIPortal(){
     <nav className="ai-side-products" aria-label={L('منتجات المنصة','Platform products')}>{offers.map(p=><Link key={p.sku} to={'/store/'+p.slug}><SolutionIcon sku={p.sku} size={17}/><span>{L(p.title_ar,p.title_en)}</span><ChevronLeft size={13}/></Link>)}</nav>
     <div className="ai-sidebar-end"><div className="ai-sidebar-powered"><img src="/icons/icon-512.png" alt="" /><span>{L('نفس شعارك وأيقونة التطبيق','Existing brand & application icon')}</span></div><Link to="/admin"><Command size={16}/>{L('لوحة الإدارة','Management console')}<ArrowUpLeft size={13}/></Link></div>
    </aside>
-   <main className="ai-primary">
+   <div className="ai-primary">
     <div className="ai-kicker"><span className="ai-kicker-dot"/><span>AI-FIRST EXPERIENCE</span><span className="ai-kicker-line"/></div>
     <div className="ai-intro"><div><h1>{L('واجهة واحدة.','One interface.')}<span>{L('كل إمكانياتك.','Every capability.')}</span></h1><p>{L('اكتب احتياجك، واستكشف منتجاتنا واشتراكاتنا وخدماتنا من مساحة عمل تفاعلية واحدة، بدون ما تضيع بين صفحات موقع تقليدي.','Describe what you need and discover every product, billing option and service from one interactive workspace.')}</p></div><div className="ai-core-symbol" aria-hidden="true"><div className="ai-core-ring"/><div className="ai-core-inner"><img src="/mif-symbol.png" alt=""/></div><span className="ai-core-node n1"/><span className="ai-core-node n2"/><span className="ai-core-node n3"/></div></div>
     <div className="ai-workspace">
@@ -90,7 +90,7 @@ export default function AIPortal(){
       <div className="ai-devices"><MonitorSmartphone size={29}/><div><strong>Android · iOS</strong><small>Windows · macOS · Linux</small></div><Link to="/apps" aria-label={L('عرض التطبيقات','View apps')}><ArrowUpLeft size={18}/></Link></div>
      </aside>
     </div>
-   </main>
+   </div>
   </div>
   <section className="ai-collection" id="ai-ecosystem"><div className="ai-collection-head"><div><span className="ai-section-kicker"><Layers3 size={16}/> MIF / PRODUCTS</span><h2>{L('كل المنتجات.','Every product.')} <em>{L('مساحة واحدة.','One workspace.')}</em></h2><p>{L('نفس المنتجات الموجودة في المتجر، مع تفاصيلها وأنظمة الدفع والطلب بدون تغيير.','The same store catalog with product details, billing terms and checkout preserved.')}</p></div><Link to="/store">{L('المتجر الكامل','Full store')}<ArrowUpLeft size={18}/></Link></div>
    <div className="ai-product-grid">{offers.map((p,i)=><Link to={'/store/'+p.slug} className="ai-product" key={p.sku}><div className="ai-product-head"><div className="ai-product-icon"><SolutionIcon sku={p.sku} size={28}/></div><span className="ai-product-num">{String(i+1).padStart(2,'0')} / {String(offers.length).padStart(2,'0')}</span></div><h3>{L(p.title_ar,p.title_en)}</h3><p>{L(p.description_ar,p.description_en)}</p><div className="ai-product-bottom"><span>{p.cycles.length} {L('أنظمة دفع','billing terms')}</span><span>{L('التفاصيل','Explore')} <ArrowUpLeft size={16}/></span></div></Link>)}</div>
