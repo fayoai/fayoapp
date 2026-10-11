@@ -17,7 +17,7 @@ const winExternal=url=>{
  try {const parsed=new URL(url);if(['https:','mailto:'].includes(parsed.protocol))shell.openExternal(parsed.href)} catch{}
 };
 const start=async()=>{
- const win=new BrowserWindow({width:1400,height:900,minWidth:760,minHeight:590,backgroundColor:'#090909',title:'RAWI Developer | Odoo Studio',autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,webviewTag:false,allowRunningInsecureContent:false}});
+ const win=new BrowserWindow({width:1400,height:900,minWidth:760,minHeight:590,backgroundColor:'#090909',title:'RAWI Developer | Odoo Studio',icon:path.join(root,'build','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,webviewTag:false,allowRunningInsecureContent:false}});
  win.webContents.setWindowOpenHandler(({url})=>{winExternal(url);return {action:'deny'}});
  win.webContents.on('will-navigate',(event,url)=>{let parsed;try{parsed=new URL(url)}catch{event.preventDefault();return}if(parsed.origin!==allowedOrigin){event.preventDefault();winExternal(url)}});
  win.webContents.session.setPermissionRequestHandler((_web,permission,callback)=>callback(false));
