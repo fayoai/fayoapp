@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {getAIProviders,routeAI} from './ai-router.js';
-import {basicBusinessPlan,generateBusinessPlan} from './rawi-business-setup.js';
+import {generateWorkspaceBlueprint,blueprintReady} from './rawi-generated-blueprint.js';
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 export const companyInput=z.object({
  workspace_id:z.string().uuid(),
@@ -15,6 +15,15 @@ export const companyInput=z.object({
 const businessInput=z.object({workspace_id:z.string().uuid(),name:z.string().trim().min(2).max(150),
  activity:z.string().trim().min(2).max(200),language:z.enum(['ar','en']).default('ar')});
 export function installRawiCompany(app,{centralDb,env,query}){
+ async function modelProviders(c,sql){
+  let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
+  if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
+  return providers;
+ }
+ async function design(c,sql,company,language='ar'){
+  return generateWorkspaceBlueprint({name:company.name,activity:company.activity,description:company.description||'',language,
+   providers:await modelProviders(c,sql),routeAI});
+ }
  app.get('/api/admin/company/setup',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
   const rows=await query(sql,'SELECT p.*,w.name workspace_name FROM rawi_company_profiles p '+
@@ -32,20 +41,20 @@ export function installRawiCompany(app,{centralDb,env,query}){
    "WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NULL",[d.workspace_id,user]);
   if(!rows.length)return fail(c,404,'Company setup unavailable');
   const existing=rows[0],inputs={name:d.name,activity:d.activity,language:d.language};
-  if(existing.setup_plan?.sections?.length&&existing.setup_inputs?.name===d.name&&
+  if(blueprintReady(existing.setup_plan)&&existing.setup_inputs?.name===d.name&&
    existing.setup_inputs?.activity===d.activity&&existing.setup_inputs?.language===d.language)
    return c.json({ok:true,plan:existing.setup_plan,source:existing.setup_source});
   // Avoid model charges for rapid successive keystrokes even from malicious clients.
   const wait=existing.setup_updated_at?8000-(Date.now()-new Date(existing.setup_updated_at).getTime()):0;
   if(wait>0)return c.json({ok:true,retry_after_ms:Math.ceil(wait),pending:true});
-  let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
-  if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
-  const plan=await generateBusinessPlan(d.name,d.activity,d.language,providers,routeAI);
+  const generated=await design(c,sql,{name:d.name,activity:d.activity},d.language);
+  if(!generated.ready)return c.json({ok:true,ready:false,source:'unavailable',reason:generated.reason});
+  const plan=generated.blueprint;
   const saved=await query(sql,"UPDATE rawi_company_profiles p SET setup_plan=$3::jsonb,setup_inputs=$4::jsonb,"+
-   "setup_source=$5,setup_updated_at=now() WHERE p.workspace_id=$1 AND p.completed_at IS NULL AND EXISTS "+
+   "setup_source='ai',setup_updated_at=now() WHERE p.workspace_id=$1 AND p.completed_at IS NULL AND EXISTS "+
    "(SELECT 1 FROM erp_memberships m WHERE m.workspace_id=p.workspace_id AND m.admin_id=$2 AND m.role='owner') RETURNING workspace_id",
-   [d.workspace_id,user,JSON.stringify(plan),JSON.stringify(inputs),plan.source]);
-  return saved.length?c.json({ok:true,plan,source:plan.source}):fail(c,404,'Company setup unavailable');
+   [d.workspace_id,user,JSON.stringify(plan),JSON.stringify(inputs)]);
+  return saved.length?c.json({ok:true,ready:true,plan,source:'ai'}):fail(c,404,'Company setup unavailable');
  });
  app.get('/api/admin/company/workspace-plan/:id',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
@@ -55,35 +64,34 @@ export function installRawiCompany(app,{centralDb,env,query}){
    [id,c.get('adminId')]);
   if(!rows.length)return fail(c,404,'Company not found');
   const company=rows[0];let plan=company.setup_plan||{},source=company.setup_source;
-  // Apply activity-led setup to companies registered before smart onboarding was added.
-  if(!Array.isArray(plan.sections)&&company.role==='owner'&&company.name?.trim()&&company.activity?.trim()){
-   let providers=[];try{providers=await getAIProviders(sql,env(c),query)}catch{}
-   if(!providers.length&&env(c).AI?.run)providers=[{code:'workers_ai',model:'@cf/meta/llama-3.2-1b-instruct',binding:env(c).AI}];
-   const language=c.req.query('language')==='en'?'en':'ar';
-   plan=await generateBusinessPlan(company.name,company.activity,language,providers,routeAI);
-   source=plan.source;
-   await query(sql,"UPDATE rawi_company_profiles SET setup_plan=$2::jsonb,setup_inputs=$3::jsonb,setup_source=$4,setup_updated_at=now() "+
-    "WHERE workspace_id=$1 AND NOT (setup_plan ? 'sections')",[id,JSON.stringify(plan),JSON.stringify({name:company.name,activity:company.activity,language}),source]);
+  // Old company profiles with a section-list are legacy; generate company-specific repositories.
+  if(!blueprintReady(plan)&&company.role==='owner'&&company.name?.trim()&&company.activity?.trim()){
+   const generated=await design(c,sql,company,c.req.query('language')==='en'?'en':'ar');
+   if(generated.ready){
+    plan=generated.blueprint;source='ai';
+    await query(sql,"UPDATE rawi_company_profiles SET setup_plan=$2::jsonb,setup_inputs=$3::jsonb,setup_source='ai',setup_updated_at=now() "+
+     "WHERE workspace_id=$1",[id,JSON.stringify(plan),JSON.stringify({name:company.name,activity:company.activity,language:c.req.query('language')==='en'?'en':'ar'})]);
+   }else{return c.json({ok:true,ready:false,reason:generated.reason,data:{name:company.name,activity:company.activity}})}
   }
-  return c.json({ok:true,data:{...plan,source,name:company.name,activity:company.activity}});
+  return c.json({ok:true,ready:blueprintReady(plan),data:{...plan,source,name:company.name,activity:company.activity}});
  });
  app.post('/api/admin/company/complete',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
   let body;try{body=await c.req.json()}catch{return fail(c,400,'Invalid company data')}
   const v=companyInput.safeParse(body);if(!v.success)return fail(c,400,'Invalid company details');
-  const d=v.data,user=c.get('adminId'),basic=basicBusinessPlan(d.name,d.activity,'ar');
+  const d=v.data,user=c.get('adminId');
   const stmt='WITH allowed AS( SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id '+
    "JOIN rawi_company_profiles p ON p.workspace_id=w.id WHERE w.id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NULL ), "+
    'changed AS( UPDATE erp_workspaces w SET name=$3,legal_name=$3,address=$4,vat_number=$6,phone=$7 '+
    'FROM allowed a WHERE w.id=a.id RETURNING w.id ), saved AS( '+
    'UPDATE rawi_company_profiles p SET logo_data=$5,name=$3,address=$4,commercial_registration=$8, '+
    'tax_number=$6,phone=$7,mobile=$9,website=$10,emails=$11,activity=$12,description=$13,completed_at=now(), '+
-   'setup_plan=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'sections\' THEN p.setup_plan ELSE $14::jsonb END, '+
-   'setup_source=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'sections\' THEN p.setup_source ELSE \'basic\' END, '+
+   'setup_plan=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_plan ELSE $14::jsonb END, '+
+   'setup_source=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_source ELSE \'pending\' END, '+
    'setup_inputs=jsonb_build_object(\'name\',$3::text,\'activity\',$12::text),setup_updated_at=now() '+
    'FROM changed x WHERE p.workspace_id=x.id RETURNING p.workspace_id ) SELECT workspace_id FROM saved';
   const rows=await query(sql,stmt,[d.workspace_id,user,d.name,d.address,d.logo_data,d.tax_number,
-   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,d.description,JSON.stringify(basic)]);
+   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,d.description,JSON.stringify({})]);
   return rows.length?c.json({ok:true,workspace_id:rows[0].workspace_id}):fail(c,404,'Pending company profile was not found');
  });
 }
