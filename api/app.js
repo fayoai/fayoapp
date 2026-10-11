@@ -20,6 +20,9 @@ const env=c=>c.env||{};
 const db=c=>env(c).DATABASE_URL?neon(env(c).DATABASE_URL):null;
 const query=(sql,text,args=[])=>sql.query(text,args);
 const secret=c=>{const s=env(c).SESSION_SECRET;return s?.length>=32?encoder.encode(s):null};
+const loginSurface=c=>['mif','enterprise','developer'].includes(env(c).MIF_APP_SURFACE)?env(c).MIF_APP_SURFACE:'mif';
+export const sessionCookieFor=surface=>({mif:'mif_session',enterprise:'rawi_enterprise_session',developer:'rawi_developer_session'}[surface]||'mif_session');
+export const sessionAudienceFor=surface=>({mif:'mif-console',enterprise:'rawi-enterprise',developer:'rawi-developer'}[surface]||'mif-console');
 const fail=(c,status,message)=>c.json({ok:false,error:message},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
 const loginData=z.object({email:z.email().max(180),password:z.string().min(1).max(200)});
@@ -63,8 +66,8 @@ app.post('/api/admin/login',async c=>{const sql=db(c),key=secret(c);if(!sql||!ke
   const profiles=await query(sql,"SELECT COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1",[row.id]);
   if(profiles[0]?.account_type!==surface)return fail(c,403,'This account belongs to the other RAWI application');
  }
- const token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience('mif-console').setIssuedAt().setExpirationTime('8h').sign(key);setCookie(c,'mif_session',token,{httpOnly:true,sameSite:'Strict',secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});return c.json({ok:true,email:row.email})});
-app.use('/api/admin/*',async(c,next)=>{if(['login','bootstrap','register'].includes(c.req.path.split('/').pop()))return next();const key=secret(c);if(!key)return fail(c,503,'Authentication unavailable');const token=getCookie(c,'mif_session');if(!token)return fail(c,401,'Sign-in required');try{const {payload}=await jwtVerify(token,key,{issuer:'mif-smart',audience:'mif-console'});c.set('adminId',payload.sub);
+ const token=await new SignJWT({email:row.email}).setProtectedHeader({alg:'HS256'}).setSubject(row.id).setIssuer('mif-smart').setAudience(sessionAudienceFor(loginSurface(c))).setIssuedAt().setExpirationTime('8h').sign(key);setCookie(c,sessionCookieFor(loginSurface(c)),token,{httpOnly:true,sameSite:'Strict',secure:new URL(c.req.url).protocol==='https:',path:'/',maxAge:28800});return c.json({ok:true,email:row.email})});
+app.use('/api/admin/*',async(c,next)=>{if(['login','bootstrap','register'].includes(c.req.path.split('/').pop()))return next();const key=secret(c);if(!key)return fail(c,503,'Authentication unavailable');const token=getCookie(c,sessionCookieFor(loginSurface(c)));if(!token)return fail(c,401,'Sign-in required');try{const {payload}=await jwtVerify(token,key,{issuer:'mif-smart',audience:sessionAudienceFor(loginSurface(c))});c.set('adminId',payload.sub);
  const surface=env(c).MIF_APP_SURFACE;
  if(surface==='enterprise'||surface==='developer'){
   const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
@@ -72,7 +75,7 @@ app.use('/api/admin/*',async(c,next)=>{if(['login','bootstrap','register'].inclu
   if(profiles[0]?.account_type!==surface)return fail(c,403,'Application account mismatch');
  }
  await next()}catch{return fail(c,401,'Session expired')}});
-app.post('/api/admin/logout',c=>{deleteCookie(c,'mif_session',{path:'/'});return c.json({ok:true})});
+app.post('/api/admin/logout',c=>{deleteCookie(c,sessionCookieFor(loginSurface(c)),{path:'/'});return c.json({ok:true})});
 app.get('/api/admin/my-subscription',async c=>{
  const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');
  const data=await query(sql,`SELECT w.id workspace_id,w.name workspace_name,s.status,s.messages_used,s.period_starts_at,s.period_ends_at,p.code plan_code,p.title plan_name,p.message_limit,
