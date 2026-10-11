@@ -69,7 +69,9 @@ export async function routeAI(question,providers,history=[],context=''){
   // Free-trial models may log prompts or use content for training. Do not share tenant context with them by default.
   const safeContext=!freeTrialCodes.includes(providers[i].code)?context:'';
   const instruction=policy+(safeContext?'\nRead-only authorized tenant context: '+String(safeContext).slice(0,3000):'');
-  try{return await requestProvider(providers[i],messages,instruction)}
+  // Trial providers receive only the message explicitly being sent now, never old conversations.
+  const requestMessages=freeTrialCodes.includes(providers[i].code)?[{role:'user',content:question}]:messages;
+  try{return await requestProvider(providers[i],requestMessages,instruction)}
   catch(e){if(i===providers.length-1)throw Object.assign(new Error(e.status===429?'AI service is busy; try again later':'RAWI could not answer at this time'),{status:e.status===429?429:502});}
  }
 }
