@@ -46,6 +46,17 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    const prepared=(sourceDraft.lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80);
    setLines(prepared.length?prepared:[emptyLine()]);prepared.forEach(x=>loadUnits(x.item_id));
    setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
+  }else if(config?.section==='invoices'){
+   setPartner(sourceDraft.partner_id||'');
+   const suggested=(sourceDraft.lines||[]).map(line=>{
+    const product=(lookups.products||[]).find(p=>p.id===line.item_id);
+    return {item_id:line.item_id||'',description:product?.name||'',quantity:Number(line.quantity)||1,
+     unit_price:line.unit_price_halalas!=null?String(Number(line.unit_price_halalas)/100):product?String(Number(product.sale_price_halalas||0)/100):''};
+   }).slice(0,80);
+   setInvoiceLines(suggested.length?suggested:[emptyInvoiceLine()]);
+   setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
+   if(/^\d{4}-\d{2}-\d{2}$/.test(String(values.field_2||'')))setInvoiceDate(values.field_2);
+   if(/^\d{4}-\d{2}-\d{2}$/.test(String(values.field_3||'')))setDueDate(values.field_3);
   }else if(config?.section==='payments'){
    const ref=kind==='sales_receipts'?values.field_5:values.field_1;
    const method=String(values.field_4||'').toLowerCase();
