@@ -34,3 +34,8 @@
 .rawi-live-empty{min-height:74px;display:flex;align-items:center;justify-content:center;gap:9px;background:#f9fbff;border-radius:9px;color:#7890a9;font-size:12px}
 .rawi-live-hint{margin:0}
 @media(max-width:740px){.rawi-live{padding:10px}.rawi-live-head{flex-direction:column}.rawi-live-actions{width:100%}.rawi-live-actions button{flex:1}.rawi-live-fields,.rawi-live-line,.rawi-live-journal-line{grid-template-columns:minmax(0,1fr)}.rawi-live :is(input,select){font-size:16px;min-height:44px}.rawi-live-row-actions button{min-height:38px}.rawi-live-editor>button[type=submit]{align-self:stretch}}
+
+.rawi-live-invoice-line{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) auto;align-items:end;gap:8px}
+.rawi-live-invoice-line>button{border:1px solid #cfdcf0;border-radius:9px;background:#f7faff;padding:9px 11px;color:#285eae;font-size:12px;min-height:40px}
+@media(max-width:920px){.rawi-live-invoice-line{grid-template-columns:repeat(2,minmax(0,1fr))}.rawi-live-invoice-line>button{justify-self:start}}
+@media(max-width:620px){.rawi-live-invoice-line{grid-template-columns:minmax(0,1fr)}.rawi-live-invoice-line>button{justify-self:stretch}}
