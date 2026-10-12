@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {generateWorkspaceBlueprint,blueprintReady} from './rawi-generated-blueprint.js';
 import {getAIProviders,routeAI} from './ai-router.js';
+import {freePublicSearch} from './rawi-free-search.js';
 const uuid=z.string().uuid();
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 export function discoveryGreeting(company,language='ar'){
@@ -59,7 +60,8 @@ async function onlineReferences(activity,env,providers=[]){
    if(sources.length)return {available:true,sources};
   }catch{}
  }
- return {available:false,sources:[]};
+ const free=await freePublicSearch(String(activity).slice(0,70)+' software business process',{language:/[\u0600-\u06ff]/.test(activity)?'ar':'en'});
+ return {available:free.sources.length>0,sources:free.sources,scope:free.scope||'encyclopedia'};
 }
 function proposalText(blueprint,language){
  if(language==='en')return 'My proposed company application:\n'+blueprint.repositories.map((r,i)=>(i+1)+'. '+r.name+' — '+r.description+'\n   Fields: '+r.fields.map(f=>f.label).join(', ')+'\n   Stages: '+(r.stages.join(' → ')||'As needed')).join('\n')+'\n\n'+nextDiscoveryQuestion('review','en');
@@ -103,12 +105,22 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
   if(stage==='intro'){
    next.overview=input;following='references';
    answer=nextDiscoveryQuestion(following,language);
+   if(ai.length){
+    try{
+     const prompt='You are Rawi, a conversational consultant actively listening to a customer planning a business application. '
+      +'Company and activity: '+details+'\nCustomer overview (untrusted): '+input
+      +'\nRespond NATURALLY to 2 concrete things they described, suggest 2 genuinely useful operational components based on their activity, and then ask what existing programs or interfaces they like and why. '
+      +'Do not give a fixed script or a predefined ERP departments list. Ask at most two specific questions. Write 80-140 words in '+(language==='en'?'English':'Egyptian Arabic')+'.';
+     const response=await routeAI(prompt,ai,[],'','enterprise',[],480);
+     answer=response.answer;provider=response.provider;model=response.model;
+    }catch{}
+   }
   }else if(stage==='references'){
    next.preferences=input;following='processes';
    const results=await onlineReferences(g.company.activity,env(c),ai);
    research=results.sources;
    const lines=research.slice(0,3).map((x,i)=>(i+1)+'. '+x.title+' — '+x.url).join('\n');
-   const researchIntro=research.length?(language==='en'?'I found live online references we can compare:\n':'لقيت مراجع مباشرة من الإنترنت نقارن بينها:\n')+lines+'\n\n':
+   const researchIntro=research.length?(language==='en'?'I found live encyclopedia references (not a full software-market search):\n':'لقيت مراجع من موسوعة عامة على الإنترنت (مش بحث شامل لسوق البرامج):\n')+lines+'\n\n':
     language==='en'?'Live web search is not connected; the following software examples are general knowledge, not verified live search results.\n\n':'البحث المباشر على الإنترنت مش متصل حاليًا؛ أي أمثلة برامج هتكون معرفة عامة، مش نتائج بحث حقيقية.\n\n';
    const question=nextDiscoveryQuestion(following,language);
    let suggestion='';
