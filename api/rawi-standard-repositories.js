@@ -113,7 +113,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    return rows.length?c.json({ok:true,data:common(rows[0],Object.fromEntries(master.render(rows[0]).map((v,i)=>['field_'+(i+1),v])))},isUpdate?200:201):fail(c,404,'Record not found');
   }
   if(isUpdate){
-   const rows=await query(g.sql,"UPDATE rawi_dynamic_records SET values_json=$4::jsonb,stage=$5,updated_by=$6,updated_at=now() WHERE workspace_id=$1 AND repository_key=$2 AND id=$3 RETURNING *",[g.workspace,repo.key,target,JSON.stringify(values),stage,g.actor]);
+   const rows=await query(g.sql,"UPDATE rawi_dynamic_records SET values_json=$4::jsonb||(CASE WHEN values_json ? 'document_number' THEN jsonb_build_object('document_number',values_json->>'document_number') ELSE '{}'::jsonb END),stage=$5,updated_by=$6,updated_at=now() WHERE workspace_id=$1 AND repository_key=$2 AND id=$3 RETURNING *",[g.workspace,repo.key,target,JSON.stringify(values),stage,g.actor]);
    return rows.length?c.json({ok:true,data:rows[0]}):fail(c,404,'Record not found');
   }
   if(docKinds.has(repo.kind)){
@@ -132,7 +132,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   const rows=await query(centralDb(c),"SELECT p.setup_inputs,p.name,p.tax_number,w.currency FROM rawi_company_profiles p JOIN erp_workspaces w ON w.id=p.workspace_id JOIN erp_memberships m ON m.workspace_id=w.id WHERE p.workspace_id=$1 AND m.admin_id=$2",[g.workspace,g.actor]);
   if(!rows.length)return fail(c,404,'Company profile not found');
   const finance=rows[0].setup_inputs?.finance||{};
-  return c.json({ok:true,data:{country:finance.country||'SA',currency:finance.currency||String(rows[0].currency).trim()||'SAR',sales_tax_rate:finance.sales_tax_rate??15,purchases_tax_rate:finance.purchases_tax_rate??15,zatca_mode:finance.zatca_mode||'qr',environment:finance.environment||'simulation',egs_unit_id:finance.egs_unit_id||'',name:rows[0].name,tax_number:rows[0].tax_number,phase2_connected:false}});
+  return c.json({ok:true,data:{country:finance.country||'',currency:finance.currency||String(rows[0].currency).trim()||'SAR',sales_tax_rate:finance.sales_tax_rate??15,purchases_tax_rate:finance.purchases_tax_rate??15,zatca_mode:finance.zatca_mode||'none',environment:finance.environment||'simulation',egs_unit_id:finance.egs_unit_id||'',name:rows[0].name,tax_number:rows[0].tax_number,phase2_connected:false}});
  });
  app.put('/api/admin/erp/w/:workspace/system/settings',async c=>{
   const g=await gate(c,true);if(g.error)return g.error;
@@ -170,6 +170,39 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    timestamp:new Date(inv.created_at||inv.issued_on).toISOString(),total:(total/100).toFixed(2),vat:(vat/100).toFixed(2)});
   return c.json({ok:true,invoice_no:inv.invoice_no,tlv_base64:payload,phase:'qr_basic',phase2_compliant:false});
  });
+
+ app.get('/api/admin/erp/w/:workspace/system/report/:kind',async c=>{
+  const g=await gate(c);if(g.error)return g.error;
+  const kind=c.req.param('kind');
+  const repo=STANDARD_REPOSITORIES.find(x=>x.kind===kind&&x.read_only);
+  if(!repo)return fail(c,404,'Report not found');
+  if(kind==='cash_flow')return c.json({ok:true,data:[],columns:[],notice:'لا يمكن إعداد تدفقات نقدية معتمدة قبل تصنيف النقد وما يعادله وربط حركات السداد الفعلية.'});
+  if(kind==='tax_report'){
+   const summary=await query(g.sql,"SELECT COUNT(*)::int invoices,COALESCE(SUM(subtotal_halalas),0)::bigint taxable_sales_halalas,COALESCE(SUM(vat_halalas),0)::bigint output_vat_halalas FROM erp_invoices WHERE workspace_id=$1 AND status IN('issued','paid')",[g.workspace]);
+   return c.json({ok:true,data:summary,columns:['invoices','taxable_sales_halalas','output_vat_halalas'],
+    notice:'إجمالي ضريبة المخرجات من الفواتير الصادرة فقط. لا يشمل ضريبة المدخلات أو إقرارات ضريبية معتمدة.'});
+  }
+  const ledger=await query(g.sql,"SELECT a.code,a.name,a.type,COALESCE(SUM(l.debit_halalas),0)::bigint debit_halalas,COALESCE(SUM(l.credit_halalas),0)::bigint credit_halalas FROM erp_accounts a LEFT JOIN erp_journal_entries j ON j.workspace_id=a.workspace_id LEFT JOIN LATERAL jsonb_to_recordset(COALESCE(j.lines,'[]'::jsonb)) AS l(account_id uuid,debit_halalas bigint,credit_halalas bigint) ON l.account_id=a.id WHERE a.workspace_id=$1 GROUP BY a.id,a.code,a.name,a.type ORDER BY a.code",[g.workspace]);
+  let selected=ledger;
+  if(kind==='income_statement')selected=ledger.filter(x=>['income','expense'].includes(x.type));
+  if(kind==='balance_sheet')selected=ledger.filter(x=>['asset','liability','equity'].includes(x.type));
+  const data=selected.map(x=>({code:x.code,name:x.name,type:x.type,debit_halalas:Number(x.debit_halalas||0),credit_halalas:Number(x.credit_halalas||0),balance_halalas:Number(x.debit_halalas||0)-Number(x.credit_halalas||0)}));
+  return c.json({ok:true,data,columns:['code','name','type','debit_halalas','credit_halalas','balance_halalas'],
+   notice:'عرض مباشر من قيود اليومية المسجلة؛ يحتاج مراجعة المحاسب وإقفال الفترات قبل اعتماد القوائم المالية.'});
+ });
+ app.put('/api/admin/erp/w/:workspace/system/sequences/:kind',async c=>{
+  const g=await gate(c,true);if(g.error)return g.error;
+  if(g.role!=='owner')return fail(c,403,'Only company owner may manage numbering');
+  const kind=c.req.param('kind');
+  if(!docKinds.has(kind))return fail(c,400,'Unsupported document sequence');
+  const v=z.object({next_number:z.number().int().min(1).max(999999999)}).safeParse(await parse(c));
+  if(!v.success)return fail(c,400,'Invalid next number');
+  // The last allocated number is monotonically increasing; never duplicate or rewind.
+  const rows=await query(g.sql,"INSERT INTO erp_document_sequences(workspace_id,kind,year,number) VALUES($1,$2,EXTRACT(YEAR FROM CURRENT_DATE)::int,$3) ON CONFLICT(workspace_id,kind,year) DO UPDATE SET number=GREATEST(erp_document_sequences.number,EXCLUDED.number) RETURNING year,number",
+   [g.workspace,'std_'+kind,v.data.next_number-1]);
+  return c.json({ok:true,data:{kind,year:rows[0].year,next_number:Number(rows[0].number)+1}});
+ });
+
  app.get('/api/admin/erp/w/:workspace/system/sequences',async c=>{
   const g=await gate(c);if(g.error)return g.error;
   const rows=await query(g.sql,"SELECT kind,year,number FROM erp_document_sequences WHERE workspace_id=$1 ORDER BY kind,year DESC",[g.workspace]);
