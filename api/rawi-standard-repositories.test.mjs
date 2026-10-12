@@ -6,11 +6,13 @@ import {installRawiStandardRepositories,zatcaTlv} from './rawi-standard-reposito
 
 const workspace='11111111-1111-4111-8111-111111111111',actor='22222222-2222-4222-8222-222222222222';
 test('All requested fixed repositories exist by department, with one leave module',()=>{
- assert.deepEqual(STANDARD_GROUPS.map(x=>[x.title,x.repositories.length]),[['المبيعات',10],['المشتريات',7],['المخزون',5],['المحاسبة',17],['الموظفين',6],['إدارة النظام',2]]);
- assert.equal(STANDARD_REPOSITORIES.length,47);
- assert.equal(new Set(STANDARD_REPOSITORIES.map(x=>x.key)).size,47);
+ assert.deepEqual(STANDARD_GROUPS.map(x=>[x.title,x.repositories.length]),[['المبيعات',10],['المشتريات',7],['المخزون',5],['المحاسبة',17],['الموظفين',6],['إدارة النظام',3]]);
+ assert.equal(STANDARD_REPOSITORIES.length,48);
+ assert.equal(new Set(STANDARD_REPOSITORIES.map(x=>x.key)).size,48);
  assert.equal(STANDARD_REPOSITORIES.filter(x=>x.name==='الاجازات').length,1);
  assert.ok(findStandardRepository('std_warehouses'));
+ assert.ok(findStandardRepository('std_units'));
+ assert.equal(findStandardRepository('std_sales_orders').fields[0].target,'customers');
  assert.ok(findStandardRepository('std_tax_report').read_only);
 });
 test('ZATCA basic QR contains proper UTF-8 TLV tags 1 through 5',()=>{
