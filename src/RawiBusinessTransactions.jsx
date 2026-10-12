@@ -17,7 +17,7 @@ const kinds={
  payment_vouchers:{section:'payments',direction:'outgoing'},
  price_lists:{section:'pricing'}
 };
-export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved=()=>{}}){
+export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceDraft=null,onSaved=()=>{}}){
  const {lang}=useSite(),L=(a,e)=>tr(lang,a,e),config=kinds[kind];
  const [rows,setRows]=useState([]),[invoices,setInvoices]=useState([]),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[open,setOpen]=useState(false);
  const [partner,setPartner]=useState(''),[lines,setLines]=useState([emptyLine()]),[notes,setNotes]=useState('');
@@ -34,6 +34,12 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
   }catch(e){setError(e.message)}finally{setLoading(false)}
  };
  useEffect(()=>{setRows([]);setOpen(false);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
+ useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind||config?.section!=='documents')return;
+  setPartner(sourceDraft.partner_id||'');
+  setLines((sourceDraft.lines||[]).map(x=>({item_id:x.item_id,quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80));
+  setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
+  setOpen(true);setError('');setMessage(L('راجع العميل والبنود ثم احفظ لإنشاء أمر فعلي؛ المسودة وحدها ليست أمرًا معتمدًا.','Review the partner and lines before creating a validated order.'));
+ },[sourceDraft?.token,prefix,kind]);
  if(!config)return null;
  const updateLine=(index,key,value)=>setLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
  const updateJournal=(index,key,value)=>setJournalLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
@@ -47,6 +53,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
   if(config.section==='payments'&&!window.confirm(L('تأكيد تسجيل السند؟ لن تُرحّل قيود محاسبية أو تُسوّى فواتير تلقائيًا.','Confirm recording this voucher? No GL entries or invoice reconciliation will be posted automatically.')))return;
   request(async()=>{
    if(config.section==='documents'){
+    if(sourceDraft?.kind===kind&&rows.some(d=>String(d.notes||'').includes(sourceDraft.id)))throw Error(L('تم إنشاء أمر فعلي من هذه المسودة بالفعل. افتح الأمر السابق بدل التكرار.','This draft has already been used to create an operational order.'));
     const result=await api(prefix+'/core/documents',{method:'POST',body:JSON.stringify({kind:config.type,partner_id:partner,lines:lines.map(x=>({item_id:x.item_id,quantity:Number(x.quantity)})),notes})});
     setPartner('');setLines([emptyLine()]);setNotes('');
     return L('تم إنشاء مستند '+result.data.doc_no+' كمسودة تشغيلية','Saved '+result.data.doc_no+' as a draft');
