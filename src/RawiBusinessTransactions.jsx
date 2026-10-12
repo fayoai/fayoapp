@@ -5,7 +5,7 @@ import './rawi-business-transactions.css';
 
 const emptyLine=()=>({item_id:'',unit_id:'',quantity:1});
 const emptyJournalLine=()=>({account_id:'',debit:'',credit:''});
-const emptyPayment=()=>({reference:'',amount:'',method:'bank',invoice_id:'',details:'',recorded_at:new Date().toISOString().slice(0,10)});
+const emptyPayment=()=>({request_id:crypto.randomUUID(),reference:'',amount:'',method:'bank',invoice_id:'',cash_account_id:'',counterpart_account_id:'',details:'',recorded_at:new Date().toISOString().slice(0,10)});
 const currency=n=>(Number(n||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const kinds={
  sales_orders:{section:'documents',type:'sale'},
@@ -52,7 +52,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  };
  const create=event=>{event.preventDefault();
   if(config.section==='journal'&&!window.confirm(L('تأكيد تسجيل القيد المتوازن في دفتر اليومية؟','Confirm posting the balanced journal entry?')))return;
-  if(config.section==='payments'&&!window.confirm(L('تأكيد تسجيل السند؟ لن تُرحّل قيود محاسبية أو تُسوّى فواتير تلقائيًا.','Confirm recording this voucher? No GL entries or invoice reconciliation will be posted automatically.')))return;
+  if(config.section==='payments'&&!window.confirm(L('سيُحفظ السند مع قيد محاسبي متوازن. راجع الحسابين والمبلغ قبل التأكيد. لا تتم تسوية الفاتورة تلقائيًا.','Save this voucher and its balanced journal entry? Review both accounts and amount; invoice reconciliation remains separate.')))return;
   request(async()=>{
    if(config.section==='documents'){
     if(sourceDraft?.kind===kind&&rows.some(d=>String(d.notes||'').includes(sourceDraft.id)))throw Error(L('تم إنشاء أمر فعلي من هذه المسودة بالفعل. افتح الأمر السابق بدل التكرار.','This draft has already been used to create an operational order.'));
@@ -78,12 +78,14 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
     return L('تم تحديث سعر بيع الصنف في ملف المنتجات، وستستخدمه أوامر البيع التالية','Product sale price updated for new sales orders');
    }
    if(config.section==='payments'){
-    await api(prefix+'/advanced/payments',{method:'POST',body:JSON.stringify({
+    const result=await api(prefix+'/advanced/payments',{method:'POST',body:JSON.stringify({
      direction:config.direction,reference:payment.reference,amount_halalas:Math.round(Number(payment.amount)*100),
-     method:payment.method,invoice_id:payment.invoice_id||null,recorded_at:payment.recorded_at,details:payment.details
+     method:payment.method,invoice_id:payment.invoice_id||null,recorded_at:payment.recorded_at,details:payment.details,
+     cash_account_id:payment.cash_account_id,counterpart_account_id:payment.counterpart_account_id,request_id:payment.request_id
     })});
+    if(!result.posted||!result.journal_entry_id)throw Error(L('السند لم يؤكد ترحيل القيد المحاسبي','Voucher was not confirmed as posted to the ledger'));
     setPayment(emptyPayment());
-    return L('تم حفظ سند الحركة النقدية، ولم يتم ترحيل قيد محاسبي تلقائي','Voucher saved without automatic accounting posting');
+    return L('تم حفظ السند وترحيل القيد المحاسبي المتوازن','Voucher and balanced journal entry saved');
    }
   });
  };
@@ -96,7 +98,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  const canCreate=config.section!=='invoices';
  return <section className="rawi-live" aria-label={L('العمليات المالية والتجارية الفعلية','Live business transactions')}>
   <header className="rawi-live-head"><div><strong><ShieldCheck size={17}/>{L('السجلات التشغيلية الفعلية','Validated business transactions')}</strong>
-   <small>{config.section==='payments'?L('سجل سندات قبض وصرف؛ لا يُرحّل قيودًا محاسبية آليًا','Payment register; no automatic GL posting'):config.section==='invoices'?L('فواتير منشأة من أوامر بيع مؤكدة','Invoices linked to confirmed sales orders'):L('البيانات محفوظة في جداول التشغيل الرئيسية للشركة','Stored in company operational tables')}</small></div>
+   <small>{config.section==='payments'?L('كل سند جديد مرتبط بقيد يومية متوازن؛ يلزم اختيار حساب النقدية والحساب المقابل','Every new voucher posts a balanced journal entry after selecting two accounts'):config.section==='invoices'?L('فواتير منشأة من أوامر بيع مؤكدة','Invoices linked to confirmed sales orders'):L('البيانات محفوظة في جداول التشغيل الرئيسية للشركة','Stored in company operational tables')}</small></div>
    <div className="rawi-live-actions"><button type="button" onClick={refresh} disabled={loading||busy}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>{canCreate&&<button type="button" className="rawi-live-primary" onClick={()=>setOpen(x=>!x)}><Plus size={16}/>{L('إنشاء عملية فعلية','New transaction')}</button>}</div>
   </header>
   {error&&<p role="alert" className="rawi-live-error">{error}</p>}{message&&<p role="status" className="rawi-live-notice">{message}</p>}
@@ -127,6 +129,8 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
     <label>{L('المبلغ بالريال','Amount (SAR)')}<input type="number" min="0.01" max="100000000" step="0.01" required value={payment.amount} onChange={e=>setPayment(p=>({...p,amount:e.target.value}))}/></label>
     <label>{L('طريقة السداد','Method')}<select value={payment.method} onChange={e=>setPayment(p=>({...p,method:e.target.value}))}><option value="bank">{L('بنك','Bank')}</option><option value="cash">{L('نقدي','Cash')}</option></select></label>
     <label>{L('تاريخ السند','Date')}<input type="date" required value={payment.recorded_at} onChange={e=>setPayment(p=>({...p,recorded_at:e.target.value}))}/></label>
+    <label>{L('حساب الصندوق أو البنك (مدين عند القبض، دائن عند الصرف)','Bank or cash ledger account')}<select required value={payment.cash_account_id} onChange={e=>setPayment(p=>({...p,cash_account_id:e.target.value}))}><option value="">{L('اختر حساب نقدية من دليل الحسابات','Select asset account')}</option>{(lookups.accounts||[]).filter(a=>a.type==='asset').map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+    <label>{L('الحساب المقابل','Counterpart ledger account')}<select required value={payment.counterpart_account_id} onChange={e=>setPayment(p=>({...p,counterpart_account_id:e.target.value}))}><option value="">{L('اختر الحساب المقابل','Choose counterpart')}</option>{(lookups.accounts||[]).filter(a=>a.id!==payment.cash_account_id).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
     {config.direction==='incoming'&&<label>{L('الفاتورة المرتبطة (اختياري)','Related invoice (optional)')}<select value={payment.invoice_id} onChange={e=>setPayment(p=>({...p,invoice_id:e.target.value}))}><option value="">{L('بدون ربط فاتورة','No invoice')}</option>{invoices.filter(x=>['issued','paid'].includes(x.status)).map(i=><option key={i.id} value={i.id}>{i.invoice_no} · {currency(i.total_halalas)}</option>)}</select></label>}
     <label className="rawi-live-wide">{L('البيان','Details')}<input value={payment.details} onChange={e=>setPayment(p=>({...p,details:e.target.value}))}/></label>
    </div>}
@@ -136,7 +140,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    <td><FileText size={14}/>{row.doc_no||row.invoice_no||row.reference||row.sku+' — '+row.name}</td>
    <td>{String(row.created_at||row.recorded_at||row.posted_on||'').slice(0,10)}</td>
    <td>{currency(row.total_halalas??row.amount_halalas??row.debit_halalas??row.sale_price_halalas)}</td>
-   <td>{row.status|| (config.section==='pricing'?(row.active?L('نشط','Active'):L('غير نشط','Inactive')):L('مسجل','Recorded'))}</td>
+   <td>{config.section==='payments'?(row.journal_entry_id?L('مرحل محاسبيًا','Posted to ledger'):L('غير مرحل','Unposted')):row.status|| (config.section==='pricing'?(row.active?L('نشط','Active'):L('غير نشط','Inactive')):L('مسجل','Recorded'))}</td>
    {config.section==='invoices'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(L('إصدار الفاتورة بعد مراجعتها؟','Issue this invoice after review?')))action(row.id,'issue')}}><CheckCircle2 size={14}/>{L('إصدار فاتورة','Issue invoice')}</button>}</td>}
    {config.section==='documents'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>action(row.id,'confirm')}><CheckCircle2 size={14}/>{L('تأكيد الأمر','Confirm')}</button>}{row.kind==='sale'&&['confirmed','completed'].includes(row.status)&&<button type="button" disabled={busy||invoices.some(i=>i.source_document_id===row.id)} onClick={()=>action(row.id,'invoice')}><FileText size={14}/>{invoices.some(i=>i.source_document_id===row.id)?L('تمت الفوترة','Invoiced'):L('إنشاء فاتورة','Invoice')}</button>}</td>}
    </tr>)}</tbody></table></div>:<div className="rawi-live-empty">{L('لا توجد معاملات فعلية في هذا المستودع حتى الآن','No operational transactions yet')}</div>}
