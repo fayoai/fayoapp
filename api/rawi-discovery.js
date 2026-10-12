@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {handleApprovedDesignRevision} from './rawi-revision.js';
 import {generateWorkspaceBlueprint,blueprintReady} from './rawi-generated-blueprint.js';
 import {getAIProviders,routeAI} from './ai-router.js';
 import {freePublicSearch} from './rawi-free-search.js';
@@ -77,7 +78,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  async function getContext(c,workspaceId,init=false){
   const sql=centralDb(c),owner=c.get('adminId');
   if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql||!uuid.safeParse(workspaceId).success)return {error:fail(c,404,'Workspace not found')};
-  const rows=await query(sql,`SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
+  const rows=await query(sql,`SELECT p.name,p.activity,p.description,p.setup_plan,p.setup_inputs,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
    FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id
    LEFT JOIN rawi_workspace_discovery d ON d.workspace_id=p.workspace_id AND d.owner_id=$2
    WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NOT NULL`,[workspaceId,owner]);
@@ -98,10 +99,11 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  // This is a distinct AI-guided planning process, not a fixed ERP selection wizard.
  async function respond({c,workspace,user,message,language}){
   const g=await getContext(c,workspace,true);if(g.error)return null;
-  if(blueprintReady(g.company.setup_plan)&&g.company.setup_inputs?.discovery===true)return null;
+  const approved=blueprintReady(g.company.setup_plan)&&g.company.setup_inputs?.discovery===true;
   const state=await query(g.sql,'SELECT stage,answers,proposal,research FROM rawi_workspace_discovery WHERE workspace_id=$1 AND owner_id=$2',[workspace,user]);
   if(!state.length)return null;
   const current=state[0],stage=current.stage==='completed'?'intro':current.stage;
+  if(approved)return handleApprovedDesignRevision({c,company:g.company,current,workspace,user,message,language,central:g.sql,query,settings:env(c)});
   const answers=current.answers||{},next={...answers},input=String(message||'').trim().slice(0,2500);
   // An owner's question about Rawi, MIF Smart or small talk is a normal AI chat turn,
   // never a forced answer to the business-design questionnaire.
