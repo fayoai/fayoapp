@@ -21,7 +21,7 @@ export function journalTotals(lines){
  if(!Number.isSafeInteger(debit+credit)||!debit||debit!==credit)throw Error('Journal entry must balance');
  return {lines:normalized,debit_halalas:debit,credit_halalas:credit};
 }
-export function installErpCore(app,{db,query}){
+export function installErpCore(app,{db,centralDb,query}){
  async function gate(c,write=false){
   const sql=db(c),workspace=c.req.param('workspace');
   if(!sql)return {err:fail(c,503,'ERP database is not connected')};
@@ -75,7 +75,11 @@ export function installErpCore(app,{db,query}){
   const products=await query(g.sql,'SELECT id,sku,name,sale_price_halalas,cost_halalas FROM erp_items WHERE workspace_id=$1 AND id=ANY($2::uuid[]) AND active=true',[g.workspace,ids]);
   if(products.length!==ids.length)return fail(c,400,'Some items are unavailable');
   let sub=0;const lines=x.lines.map(l=>{const p=products.find(i=>i.id===l.item_id),unit=Number(x.kind==='sale'?p.sale_price_halalas:p.cost_halalas),amount=Math.round(l.quantity*unit);sub+=amount;return {item_id:p.id,sku:p.sku,name:p.name,quantity:l.quantity,unit_halalas:unit,total_halalas:amount}});
-  const vat=Math.round(sub*.15);if(!Number.isSafeInteger(sub+vat)||sub+vat>1e12)return fail(c,400,'Document amount too large');
+  const settings=await query(g.sql,'SELECT vat_rate FROM erp_workspaces WHERE id=$1',[g.workspace]);
+  const finance=x.kind==='purchase'&&centralDb?await query(centralDb(c),'SELECT setup_inputs FROM rawi_company_profiles WHERE workspace_id=$1',[g.workspace]):[];
+  const rate=x.kind==='purchase'?Number(finance[0]?.setup_inputs?.finance?.purchases_tax_rate??15)/100:Number(settings[0]?.vat_rate??.15);
+  if(!Number.isFinite(rate)||rate<0||rate>1)return fail(c,400,'Invalid company tax configuration');
+  const vat=Math.round(sub*rate);if(!Number.isSafeInteger(sub+vat)||sub+vat>1e12)return fail(c,400,'Document amount too large');
   const stmt="WITH seq AS(INSERT INTO erp_document_sequences(workspace_id,kind,year,number) VALUES($1,$2,EXTRACT(YEAR FROM CURRENT_DATE)::int,1) ON CONFLICT(workspace_id,kind,year) DO UPDATE SET number=erp_document_sequences.number+1 RETURNING year,number), created AS(INSERT INTO erp_documents(workspace_id,doc_no,kind,partner_id,lines,subtotal_halalas,vat_halalas,total_halalas,notes) SELECT $1,CASE WHEN $2='sale' THEN 'SO-' ELSE 'PO-' END||seq.year||'-'||lpad(seq.number::text,6,'0'),$2,$3,$4::jsonb,$5,$6,$7,$8 FROM seq RETURNING *) SELECT * FROM created";
   const rows=await query(g.sql,stmt,[g.workspace,x.kind,x.partner_id,JSON.stringify(lines),sub,vat,sub+vat,x.notes]);
   return c.json({ok:true,data:rows[0]},201);
@@ -94,7 +98,7 @@ export function installErpCore(app,{db,query}){
   const d=docs[0];
   const previous=await query(g.sql,'SELECT id,invoice_no FROM erp_invoices WHERE workspace_id=$1 AND source_document_id=$2',[g.workspace,id]);
   if(previous.length)return c.json({ok:true,data:previous[0],existing:true});
-  const lines=(d.lines||[]).map(x=>({description:x.name,quantity:Number(x.quantity),unit_price:Number(x.unit_halalas)/100,amount_halalas:Number(x.total_halalas),vat_halalas:Math.round(Number(x.total_halalas)*.15)}));
+  const lines=(d.lines||[]).map(x=>({description:x.name,quantity:Number(x.quantity),unit_price:Number(x.unit_halalas)/100,amount_halalas:Number(x.total_halalas),vat_halalas:Math.round(Number(x.total_halalas)*(Number(d.vat_halalas)||0)/Math.max(1,Number(d.subtotal_halalas)))}));
   const stmt="WITH seq AS(INSERT INTO erp_invoice_sequences(workspace_id,year,last_number) VALUES($1,EXTRACT(YEAR FROM CURRENT_DATE)::int,1) ON CONFLICT(workspace_id,year) DO UPDATE SET last_number=erp_invoice_sequences.last_number+1 RETURNING year,last_number), created AS(INSERT INTO erp_invoices(workspace_id,invoice_no,customer_id,lines,subtotal_halalas,vat_halalas,total_halalas,source_document_id,notes,currency) SELECT $1,'MIF-'||seq.year||'-'||lpad(seq.last_number::text,6,'0'),$2,$3::jsonb,$4,$5,$6,$7,$8,w.currency FROM seq JOIN erp_workspaces w ON w.id=$1 ON CONFLICT(source_document_id) DO NOTHING RETURNING id,invoice_no) SELECT * FROM created";
   const rows=await query(g.sql,stmt,[g.workspace,d.partner_id,JSON.stringify(lines),d.subtotal_halalas,d.vat_halalas,d.total_halalas,id,'Generated from '+d.doc_no]);
   if(!rows.length){const existing=await query(g.sql,'SELECT id,invoice_no FROM erp_invoices WHERE workspace_id=$1 AND source_document_id=$2',[g.workspace,id]);return existing.length?c.json({ok:true,data:existing[0],existing:true}):fail(c,409,'Invoice could not be created')}
