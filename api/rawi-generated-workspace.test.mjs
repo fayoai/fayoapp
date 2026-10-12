@@ -16,7 +16,7 @@ function harness({role='owner',owner=true}={}){
  const query=async(_sql,q,params=[])=>{
   sqlLog.push({q,params});
   if(q.includes('SELECT role FROM erp_memberships'))return role?[{role}]:[];
-  if(q.includes('SELECT p.setup_plan,p.name,p.activity'))return owner?[{setup_plan:plan,setup_inputs:{discovery:true},name:'Airfield Ops',activity:'Aviation inspection'}]:[];
+  if(q.includes('SELECT p.setup_plan,p.setup_inputs,p.name,p.activity'))return owner?[{setup_plan:plan,setup_inputs:{discovery:true},name:'Airfield Ops',activity:'Aviation inspection'}]:[];
   if(q.includes('SELECT id FROM mif_chat_threads'))return [{id:thread}];
   if(q.includes('INSERT INTO rawi_dynamic_records'))return [{id:thread,values_json:JSON.parse(params[2]),stage:params[3]}];
   if(q.includes('SELECT id,repository_key,values_json,stage,source_thread_id'))return [];

@@ -15,7 +15,7 @@ function harness(){
  app.use('/api/admin/*',async(c,next)=>{c.set('adminId',owner);await next()});
  const query=async(_sql,sql,params=[])=>{
   calls.push({sql,params});
-  if(sql.includes('SELECT p.name,p.activity,p.setup_plan,d.workspace_id'))return [{name:'Stadium Works',activity:'Sports turf installation',setup_plan:state.setup_plan,discovery_id:workspace,stage:state.stage,answers:state.answers,proposal:state.proposal,research:state.research}];
+  if(sql.includes('SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,d.workspace_id'))return [{name:'Stadium Works',activity:'Sports turf installation',setup_plan:state.setup_plan,discovery_id:workspace,stage:state.stage,answers:state.answers,proposal:state.proposal,research:state.research}];
   if(sql.includes('SELECT stage,answers,proposal,research FROM rawi_workspace_discovery'))return [state];
   if(sql.includes('SELECT code,model,encrypted_key'))return [];
   if(sql.includes('UPDATE rawi_company_profiles p SET setup_plan=')){state.setup_plan=JSON.parse(params[2]);return [{workspace_id:workspace}]}

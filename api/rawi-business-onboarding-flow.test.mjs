@@ -9,7 +9,7 @@ function create({allowed=true,existing={sections:['sales','inventory']}}={}){
  app.use('/api/admin/*',async(c,next)=>{c.set('adminId',owner);await next()});
  const query=async(_sql,text,args=[])=>{
   calls.push({text,args});
-  if(text.includes('SELECT p.setup_plan,p.setup_source,p.name,p.activity,m.role'))return allowed?[{setup_plan:existing,setup_source:'basic',name:'ملعبنا',activity:'تنفيذ ملاعب',role:'owner'}]:[];
+  if(text.includes('SELECT p.setup_plan,p.setup_source,p.setup_inputs,p.name,p.activity,m.role'))return allowed?[{setup_plan:existing,setup_source:'basic',name:'ملعبنا',activity:'تنفيذ ملاعب',role:'owner'}]:[];
   if(text.includes('WITH allowed AS'))return [{workspace_id:workspace}];
   return [];
  };
