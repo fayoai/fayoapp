@@ -4,11 +4,12 @@ import {BookOpen,Building2,ChartColumn,FilePlus2,Loader2,RefreshCw,Save,Search,S
 import {api,useSite,tr} from './App.jsx';
 import './rawi-standard.css';
 
-export default function RawiStandardRepositories(){
+export default function RawiStandardRepositories({onOpenThread}={}){
  const {lang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState(''),[groups,setGroups]=useState([]);
  const [groupKey,setGroupKey]=useState('sales'),[repoKey,setRepoKey]=useState('std_opportunities');
  const [rows,setRows]=useState([]),[report,setReport]=useState(null),[draft,setDraft]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [drafts,setDrafts]=useState([]),[focusDraftId,setFocusDraftId]=useState(null);
  const [loading,setLoading]=useState(true),[recordsLoading,setRecordsLoading]=useState(false),[saving,setSaving]=useState(false),[search,setSearch]=useState('');
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
@@ -17,6 +18,8 @@ export default function RawiStandardRepositories(){
  const [productUnitDraft,setProductUnitDraft]=useState({unit_id:'',factor:1,barcode:'',sale_price:'',purchase_price:''});
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
+ const loadDrafts=async()=>{if(!prefix)return;try{const r=await api(prefix+'/standard/drafts');setDrafts(r.data||[])}catch{setDrafts([])}};
+ useEffect(()=>{if(workspace)loadDrafts();else setDrafts([])},[workspace]);
  const activeGroup=groups.find(g=>g.key===groupKey)||groups[0];
  const selected=groups.flatMap(g=>g.repositories).find(r=>r.key===repoKey)||null;
  const all=groups.flatMap(g=>g.repositories);
@@ -94,6 +97,7 @@ export default function RawiStandardRepositories(){
    {stage:selected?.stages?.[0]||'',values:selected?.kind==='products'?{field_3:units.find(u=>u.code==='unit')?.code||'unit'}:{},lines:[]});
   lines.forEach(x=>loadLineUnits(x.item_id));
  };
+ useEffect(()=>{if(!focusDraftId||!rows.length)return;const row=rows.find(record=>record.id===focusDraftId);if(row)startDraft(row);setFocusDraftId(null)},[rows,focusDraftId]);
  const changeLine=(index,key,value)=>{
   setDraft(old=>({...old,lines:old.lines.map((line,i)=>i===index?{...line,[key]:value,...(key==='item_id'?{unit_id:''}:{})}:line)}));
   if(key==='item_id')loadLineUnits(value);
@@ -114,7 +118,7 @@ export default function RawiStandardRepositories(){
    const documentLines=lineKinds.has(selected.kind)?{lines:(draft.lines||[]).map(x=>({item_id:x.item_id,quantity:Number(x.quantity),...(x.unit_id?{unit_id:x.unit_id}:{})}))}:{};
    const response=await api(target,{method:draft.id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage||'',...documentLines})});
    if(!response?.data?.id)throw Error(L('لم يؤكد النظام حفظ البيانات','The server did not confirm saving'));
-   setDraft(null);await loadRecords();await refreshLookups();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
+   setDraft(null);await loadRecords();await refreshLookups();await loadDrafts();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const saveSequence=async e=>{e.preventDefault();setSaving(true);setError('');
@@ -132,12 +136,21 @@ export default function RawiStandardRepositories(){
  const visible=useMemo(()=>rows.filter(x=>JSON.stringify(x.values_json||{}).toLocaleLowerCase().includes(search.toLocaleLowerCase())),[rows,search]);
  const genericDraft=selected&&!selected.read_only&&selected.storage!=='erp'&&selected.kind!=='system_designs'&&selected.kind!=='document_sequences';
  return <section className="rawi-std" dir={lang==='ar'?'rtl':'ltr'}>
-  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('مستودعات راوي','RAWI repositories')}</h1><p>{L('المبيعات والمشتريات والمخزون والمحاسبة والموظفون، ببيانات محفوظة لكل شركة','Sales, purchases, inventory, accounting and HR with company-specific saved data')}</p></div>
+  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('العمليات','Operations')}</h1><p>{L('إدارة السجلات والمستندات ومسودات راوي المحفوظة داخل الشركة','Manage company records, documents and saved Rawi drafts')}</p></div>
    {workspaces.length>1&&<select aria-label={L('الشركة','Company')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}
   </div>
   {error&&<p role="alert" className="rawi-std-error">{error}</p>}
   {notice&&<p role="status" className="rawi-std-notice">{notice}</p>}
   {loading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/>{L('جاري تحميل المستودعات','Loading repositories')}</div>:!workspace?<div className="rawi-std-empty">{L('لا توجد شركة متاحة','No company workspace is available')}</div>:<>
+   <section className="rawi-std-drafts" aria-label={L('مسودات العمليات','Operational drafts')}>
+    <div className="rawi-std-drafts-head"><h2>{L('مسودات العمليات','Operational drafts')}</h2><span>{drafts.length}</span><button type="button" onClick={loadDrafts}><RefreshCw size={15}/>{L('تحديث','Refresh')}</button></div>
+    {drafts.length?<div className="rawi-std-drafts-list">{drafts.map(row=><div className="rawi-std-draft-item" key={row.id}>
+     <button type="button" className="rawi-std-draft-open" onClick={()=>{setGroupKey(row.group);setRepoKey(row.repository_key);setFocusDraftId(row.id)}}>
+      <strong>{row.repository_name}</strong><span>{String(row.values_json?.document_number||row.values_json?.field_1||row.id).slice(0,85)}</span><small>{L('مسودة','Draft')}</small>
+     </button>
+     {row.source_thread_id&&onOpenThread&&<button type="button" className="rawi-std-source-link" onClick={()=>onOpenThread(row.source_thread_id)}>{L('المصدر','Source')}</button>}
+    </div>)}</div>:<p className="rawi-std-drafts-empty">{L('لا توجد مسودات محفوظة بعد. ستظهر هنا العمليات التي ينشئها راوي أو المستخدم.','No saved drafts yet. Rawi and user-created drafts will appear here.')}</p>}
+   </section>
    <nav className="rawi-std-groups" aria-label={L('الإدارات','Departments')}>
     {groups.map(g=><button key={g.key} className={groupKey===g.key?'active':''} type="button" onClick={()=>selectGroup(g.key)}>{g.title}<span>{g.repositories.length}</span></button>)}
    </nav>
@@ -233,6 +246,7 @@ export default function RawiStandardRepositories(){
         <div className="rawi-std-record-title"><strong>{row.document_number||row.values_json?.document_number||String(row.values_json?.field_1||selected.name)}</strong>{row.stage&&<small>{row.stage}</small>}</div>
         <div className="rawi-std-record-fields">{selected.fields.filter(f=>row.values_json?.[f.key]!==undefined).map(f=><div key={f.key}><small>{f.label}</small><span>{show(f,row.values_json[f.key])}</span></div>)}</div>
         <div className="rawi-std-record-actions">{selected.kind!=='document_sequences'&&<button type="button" onClick={()=>startDraft(row)}>{L('تعديل','Edit')}</button>}
+         {row.values_json?.rawi_source_thread_id&&onOpenThread&&<button type="button" onClick={()=>onOpenThread(row.values_json.rawi_source_thread_id)}>{L('عرض المصدر','View source')}</button>}
          {selected.kind==='products'&&<button type="button" onClick={()=>openProductUnits(row)}>{L('وحدات الصنف','Product units')}</button>}</div>
        </article>)}</div>:<div className="rawi-std-empty">{L('لا توجد سجلات بعد في هذا المستودع','No records saved in this repository yet')}</div>}
       </>}
