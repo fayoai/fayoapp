@@ -25,7 +25,7 @@ export function unitsToBase(quantity,factor){
  return Math.round(value*1000)/1000;
 }
 export async function resolveItemUnit({sql,query,workspace,itemId,unitId,quantity}){
- const rows=await query(sql,"SELECT i.id,i.unit,i.sale_price_halalas,i.cost_halalas,l.factor,l.sale_price_halalas unit_sale_halalas,l.purchase_price_halalas unit_purchase_halalas,u.name unit_name,u.code unit_code FROM erp_items i LEFT JOIN erp_item_units l ON l.workspace_id=i.workspace_id AND l.item_id=i.id AND ($3::uuid IS NULL OR l.unit_id=$3) LEFT JOIN erp_units u ON u.id=l.unit_id AND u.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.active=true AND ($3::uuid IS NULL OR l.unit_id=$3)",
+ const rows=await query(sql,"SELECT i.id,i.unit,i.sale_price_halalas,i.cost_halalas,l.factor,l.sale_price_halalas unit_sale_halalas,l.purchase_price_halalas unit_purchase_halalas,u.name unit_name,u.code unit_code FROM erp_items i LEFT JOIN erp_item_units l ON l.workspace_id=i.workspace_id AND l.item_id=i.id AND (($3::uuid IS NULL AND l.is_base=true) OR l.unit_id=$3) LEFT JOIN erp_units u ON u.id=l.unit_id AND u.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.active=true AND ($3::uuid IS NULL OR l.unit_id=$3)",
  [workspace,itemId,unitId||null]);
  const selected=rows[0];
  if(!selected)throw Error('الصنف أو وحدة القياس غير موجودين في الشركة');
