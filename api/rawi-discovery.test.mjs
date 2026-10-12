@@ -22,7 +22,11 @@ function harness(){
   if(sql.includes('UPDATE rawi_workspace_discovery SET stage=')){state={...state,stage:params[2],answers:JSON.parse(params[3]),proposal:JSON.parse(params[4]),research:JSON.parse(params[5])};return []}
   return [];
  };
- const ai={run:async()=>({response:JSON.stringify(proposal)})};
+ const ai={run:async(_model,request)=>{
+  const prompt=String(request.messages?.at(-1)?.content||'');
+  if(prompt.includes('Return ONLY a valid minified JSON'))return {response:JSON.stringify(proposal)};
+  return {response:'بالنسبة لشركتك نقدر ننظم تنفيذ الملاعب والتكلفة والتوريد. حابب تشوف شكل البرنامج شبه أودو ولا واجهة أبسط؟'};
+ }};
  const discovery=installRawiDiscovery(app,{centralDb:()=>({}),env:c=>c.env||{},query});
  app.post('/api/admin/probe',async c=>{
   const b=await c.req.json();const result=await discovery.respond({c,workspace,user:owner,message:b.message,language:b.language||'ar'});
@@ -44,8 +48,14 @@ test('Business discovery takes several chat turns and does not create program wi
  assert.equal(r.status,200);assert.equal((await r.json()).stage,'intro');
  const first=await h.request('تركيب ملاعب كرة قدم وصيانة أرضياتها للمشاريع والمقاولين');
  assert.equal(first.discovery_stage,'references');assert.equal(blueprintReady(h.state().setup_plan),false);
- const second=await h.request('أفضل أودو في العقود، وواجهة سهلة مثل Monday للمشاريع');
- assert.equal(second.discovery_stage,'processes');assert.match(second.answer,/البحث المباشر/);
+ const prev=globalThis.fetch;
+ globalThis.fetch=async url=>{
+  if(String(url).includes('wikipedia.org'))return {ok:true,json:async()=>({query:{search:[{title:'Odoo',snippet:'<span>Odoo</span> is business software'}]}})};
+  throw Error('Unexpected web request');
+ };
+ let second;
+ try{second=await h.request('أفضل أودو في العقود، وواجهة سهلة مثل Monday للمشاريع')}finally{globalThis.fetch=prev}
+ assert.equal(second.discovery_stage,'processes');assert.match(second.answer,/مراجع|الإنترنت/);assert.match(second.answer,/wikipedia.org/);
  const third=await h.request('عايز عروض أسعار وأوامر بيع، متابعة التوريد والشراء وتكلفة كل مشروع والتسليم');
  assert.equal(third.discovery_stage,'review');assert.match(third.answer,/المقترح الأول/);
  assert.equal(blueprintReady(h.state().setup_plan),false);
