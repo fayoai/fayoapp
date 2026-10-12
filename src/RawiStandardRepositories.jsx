@@ -143,7 +143,25 @@ export default function RawiStandardRepositories(){
        {qrImage&&<div className="rawi-std-qr" role="dialog" aria-label={L('رمز الفاتورة','Invoice QR')}><strong>{qrImage.invoice_no}</strong><img src={qrImage.dataUrl} alt={L('رمز QR الأساسي للفاتورة','Basic invoice QR code')}/><small>{L('QR أساسي، ليس شهادة توافق مع المرحلة الثانية','Basic QR, not Phase 2 certification')}</small><button type="button" onClick={()=>setQrImage(null)}>{L('إغلاق','Close')}</button></div>}
       </section>}
 
-      {selected.kind==='document_sequences'&&<form className="rawi-std-sequence" onSubmit={saveSequence}>
+      
+       {selected.kind==='products'&&productEditor&&<section className="rawi-std-uom-editor">
+        <div className="rawi-std-form-top"><strong>{L('وحدات الصنف: ','Product units: ')}{productEditor.product.name}</strong>
+         <button type="button" onClick={()=>setProductEditor(null)} aria-label={L('إغلاق','Close')}><X size={17}/></button></div>
+        <p className="rawi-std-info">{L('وحدة الأساس: ','Base unit: ')}{productEditor.product.unit} — {L('كل وحدة بديلة تساوي عددًا محددًا من وحدات الأساس','Each alternative represents a quantity of base units')}</p>
+        <div className="rawi-std-uom-links">{productEditor.links.map(link=><div key={link.unit_id}><strong>{link.name}{link.is_base?' — الأساس':''}</strong><span>{'1 '+link.name+' = '+Number(link.factor)+' '+productEditor.product.unit}</span><small>{link.barcode||''}</small></div>)}</div>
+        <form onSubmit={saveProductUnit} className="rawi-std-uom-form">
+         <label>{L('وحدة إضافية','Alternative unit')}<select required value={productUnitDraft.unit_id} onChange={e=>setProductUnitDraft(x=>({...x,unit_id:e.target.value}))}>
+          <option value="">{L('اختر وحدة','Choose unit')}</option>{units.filter(u=>u.active&&u.code!==productEditor.product.unit).map(u=><option key={u.id} value={u.id}>{u.name} ({u.code})</option>)}
+         </select></label>
+         <label>{L('معامل التحويل إلى وحدة الأساس','Quantity in base units')}<input required type="number" min="0.000001" step="any" value={productUnitDraft.factor} onChange={e=>setProductUnitDraft(x=>({...x,factor:e.target.value}))}/></label>
+         <label>{L('باركود الوحدة','Unit barcode')}<input value={productUnitDraft.barcode} onChange={e=>setProductUnitDraft(x=>({...x,barcode:e.target.value}))}/></label>
+         <label>{L('سعر البيع للوحدة (اختياري)','Unit sale price (optional)')}<input type="number" min="0" step="0.01" value={productUnitDraft.sale_price} onChange={e=>setProductUnitDraft(x=>({...x,sale_price:e.target.value}))}/></label>
+         <label>{L('سعر الشراء للوحدة (اختياري)','Unit purchase price (optional)')}<input type="number" min="0" step="0.01" value={productUnitDraft.purchase_price} onChange={e=>setProductUnitDraft(x=>({...x,purchase_price:e.target.value}))}/></label>
+         <button type="submit" disabled={saving}><Save size={16}/>{L('حفظ وحدة الصنف','Save product unit')}</button>
+        </form>
+       </section>}
+
+       {selected.kind==='document_sequences'&&<form className="rawi-std-sequence" onSubmit={saveSequence}>
        <label>{L('نوع المستند','Document type')}<select value={sequenceKind} onChange={e=>setSequenceKind(e.target.value)}>{sequences.map(r=><option key={r.kind} value={r.kind}>{r.name} — {groups.find(g=>g.key===r.group)?.title}</option>)}</select></label>
        <label>{L('الرقم التالي (لا يمكن الرجوع للخلف)','Next number (cannot decrease)')}<input type="number" min="1" required value={sequenceValue} onChange={e=>setSequenceValue(e.target.value)}/></label>
        <button disabled={saving} type="submit"><Save size={15}/>{L('حفظ الترقيم','Save numbering')}</button>
@@ -155,7 +173,17 @@ export default function RawiStandardRepositories(){
        {draft&&<form className="rawi-std-form" onSubmit={save}>
         <div className="rawi-std-form-top"><strong>{draft.id?L('تعديل السجل','Edit record'):L('إضافة سجل','Create record')}</strong><button type="button" aria-label={L('إغلاق','Close')} onClick={()=>setDraft(null)}><X size={18}/></button></div>
         <div className="rawi-std-fields">{selected.fields.map(f=><label key={f.key}><span>{f.label}{f.required?' *':''}</span>
-         {selected.kind==='chart_accounts'&&f.key==='field_3'?<select value={draft.values[f.key]||''} onChange={e=>fieldChange(f.key,e.target.value)} required><option value="">{L('اختر','Choose')}</option>{[['asset','أصول'],['liability','التزامات'],['equity','حقوق ملكية'],['income','إيرادات'],['expense','مصروفات']].map(x=><option key={x[0]} value={x[0]}>{x[1]}</option>)}</select>:
+         {f.type==='relation'?<select required={f.required} value={draft.values[f.key]||''} onChange={e=>fieldChange(f.key,e.target.value)}>
+           <option value="">{L('اختر من سجلات الشركة','Choose a company record')}</option>
+           {(lookups[f.target]||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>:
+          selected.kind==='products'&&f.key==='field_3'?<select required value={draft.values[f.key]||''} onChange={e=>fieldChange(f.key,e.target.value)}>
+           <option value="">{L('وحدة الأساس','Base unit')}</option>{units.filter(x=>x.active).map(x=><option key={x.id} value={x.code}>{x.name} ({x.code})</option>)}
+          </select>:
+          selected.kind==='units'&&f.key==='field_3'?<select required value={draft.values[f.key]||'count'} onChange={e=>fieldChange(f.key,e.target.value)}>
+           {Object.entries({count:'العدد',weight:'الوزن',volume:'الحجم',length:'الطول',area:'المساحة',time:'الوقت',other:'أخرى'}).map(([value,label])=><option key={value} value={value}>{label}</option>)}
+          </select>:
+          selected.kind==='chart_accounts'&&f.key==='field_3'?<select value={draft.values[f.key]||''} onChange={e=>fieldChange(f.key,e.target.value)} required><option value="">{L('اختر','Choose')}</option>{[['asset','أصول'],['liability','التزامات'],['equity','حقوق ملكية'],['income','إيرادات'],['expense','مصروفات']].map(x=><option key={x[0]} value={x[0]}>{x[1]}</option>)}</select>:
          f.type==='long_text'?<textarea rows={3} value={draft.values[f.key]??''} required={f.required} onChange={e=>fieldChange(f.key,e.target.value)}/>:
          <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} step={f.type==='number'?'any':undefined} min={f.type==='number'?0:undefined} required={f.required} value={draft.values[f.key]??''} onChange={e=>fieldChange(f.key,e.target.value)}/>}
         </label>)}</div>
@@ -166,7 +194,8 @@ export default function RawiStandardRepositories(){
        {recordsLoading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/>{L('جاري جلب البيانات','Loading data')}</div>:visible.length?<div className="rawi-std-records">{visible.map(row=><article key={row.id}>
         <div className="rawi-std-record-title"><strong>{row.document_number||row.values_json?.document_number||String(row.values_json?.field_1||selected.name)}</strong>{row.stage&&<small>{row.stage}</small>}</div>
         <div className="rawi-std-record-fields">{selected.fields.filter(f=>row.values_json?.[f.key]!==undefined).map(f=><div key={f.key}><small>{f.label}</small><span>{show(f,row.values_json[f.key])}</span></div>)}</div>
-        {selected.kind!=='document_sequences'&&<button type="button" onClick={()=>startDraft(row)}>{L('تعديل','Edit')}</button>}
+        <div className="rawi-std-record-actions">{selected.kind!=='document_sequences'&&<button type="button" onClick={()=>startDraft(row)}>{L('تعديل','Edit')}</button>}
+         {selected.kind==='products'&&<button type="button" onClick={()=>openProductUnits(row)}>{L('وحدات الصنف','Product units')}</button>}</div>
        </article>)}</div>:<div className="rawi-std-empty">{L('لا توجد سجلات بعد في هذا المستودع','No records saved in this repository yet')}</div>}
       </>}
      </>}
