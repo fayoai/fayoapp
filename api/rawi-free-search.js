@@ -6,7 +6,12 @@ export function wantsPublicSearch(question){
  return searchSignals.test(String(question||'').slice(0,500));
 }
 export async function freePublicSearch(question,{language='ar',limit=4,fetcher=fetch}={}){
- const input=String(question||'').trim().slice(0,150);
+ let input=String(question||'').trim().slice(0,150);
+ // Convert a conversational search request into a topical encyclopedia query.
+ const names=[[/أودو|اودو|\\bOdoo\\b/i,'Odoo'],[/زوهو|\\bZoho\\b/i,'Zoho'],[/دايناميكس|\\bDynamics\\b/i,'Microsoft Dynamics 365'],[/مانداي|\\bMonday\\.com\\b/i,'Monday.com'],[/\\bERP\\b/i,'Enterprise resource planning']];
+ const named=names.find(([pattern])=>pattern.test(input));
+ if(named)input=named[1];
+ else input=input.replace(/^(?:ابحث(?:\\s+لي)?\\s+(?:عن|في)?|دور\\s+(?:لي)?\\s+على|ما\\s+هو|ايه\\s+هو|search\\s+(?:for)?|look\\s+up)\\s*/i,'').trim().slice(0,95);
  if(input.length<2)return {searched:false,sources:[],engine:'wikimedia'};
  const langs=language==='en'?['en','ar']:['ar','en'];
  for(const lang of langs){
