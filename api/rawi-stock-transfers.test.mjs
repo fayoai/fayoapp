@@ -5,7 +5,7 @@ import {installErpCore} from './erp-core.js';
 const ws='11111111-1111-4111-8111-111111111111',admin='22222222-2222-4222-8222-222222222222';
 const product='33333333-3333-4333-8333-333333333333',source='44444444-4444-4444-8444-444444444444',dest='55555555-5555-4555-8555-555555555555';
 const path='/api/admin/erp/w/'+ws+'/core/transfers';
-const payload={item_id:product,source_warehouse_id:source,target_warehouse_id:dest,quantity:3,reference:'Warehouse reallocation'};
+const payload={item_id:product,source_warehouse_id:source,target_warehouse_id:dest,quantity:3,reference:'Warehouse reallocation',request_id:'77777777-7777-4777-8777-777777777777'};
 const make=(role='owner',hasStock=true)=>{
  const app=new Hono(),calls=[];
  app.use('/api/admin/*',async(c,next)=>{c.set('adminId',admin);await next()});
@@ -31,6 +31,8 @@ test('Two-warehouse transfer debits, credits and audits stock in a single SQL st
  assert.match(tx.statement,/INSERT INTO erp_stock\(workspace_id,item_id,warehouse_id,quantity\)/);
  assert.match(tx.statement,/INSERT INTO erp_stock_movements/);
  assert.match(tx.statement,/FROM deposited/);
+ assert.match(tx.statement,/md5\(\$7::text/);
+ assert.equal(tx.args[6],payload.request_id);
 });
 test('Cannot transfer stock from warehouse to itself or without adequate on-hand quantity',async()=>{
  const h=make();const invalid=await h.post(path,{...payload,target_warehouse_id:source});
