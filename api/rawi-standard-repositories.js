@@ -1,11 +1,15 @@
 import {z} from 'zod';
 import {STANDARD_GROUPS,STANDARD_REPOSITORIES,findStandardRepository} from './rawi-standard-catalog.js';
 import {validateRepositoryRecord} from './rawi-generated-blueprint.js';
+import {resolveItemUnit} from './rawi-uom.js';
 
 const uuid=z.string().uuid();
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
-const input=z.object({values:z.record(z.string(),z.unknown()),stage:z.string().max(85).optional()}).strict();
+const input=z.object({values:z.record(z.string(),z.unknown()),stage:z.string().max(85).optional(),
+ lines:z.array(z.object({item_id:z.string().uuid(),unit_id:z.string().uuid().optional(),quantity:z.number().positive().max(100000)}).strict()).max(80).optional()
+}).strict();
+const lineDocumentKinds=new Set(['quotations','sales_orders','sales_invoices','purchase_quotes','purchase_orders']);
 const docKinds=new Set(['quotations','sales_orders','sales_invoices','sales_credit_note','sales_debit_note','sales_receipts','purchase_quotes','purchase_orders','purchase_expenses','purchase_credit_note','purchase_debit_note','internal_transfer','external_transfer','stock_count','journal_entries','accounting_receipts','payment_vouchers','contracts','leaves','payroll','custody','attendance']);
 const prefixes={quotations:'QT',sales_orders:'SO',sales_invoices:'INV',sales_credit_note:'SCN',sales_debit_note:'SDN',sales_receipts:'SR',purchase_quotes:'RFQ',purchase_orders:'PO',purchase_expenses:'PE',purchase_credit_note:'PCN',purchase_debit_note:'PDN',internal_transfer:'IT',external_transfer:'ET',stock_count:'SC',journal_entries:'JE',accounting_receipts:'AR',payment_vouchers:'PV',contracts:'CON',leaves:'LV',payroll:'PAY',custody:'CUS',attendance:'ATT'};
 const minor=value=>Math.round(Number(value||0)*100);
@@ -182,6 +186,43 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
     await query(g.sql,"INSERT INTO erp_item_units(workspace_id,item_id,unit_id,factor,is_base) VALUES($1,$2,$3,1,true) ON CONFLICT(workspace_id,item_id,unit_id) DO NOTHING",[g.workspace,rows[0].id,unit[0].id]);
    }
    return rows.length?c.json({ok:true,data:common(rows[0],Object.fromEntries(master.render(rows[0]).map((v,i)=>['field_'+(i+1),v])))},isUpdate?200:201):fail(c,404,'Record not found');
+  }
+  // Sales and purchase drafts share real products, prices, units and quantities.
+  // This does NOT post stock, invoices, accounts or payments.
+  if(lineDocumentKinds.has(repo.kind)){
+   let list=req.data.lines;
+   if(isUpdate&&list===undefined){
+    const previous=await query(g.sql,"SELECT values_json FROM rawi_dynamic_records WHERE workspace_id=$1 AND repository_key=$2 AND id=$3",[g.workspace,repo.key,target]);
+    if(!previous.length)return fail(c,404,'Document not found');
+    list=Array.isArray(previous[0].values_json?.document_lines)?previous[0].values_json.document_lines.map(x=>({item_id:x.item_id,unit_id:x.unit_id||undefined,quantity:Number(x.quantity)})):[];
+   }
+   if(!isUpdate&&(!list||!list.length))return fail(c,400,'Add at least one product line linked to company inventory');
+   if(list?.length){
+    let subtotal=0;const normalized=[];
+    for(const item of list){
+     let resolved;try{resolved=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:item.item_id,unitId:item.unit_id,quantity:item.quantity})}
+     catch(e){return fail(c,400,e.message)}
+     const purchase=repo.kind.startsWith('purchase_');
+     const unitPrice=purchase?resolved.purchase_price_halalas:resolved.sale_price_halalas;
+     const lineTotal=Math.round(item.quantity*unitPrice);
+     if(!Number.isSafeInteger(lineTotal)||lineTotal<0)return fail(c,400,'Invalid line value');
+     subtotal+=lineTotal;
+     normalized.push({item_id:item.item_id,unit_id:item.unit_id||null,quantity:item.quantity,base_quantity:resolved.baseQuantity,
+      unit_code:resolved.unit_code,unit_price_halalas:unitPrice,total_halalas:lineTotal});
+    }
+    const settings=await query(g.sql,'SELECT vat_rate FROM erp_workspaces WHERE id=$1',[g.workspace]);
+    let rate=Number(settings[0]?.vat_rate??.15);
+    if(repo.kind.startsWith('purchase_')){
+     const profile=await query(centralDb(c),'SELECT setup_inputs FROM rawi_company_profiles WHERE workspace_id=$1',[g.workspace]);
+     rate=Number(profile[0]?.setup_inputs?.finance?.purchases_tax_rate??15)/100;
+    }
+    if(!Number.isFinite(rate)||rate<0||rate>1||!Number.isSafeInteger(subtotal))return fail(c,400,'Invalid company tax settings');
+    const tax=Math.round(subtotal*rate);
+    values.document_lines=normalized;
+    values.subtotal_halalas=subtotal;
+    values.vat_halalas=tax;
+    values.total_halalas=subtotal+tax;
+   }
   }
   if(isUpdate){
    const rows=await query(g.sql,"UPDATE rawi_dynamic_records SET values_json=$4::jsonb||(CASE WHEN values_json ? 'document_number' THEN jsonb_build_object('document_number',values_json->>'document_number') ELSE '{}'::jsonb END),stage=$5,updated_by=$6,updated_at=now() WHERE workspace_id=$1 AND repository_key=$2 AND id=$3 RETURNING *",[g.workspace,repo.key,target,JSON.stringify(values),stage,g.actor]);
