@@ -22,7 +22,7 @@ export function nextDiscoveryQuestion(stage,language='ar'){
  }[stage]||'';
 }
 export const approvalMessage=(text,language='ar')=>/^(?:اعتمد(?: التصميم)?|موافق(?: على التصميم)?|وافق|نفذ(?: التصميم)?|ابدأ التنفيذ|تمام اعتمد|approve(?: the design)?|approved|confirm(?: design)?|build it|yes approve)[.!\s]*$/i.test(String(text||'').trim());
-async function onlineReferences(activity,env,providers=[]){
+async function onlineReferences(activity,env,providers=[],preferences=''){
  const key=String(env.BRAVE_SEARCH_API_KEY||'').trim();
  const clean=results=>(results||[]).slice(0,6).flatMap(x=>{
   try{const uri=new URL(x.url);if(uri.protocol!=='https:')return [];
@@ -60,8 +60,14 @@ async function onlineReferences(activity,env,providers=[]){
    if(sources.length)return {available:true,sources};
   }catch{}
  }
- const free=await freePublicSearch(String(activity).slice(0,70)+' software business process',{language:/[\u0600-\u06ff]/.test(activity)?'ar':'en'});
- return {available:free.sources.length>0,sources:free.sources,scope:free.scope||'encyclopedia'};
+ const preferred=String(preferences||'');
+ const explicit=/أودو|اودو|\\bOdoo\\b/i.test(preferred)?'Odoo':
+  /زوهو|\\bZoho\\b/i.test(preferred)?'Zoho':
+  /دايناميكس|\\bDynamics\\b/i.test(preferred)?'Microsoft Dynamics 365':
+  /مونداي|مانداي|\\bMonday\\b/i.test(preferred)?'Monday.com':'Enterprise resource planning';
+ const free=await freePublicSearch(explicit,{language:'en'});
+ const needle=explicit.toLowerCase(),matches=free.sources.filter(x=>x.title.toLowerCase().includes(needle));
+ return {available:matches.length>0,sources:matches.slice(0,3),scope:'encyclopedia'};
 }
 function proposalText(blueprint,language){
  if(language==='en')return 'My proposed company application:\n'+blueprint.repositories.map((r,i)=>(i+1)+'. '+r.name+' — '+r.description+'\n   Fields: '+r.fields.map(f=>f.label).join(', ')+'\n   Stages: '+(r.stages.join(' → ')||'As needed')).join('\n')+'\n\n'+nextDiscoveryQuestion('review','en');
@@ -117,7 +123,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
    }
   }else if(stage==='references'){
    next.preferences=input;following='processes';
-   const results=await onlineReferences(g.company.activity,env(c),ai);
+   const results=await onlineReferences(g.company.activity,env(c),ai,input);
    research=results.sources;
    const lines=research.slice(0,3).map((x,i)=>(i+1)+'. '+x.title+' — '+x.url).join('\n');
    const researchIntro=research.length?(language==='en'?'I found live encyclopedia references (not a full software-market search):\n':'لقيت مراجع من موسوعة عامة على الإنترنت (مش بحث شامل لسوق البرامج):\n')+lines+'\n\n':
