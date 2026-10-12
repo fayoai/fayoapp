@@ -31,31 +31,6 @@ export function installRawiCompany(app,{centralDb,env,query}){
    "WHERE m.admin_id=$1 AND m.role='owner' AND p.completed_at IS NULL LIMIT 1",[c.get('adminId')]);
   return c.json({ok:true,data:rows[0]||null});
  });
- app.post('/api/admin/company/plan',async c=>{
-  const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
-  let json;try{json=await c.req.json()}catch{return fail(c,400,'Invalid business details')}
-  const v=businessInput.safeParse(json);if(!v.success)return fail(c,400,'Enter company name and business activity');
-  const d=v.data,user=c.get('adminId');
-  const rows=await query(sql,"SELECT p.setup_plan,p.setup_inputs,p.setup_source,p.setup_updated_at "+
-   "FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id "+
-   "WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NULL",[d.workspace_id,user]);
-  if(!rows.length)return fail(c,404,'Company setup unavailable');
-  const existing=rows[0],inputs={name:d.name,activity:d.activity,language:d.language};
-  if(blueprintReady(existing.setup_plan)&&existing.setup_inputs?.name===d.name&&
-   existing.setup_inputs?.activity===d.activity&&existing.setup_inputs?.language===d.language)
-   return c.json({ok:true,ready:true,plan:existing.setup_plan,source:existing.setup_source});
-  // Avoid model charges for rapid successive keystrokes even from malicious clients.
-  const wait=existing.setup_updated_at?8000-(Date.now()-new Date(existing.setup_updated_at).getTime()):0;
-  if(wait>0)return c.json({ok:true,retry_after_ms:Math.ceil(wait),pending:true});
-  const generated=await design(c,sql,{name:d.name,activity:d.activity},d.language);
-  if(!generated.ready)return c.json({ok:true,ready:false,source:'unavailable',reason:generated.reason});
-  const plan=generated.blueprint;
-  const saved=await query(sql,"UPDATE rawi_company_profiles p SET setup_plan=$3::jsonb,setup_inputs=$4::jsonb,"+
-   "setup_source='ai',setup_updated_at=now() WHERE p.workspace_id=$1 AND p.completed_at IS NULL AND EXISTS "+
-   "(SELECT 1 FROM erp_memberships m WHERE m.workspace_id=p.workspace_id AND m.admin_id=$2 AND m.role='owner') RETURNING workspace_id",
-   [d.workspace_id,user,JSON.stringify(plan),JSON.stringify(inputs)]);
-  return saved.length?c.json({ok:true,ready:true,plan,source:'ai'}):fail(c,404,'Company setup unavailable');
- });
  app.get('/api/admin/company/workspace-plan/:id',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
   const id=c.req.param('id');if(!z.string().uuid().safeParse(id).success)return fail(c,400,'Invalid company');
@@ -64,16 +39,8 @@ export function installRawiCompany(app,{centralDb,env,query}){
    [id,c.get('adminId')]);
   if(!rows.length)return fail(c,404,'Company not found');
   const company=rows[0];let plan=company.setup_plan||{},source=company.setup_source;
-  // Old company profiles with a section-list are legacy; generate company-specific repositories.
-  if(!blueprintReady(plan)&&company.role==='owner'&&company.name?.trim()&&company.activity?.trim()){
-   const generated=await design(c,sql,company,c.req.query('language')==='en'?'en':'ar');
-   if(generated.ready){
-    plan=generated.blueprint;source='ai';
-    await query(sql,"UPDATE rawi_company_profiles SET setup_plan=$2::jsonb,setup_inputs=$3::jsonb,setup_source='ai',setup_updated_at=now() "+
-     "WHERE workspace_id=$1",[id,JSON.stringify(plan),JSON.stringify({name:company.name,activity:company.activity,language:c.req.query('language')==='en'?'en':'ar'})]);
-   }else{return c.json({ok:true,ready:false,reason:generated.reason,data:{name:company.name,activity:company.activity}})}
-  }
-  return c.json({ok:true,ready:blueprintReady(plan),data:{...plan,source,name:company.name,activity:company.activity}});
+  // Workspace design begins only after an interactive discovery chat and explicit approval.
+  return c.json({ok:true,ready:blueprintReady(plan),data:blueprintReady(plan)?{...plan,source,name:company.name,activity:company.activity}:{name:company.name,activity:company.activity,source:'pending'}});
  });
  app.post('/api/admin/company/complete',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
@@ -85,13 +52,13 @@ export function installRawiCompany(app,{centralDb,env,query}){
    'changed AS( UPDATE erp_workspaces w SET name=$3,legal_name=$3,address=$4,vat_number=$6,phone=$7 '+
    'FROM allowed a WHERE w.id=a.id RETURNING w.id ), saved AS( '+
    'UPDATE rawi_company_profiles p SET logo_data=$5,name=$3,address=$4,commercial_registration=$8, '+
-   'tax_number=$6,phone=$7,mobile=$9,website=$10,emails=$11,activity=$12,description=$13,completed_at=now(), '+
+   'tax_number=$6,phone=$7,mobile=$9,website=$10,emails=$11,activity=$12,description='',completed_at=now(), '+
    'setup_plan=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_plan ELSE $14::jsonb END, '+
    'setup_source=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_source ELSE \'pending\' END, '+
    'setup_inputs=jsonb_build_object(\'name\',$3::text,\'activity\',$12::text),setup_updated_at=now() '+
    'FROM changed x WHERE p.workspace_id=x.id RETURNING p.workspace_id ) SELECT workspace_id FROM saved';
   const rows=await query(sql,stmt,[d.workspace_id,user,d.name,d.address,d.logo_data,d.tax_number,
-   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,d.description,JSON.stringify({})]);
+   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,'',JSON.stringify({})]);
   return rows.length?c.json({ok:true,workspace_id:rows[0].workspace_id}):fail(c,404,'Pending company profile was not found');
  });
 }
