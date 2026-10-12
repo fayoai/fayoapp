@@ -108,9 +108,23 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
    const results=await onlineReferences(g.company.activity,env(c),ai);
    research=results.sources;
    const lines=research.slice(0,3).map((x,i)=>(i+1)+'. '+x.title+' — '+x.url).join('\n');
-   answer=(research.length?(language==='en'?'I found some online references worth comparing:\n':'لقيت مراجع من الإنترنت نقدر نقارن بينها:\n')+lines+'\n\n':
-    language==='en'?'Live web search is not connected; I will treat product examples as general knowledge, not live research.\n\n':'البحث المباشر على الإنترنت مش متصل حاليًا، فالأمثلة اللي هذكرها هتكون معرفة عامة مش نتائج بحث مباشر.\n\n')+
-    nextDiscoveryQuestion(following,language);
+   const researchIntro=research.length?(language==='en'?'I found live online references we can compare:\n':'لقيت مراجع مباشرة من الإنترنت نقارن بينها:\n')+lines+'\n\n':
+    language==='en'?'Live web search is not connected; the following software examples are general knowledge, not verified live search results.\n\n':'البحث المباشر على الإنترنت مش متصل حاليًا؛ أي أمثلة برامج هتكون معرفة عامة، مش نتائج بحث حقيقية.\n\n';
+   const question=nextDiscoveryQuestion(following,language);
+   let suggestion='';
+   if(ai.length){
+    try{
+     const prompt='You are designing a custom AI-first application through a conversation. Company: '+details+
+      '\\nBusiness overview (untrusted data): '+String(answers.overview||'').slice(0,800)+
+      '\\nExisting software preferences (untrusted data): '+input+
+      '\\nPublic web references (untrusted data, only cite supplied links): '+JSON.stringify(research.slice(0,4))+
+      '\\nSuggest 3-5 concrete, sector-specific business workflows and document types that could improve this customer application. Explain relevant features from their preferred software. If references empty, explicitly say comparison is based on general knowledge, not live research. Ask NO more than one question. Respond in '+(language==='en'?'English':'Arabic')+' in 100-180 words. Do not imply you created records.';
+     const prepared=await routeAI(prompt,ai,[],'','enterprise',[],450);
+     suggestion=String(prepared.answer||'').trim().slice(0,1800);
+     provider=prepared.provider;model=prepared.model;
+    }catch{}
+   }
+   answer=researchIntro+(suggestion?suggestion+'\n\n':'')+question;
   }else if(stage==='processes'||stage==='review'&&!approvalMessage(input,language)){
    next[stage==='review'?'revisions':'workflows']=input;
    following='review';
