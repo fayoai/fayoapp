@@ -163,7 +163,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   if(!company.length||(finance?.country&&finance.country!=='SA')||finance?.zatca_mode==='none')return fail(c,409,'Saudi electronic invoicing QR is not enabled');
   if(!company[0].tax_number)return fail(c,409,'Company VAT number is required');
   const invoice=await query(g.sql,"SELECT invoice_no,issued_on,created_at,total_halalas,vat_halalas,status FROM erp_invoices WHERE workspace_id=$1 AND id=$2",[g.workspace,c.req.param('id')]);
-  if(!invoice.length||invoice[0].status!=='issued')return fail(c,409,'Only issued invoices have a QR payload');
+  if(!invoice.length||!['issued','paid'].includes(invoice[0].status))return fail(c,409,'Only issued invoices have a QR payload');
   const inv=invoice[0],total=Number(inv.total_halalas),vat=Number(inv.vat_halalas);
   if(!moneySafe(total)||!moneySafe(vat))return fail(c,409,'Invoice totals cannot be verified');
   const payload=zatcaTlv({seller:company[0].name,vatNumber:company[0].tax_number,
