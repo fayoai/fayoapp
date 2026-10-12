@@ -52,7 +52,7 @@ export default function MifSmartShell(){
  const device=useMemo(platform,[]),authed=!!session;
  // Adapt the application height to Android/iOS visual viewport when the keyboard appears.
  useEffect(()=>{const viewport=window.visualViewport;const resize=()=>{const height=Math.round(viewport?.height||window.innerHeight);if(height>0)viewportRef.current?.style.setProperty('--rawi-screen-height',height+'px')};resize();viewport?.addEventListener('resize',resize);window.addEventListener('resize',resize);window.addEventListener('orientationchange',resize);return()=>{viewport?.removeEventListener('resize',resize);window.removeEventListener('resize',resize);window.removeEventListener('orientationchange',resize)}},[]);
- const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);if(r.company_setup_required){setSignupStep('company');setTab('company')}return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
+ const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);if(r.company_setup_required){setSignupStep('company');setTab('company')}else{setTab(current=>current==='new'?'operations':current)}return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
  useEffect(()=>{if(signupStep!=='company'||!authed)return;
   api('/api/admin/company/setup').then(r=>{if(r.data)setCompany(old=>({...old,...r.data,workspace_id:r.data.workspace_id,name:r.data.name||''}))}).catch(()=>setCompanyError(L('تعذر تحميل بيانات الشركة','Could not load company details')))
  },[signupStep,authed]);
@@ -62,7 +62,7 @@ export default function MifSmartShell(){
   if(!authed||!workspaceId||session?.company_setup_required){setDiscovery(null);return}
   let active=true;
   api('/api/admin/company/discovery/'+encodeURIComponent(workspaceId)+'?language='+lang)
-   .then(r=>{if(active)setDiscovery(r.completed?null:{...r,workspace_id:workspaceId})})
+   .then(r=>{if(active){setDiscovery(r.completed?null:{...r,workspace_id:workspaceId});if(!r.completed)setTab(current=>current==='operations'?'new':current)}})
    .catch(()=>{if(active)setDiscovery(null)});
   return()=>{active=false};
  },[authed,workspaceId,session?.company_setup_required,lang]);
