@@ -39,7 +39,7 @@ async function platformCredentials(sql,settings,query){
   return {OPENAI_API_KEY:await unsealProviderSecret(rows[0].encrypted_value,settings),OPENAI_MODEL:rows[0]?.metadata?.model||'gpt-4.1-mini'};
  }catch{return {}}
 }
-export function installMifChat(app,{db,env,query,centralDb=db}){
+export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null}){
  async function operator(c){
   const settings=env(c),email=settings.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
   if(!email)return null;
@@ -171,6 +171,10 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
   if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
   let result;try{
+   if(rawiDiscovery&&env(c).MIF_APP_SURFACE==='enterprise'&&!v.data.documents?.length){
+    result=await rawiDiscovery.respond({c,workspace,user,message:v.data.question,language:c.req.header('accept-language')?.toLowerCase().startsWith('en')?'en':'ar'});
+   }
+   if(!result){
    // Company-scoped ERP aggregates: RAWI never claims unverified account actions.
     const stats=await query(sql,`SELECT w.name,
    (SELECT count(*)::int FROM erp_contacts WHERE workspace_id=w.id) contacts,
@@ -197,6 +201,7 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
     }))
    }:null;
    result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3700),'enterprise',v.data.documents||[]);
+   }
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
@@ -208,6 +213,6 @@ export function installMifChat(app,{db,env,query,centralDb=db}){
    id=created[0].id;
   }
   await query(sql,"WITH first AS(INSERT INTO mif_chat_messages(thread_id,role,content) VALUES($1,'user',$2) RETURNING id), second AS(INSERT INTO mif_chat_messages(thread_id,role,content) SELECT $1,'assistant',$3 FROM first RETURNING id) UPDATE mif_chat_threads SET updated_at=now() WHERE id=$1 AND owner_id=$4",[id,v.data.question,answer,user]);
-  return c.json({ok:true,thread_id:id,answer});
+  return c.json({ok:true,thread_id:id,answer,...(result.discovery_stage?{discovery_stage:result.discovery_stage,design_ready:!!result.design_ready}:{})});
  });
 }
