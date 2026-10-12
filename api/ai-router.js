@@ -76,7 +76,23 @@ async function requestProvider(provider,messages,instructions,maxTokens=800){
  const usage=code==='openai'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:code==='anthropic'?{input:result.usage?.input_tokens,output:result.usage?.output_tokens}:(code==='groq'||code==='openrouter')?{input:result.usage?.prompt_tokens,output:result.usage?.completion_tokens}:{input:result.usageMetadata?.promptTokenCount,output:result.usageMetadata?.candidatesTokenCount};
  return {answer:answer.slice(0,12000),provider:code,model,input_tokens:Number(usage.input)||0,output_tokens:Number(usage.output)||0};
 }
+export function rawiVerifiedIdentityAnswer(question,mode='enterprise'){
+ const input=String(question||'').trim().replace(/[؟?!.،,]+$/,'').trim();
+ if(!input||input.length>145)return null;
+ const maker=/(?:مين|من)\s+(?:(?:اللي|الي)\s+)?(?:عملك|صنعك|طورك|برمجك|صممك|أنشأك|يديرك|بيديرك|مسؤول\s+عنك|صاحبك)|(?:من|مين)\s+(?:هو\s+)?(?:المطور|المدير)|who\s+(?:created|made|developed|built|owns|operates|manages)\s+(?:you|rawi)|who\s+is\s+(?:behind|running)\s+(?:you|rawi)/i;
+ const naming=/(?:اسمك\s*(?:ايه|إيه)?|إنت\s+مين|انت\s+مين|مين\s+انت|مين\s+إنت|عرفني\s+(?:بنفسك|عليك)|who\s+are\s+you|what(?:'s|\s+is)\s+your\s+name)/i;
+ if(!maker.test(input)&&!naming.test(input))return null;
+ const english=/[A-Za-z]{3,}/.test(input)&&!/[\u0600-\u06ff]/.test(input);
+ if(mode==='mif-public')return english
+  ?'I am the MIF Smart assistant. MIF Smart is the company that develops and operates Rawi ERP (نظام راوي).'
+  :'أنا مساعد ميف سمارت (MIF Smart). شركة ميف سمارت هي المطوّرة والمشغّلة لنظام راوي (Rawi ERP).';
+ return english
+  ?'I am Rawi ERP, an AI business assistant developed and operated by MIF Smart.'
+  :'أنا نظام راوي (Rawi ERP)، مساعد أعمال ذكي طوّرته وتديره شركة ميف سمارت (MIF Smart).';
+}
 export async function routeAI(question,providers,history=[],context='',mode='enterprise',documents=[],maxTokens=800){
+ const identity=documents.length?null:rawiVerifiedIdentityAnswer(question,mode);
+ if(identity)return {answer:identity,provider:'mif-smart',model:'verified-product-identity',input_tokens:0,output_tokens:0};
  if(!providers.length)throw Object.assign(new Error('RAWI AI service is not configured by MIF Smart'),{status:503});
  if(documents.length&&!providers.some(p=>p.code==='openai'))throw Object.assign(new Error('Document analysis requires an enabled OpenAI provider'),{status:503});
  const current=documents.length?[{type:'input_text',text:question},...documents.map(file=>({type:'input_file',filename:file.name,file_data:file.data}))]:question;
