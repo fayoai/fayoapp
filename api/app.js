@@ -311,7 +311,7 @@ installRawiDynamicWorkspace(app,{db,centralDb,env,query});
 installRawiStandardRepositories(app,{db,centralDb,env,query});
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
-installErpCore(app,{db,env,query});
+installErpCore(app,{db,centralDb,env,query});
 installMifChat(app,{db,env,query,centralDb,rawiDiscovery});
 installPlatformSaas(app,{db,env,query});
 installRawiReadiness(app,{db,env,query});
