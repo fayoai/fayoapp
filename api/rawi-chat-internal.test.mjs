@@ -30,7 +30,7 @@ test('Authenticated Enterprise chat works with existing trial subscription and f
  installMifChat(app,{db:()=>({}),centralDb:()=>({}),env:()=>env,query});
  const response=await app.request('http://localhost/api/admin/chat/send',{method:'POST',
   headers:{'Content-Type':'application/json','Accept-Language':'ar'},
-  body:JSON.stringify({question:'انت مين ومين عملك؟',workspace_id:workspace,thread_id:null})});
+  body:JSON.stringify({question:'إزاي نقدر ندير تنفيذ مشروع جديد وخطوات استلامه؟',workspace_id:workspace,thread_id:null})});
  const body=await response.json();
  assert.equal(response.status,200,body.error||'Private chat unexpectedly failed');assert.equal(body.ok,true);
  assert.match(body.answer,/راوي/);assert.match(body.answer,/MIF Smart/);
@@ -60,12 +60,15 @@ test('Private and public identities name the actual RAWI developer/operator and 
  let instructions='';
  const binding={run:async(_,payload)=>{instructions=payload.messages[0].content;return {response:'أنا راوي، شركة ميف سمارت طورتني وتديرني.'}}};
  const p=[{code:'workers_ai',model:'@cf/meta/llama-3.1-8b-instruct-fast',binding}];
- await routeAI('مين عملك؟',p,[],'','enterprise');
- assert.match(instructions,/MIF Smart/);
+ const own=await routeAI('مين عملك؟',p,[],'','enterprise');
+ assert.match(own.answer,/MIF Smart/);
+ assert.equal(own.provider,'mif-smart');
  assert.match(instructions,/Do not invent an individual founder/);
  assert.match(instructions,/نظام راوي/);
  assert.match(instructions,/Rawi ERP/);
- await routeAI('مين بيدير راوي؟',p,[],'','enterprise-public');
+ const operator=await routeAI('مين بيدير راوي؟',p,[],'','enterprise-public');
+ assert.match(operator.answer,/MIF Smart/);
+ await routeAI('إزاي أرتب مشروعاتي؟',p,[],'','enterprise');
  assert.match(instructions,/MIF Smart/);
 });
 test('Private chat history keeps tenant routing on opening and deleting',()=>{
