@@ -82,3 +82,22 @@ test('Document prompts refuse providers that would drop their contents',async()=
  const data='data:application/pdf;base64,'+Buffer.from('PDF').toString('base64');
  await assert.rejects(routeAI('Analyze',[{code:'groq',model:'test',key:'private'}],[],'','enterprise',[{name:'invoice.pdf',mime_type:'application/pdf',data}]),/requires an enabled OpenAI provider/);
 });
+
+test('Workers AI runs the current available free model with no OpenAI or operator key',async()=>{
+ let call=null;
+ const ai={run:async(model,payload)=>{call={model,payload};return {choices:[{message:{content:'مفهوم، كمل لي طبيعة عمل الشركة'}}]}}};
+ const providers=await getAIProviders({}, {AI:ai},async()=>[]);
+ assert.equal(providers.length,1);
+ assert.equal(providers[0].code,'workers_ai');
+ assert.equal(providers[0].model,'@cf/zai-org/glm-4.7-flash');
+ const output=await routeAI('عايز برنامج مخصص',[...providers],[{role:'user',content:'أنا عندي مصنع'},{role:'assistant',content:'ما هي مراحل التصنيع؟'}],'HIDDEN_PRIVATE_ERP_DATA','enterprise');
+ assert.match(output.answer,/طبيعة عمل/);
+ assert.equal(call.payload.max_completion_tokens,800);
+ assert.equal(call.payload.messages.length,4);
+ assert.ok(!JSON.stringify(call).includes('HIDDEN_PRIVATE_ERP_DATA'));
+});
+test('Operator-disabled AI provider is not silently reenabled',async()=>{
+ const ai={run:async()=>({response:'Reply'})};
+ const providers=await getAIProviders({}, {AI:ai},async()=>[{code:'workers_ai',enabled:false,model:'@cf/zai-org/glm-4.7-flash',priority:1}]);
+ assert.equal(providers.length,0);
+});
