@@ -12,6 +12,8 @@ export default function RawiStandardRepositories(){
  const [loading,setLoading]=useState(true),[recordsLoading,setRecordsLoading]=useState(false),[saving,setSaving]=useState(false),[search,setSearch]=useState('');
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
+ const [lookups,setLookups]=useState({}),[units,setUnits]=useState([]),[productEditor,setProductEditor]=useState(null);
+ const [productUnitDraft,setProductUnitDraft]=useState({unit_id:'',factor:1,barcode:'',sale_price:'',purchase_price:''});
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
  const activeGroup=groups.find(g=>g.key===groupKey)||groups[0];
@@ -59,8 +61,25 @@ export default function RawiStandardRepositories(){
   }catch(e){setError(e.message)}
  };
 
- const selectGroup=key=>{setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
- const startDraft=row=>{setError('');setNotice('');setDraft(row?{id:row.id,stage:row.stage||'',values:{...row.values_json}}:{stage:selected?.stages?.[0]||'',values:{}})};
+ const refreshLookups=async()=>{if(!prefix)return;const [ref,measure]=await Promise.all([api(prefix+'/standard/lookups'),api(prefix+'/system/units')]);setLookups(ref.data||{});setUnits(measure.data||[])};
+ useEffect(()=>{if(!workspace)return;let active=true;Promise.all([api(prefix+'/standard/lookups'),api(prefix+'/system/units')]).then(([ref,measure])=>{if(active){setLookups(ref.data||{});setUnits(measure.data||[])}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[workspace]);
+ const openProductUnits=async row=>{
+  setError('');setProductEditor(null);
+  try{const r=await api(prefix+'/system/items/'+encodeURIComponent(row.id)+'/units');
+   setProductEditor({product:r.product,links:r.data||[]});
+   setProductUnitDraft({unit_id:units.find(u=>u.active&&u.code!==r.product.unit)?.id||'',factor:1,barcode:'',sale_price:'',purchase_price:''});
+  }catch(e){setError(e.message)}
+ };
+ const saveProductUnit=async e=>{e.preventDefault();if(!productEditor||saving)return;setSaving(true);setError('');
+  try{const d=productUnitDraft;await api(prefix+'/system/items/'+encodeURIComponent(productEditor.product.id)+'/units',{method:'PUT',body:JSON.stringify({
+   unit_id:d.unit_id,factor:Number(d.factor),barcode:d.barcode,sale_price:d.sale_price===''?null:Number(d.sale_price),
+   purchase_price:d.purchase_price===''?null:Number(d.purchase_price)
+  })});const r=await api(prefix+'/system/items/'+encodeURIComponent(productEditor.product.id)+'/units');
+   setProductEditor({product:r.product,links:r.data||[]});setNotice(L('تم حفظ وحدات الصنف ومعامل التحويل','Saved product units and conversions'));
+  }catch(e){setError(e.message)}finally{setSaving(false)}
+ };
+ const selectGroup=key=>{setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
+ const startDraft=row=>{setError('');setNotice('');setDraft(row?{id:row.id,stage:row.stage||'',values:{...row.values_json}}:{stage:selected?.stages?.[0]||'',values:selected?.kind==='products'?{field_3:units.find(u=>u.code==='unit')?.code||'unit'}:{}})};
  const fieldChange=(key,value)=>setDraft(old=>({...old,values:{...old.values,[key]:value}}));
  const save=async event=>{
   event.preventDefault();if(!selected||!draft||saving)return;
@@ -75,7 +94,7 @@ export default function RawiStandardRepositories(){
    const target=prefix+'/standard/'+selected.key+'/records'+(draft.id?'/'+encodeURIComponent(draft.id):'');
    const response=await api(target,{method:draft.id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage||''})});
    if(!response?.data?.id)throw Error(L('لم يؤكد النظام حفظ البيانات','The server did not confirm saving'));
-   setDraft(null);await loadRecords();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
+   setDraft(null);await loadRecords();await refreshLookups();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const saveSequence=async e=>{e.preventDefault();setSaving(true);setError('');
@@ -87,6 +106,7 @@ export default function RawiStandardRepositories(){
  const show=(field,value)=>{
   if(value===undefined||value===null||value==='')return '—';
   if(field.type==='number')return Number(value).toLocaleString(lang==='ar'?'ar-SA':'en');
+  if(field.type==='relation')return lookups[field.target]?.find(x=>x.id===value)?.name||String(value);
   return String(value);
  };
  const visible=useMemo(()=>rows.filter(x=>JSON.stringify(x.values_json||{}).toLocaleLowerCase().includes(search.toLocaleLowerCase())),[rows,search]);
@@ -103,7 +123,7 @@ export default function RawiStandardRepositories(){
    </nav>
    <div className="rawi-std-layout">
     <nav className="rawi-std-side" aria-label={L('المستودعات','Repositories')}>
-     {(activeGroup?.repositories||[]).map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>setRepoKey(r.key)}>{r.name}</button>)}
+     {(activeGroup?.repositories||[]).map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>{setProductEditor(null);setRepoKey(r.key)}}>{r.name}</button>)}
     </nav>
     <div className="rawi-std-main">
      {selected&&<>
