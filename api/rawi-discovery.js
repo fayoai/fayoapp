@@ -105,7 +105,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
   const answers=current.answers||{},next={...answers},input=String(message||'').trim().slice(0,2500);
   // An owner's question about Rawi, MIF Smart or small talk is a normal AI chat turn,
   // never a forced answer to the business-design questionnaire.
-  const aside=/^(?:[\\s؟?!.,]*)?(?:انت مين|إنت مين|مين انت|مين إنت|اسمك ايه|اسمك إيه|اسمك|مين عملك|مين طورك|مين صنعك|مين بيديرك|مين مسؤول عنك|مين صاحبك|تابع لمين|who are you|what is your name|who created you|who made you|who runs you|who manages you|hello|hi|مرحبا|أهلا|اهلا|السلام عليكم|ازيك|إزيك)/i.test(input);
+  const aside=/^(?:[\\s؟?!.,]*)?(?:انت مين|إنت مين|مين انت|مين إنت|اسمك ايه|اسمك إيه|اسمك|مين عملك|مين اللي عملك|مين الي عملك|من عملك|من طورك|من صممك|مين طورك|مين صنعك|مين برمجك|من صنعك|مين بيديرك|من يديرك|مين مسؤول عنك|مين صاحبك|تابع لمين|who are you|what is your name|who created you|who made you|who runs you|who manages you|hello|hi|مرحبا|أهلا|اهلا|السلام عليكم|ازيك|إزيك)/i.test(input);
   if(aside)return null;
   if(input.length<3)return {answer:language==='en'?'Tell me a little more so I can design accurately.':'احكي لي تفاصيل أكتر شوية عشان أقدر أصمم لك حاجة تناسب شغلك.',provider:'discovery',model:'guided',input_tokens:0,output_tokens:0,discovery_stage:stage};
   const ai=await getAIProviders(g.sql,env(c),query).catch(()=>[]);
