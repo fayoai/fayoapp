@@ -75,3 +75,20 @@
 .rawi-std-record-actions button{border:1px solid #cfdcf4;border-radius:8px;padding:8px 10px;background:#f7faff;color:#2865b3;font-size:12px}
 .rawi-std-document-line{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:end}
 @media(max-width:720px){.rawi-std-uom-form{grid-template-columns:minmax(0,1fr)}.rawi-std-document-line{grid-template-columns:minmax(0,1fr)}.rawi-std-uom-form :is(input,select),.rawi-std-document-line :is(input,select){min-height:44px;font-size:16px}}
+
+
+/* Operational draft inbox: the first screen for authenticated RAWI ERP members. */
+.rawi-std-drafts{display:flex;flex-direction:column;gap:11px;padding:15px;background:#fff;border:1px solid #dce7f7;border-radius:14px;min-width:0}
+.rawi-std-drafts-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.rawi-std-drafts-head h2{font-size:16px;line-height:1.5;margin:0}
+.rawi-std-drafts-head>span{min-width:26px;text-align:center;border-radius:7px;background:#f0f5fd;padding:3px 8px;font-size:12px;font-weight:700}
+.rawi-std-drafts-head>button{margin-inline-start:auto;display:flex;align-items:center;gap:6px;border:1px solid #cddcf0;border-radius:9px;background:#fff;color:#355e94;padding:7px 11px;font-size:12px}
+.rawi-std-drafts-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;max-height:330px;overflow:auto}
+.rawi-std-draft-item{min-width:0;display:flex;align-items:stretch;border:1px solid #e0e9f5;border-radius:11px;background:#f8fbff;overflow:hidden}
+.rawi-std-draft-open{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;text-align:start;background:transparent;border:0;min-width:0;flex:1;padding:12px;color:inherit}
+.rawi-std-draft-open strong{font-size:13px}.rawi-std-draft-open span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;color:#526e91}
+.rawi-std-draft-open small{color:#657f9d;font-size:11px}
+.rawi-std-source-link{margin:auto 9px;align-self:center;border:1px solid #cddcf0;border-radius:8px;background:#fff;padding:7px 9px;font-size:11px;color:#2a60aa;flex-shrink:0}
+.rawi-std-drafts-empty{margin:0;padding:12px 4px;color:#627d9e;font-size:13px}
+@media(max-width:920px){.rawi-std-drafts-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.rawi-std-drafts{padding:11px}.rawi-std-drafts-list{grid-template-columns:minmax(0,1fr);max-height:250px}.rawi-std-drafts-head h2{font-size:15px}.rawi-std-draft-open{min-height:64px}}
