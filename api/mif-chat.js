@@ -4,6 +4,7 @@ import {designChangeRequested} from './rawi-revision.js';
 import {freePublicSearch,wantsPublicSearch,sourceContext,sourceLinks} from './rawi-free-search.js';
 import {z} from 'zod';
 import {documentsSchema} from './rawi-documents.js';
+import {createRawiCommandDraft} from './rawi-chat-drafts.js';
 const uuid=z.string().uuid();
 const messageHistory=z.array(z.object({role:z.enum(['user','assistant']),content:z.string().max(2500)})).max(12).optional();
 const input=z.object({question:z.string().trim().min(1).max(2500),documents:documentsSchema.optional(),history:messageHistory});
@@ -247,7 +248,7 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    if(!discoveryPending)await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
   }
-  const answer=result.answer;
+  let answer=result.answer;
   // Metrics must never discard an AI response if logging temporarily fails.
   try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[claim[0].workspace_id,user,result.provider,result.model,result.input_tokens,result.output_tokens])}
   catch(e){console.error('RAWI private AI usage audit failed',e?.message)}
@@ -255,7 +256,20 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title,workspace_id) VALUES($1,$2,$3) RETURNING id',[user,v.data.question.slice(0,95),workspace]);
    id=created[0].id;
   }
+  // Natural-language commands create validated, unposted drafts only.
+  // Never interpret ordinary advice, onboarding or documents as permission to mutate the ERP.
+  let draftAction=null;
+  if(env(c).MIF_APP_SURFACE==='enterprise'&&!discoveryPending&&!v.data.documents?.length){
+   try{
+    draftAction=await createRawiCommandDraft({app,c,sql,query,workspace,user,threadId:id,question:v.data.question,providers:await getAIProviders(centralDb(c),env(c),query)});
+    if(draftAction)answer=draftAction.status==='saved'?draftAction.message:answer+'\n\n'+draftAction.message;
+   }catch(e){
+    console.error('RAWI requested draft operation failed',String(e?.message||e).slice(0,160));
+    draftAction={status:'not_saved',message:'تعذر تنفيذ الأمر وحفظ المسودة؛ لم يتم اعتماد أو ترحيل أي مستند.'};
+    answer+='\n\n'+draftAction.message;
+   }
+  }
   await query(sql,"WITH first AS(INSERT INTO mif_chat_messages(thread_id,role,content) VALUES($1,'user',$2) RETURNING id), second AS(INSERT INTO mif_chat_messages(thread_id,role,content) SELECT $1,'assistant',$3 FROM first RETURNING id) UPDATE mif_chat_threads SET updated_at=now() WHERE id=$1 AND owner_id=$4",[id,v.data.question,answer,user]);
-  return c.json({ok:true,thread_id:id,answer,provider:result.provider,model:result.model,sources:result.sources||[],...(result.discovery_stage?{discovery_stage:result.discovery_stage,design_ready:!!result.design_ready}:{})});
+  return c.json({ok:true,thread_id:id,answer,provider:result.provider,model:result.model,sources:result.sources||[],...(draftAction?{draft_action:draftAction}:{}),...(result.discovery_stage?{discovery_stage:result.discovery_stage,design_ready:!!result.design_ready}:{})});
  });
 }
