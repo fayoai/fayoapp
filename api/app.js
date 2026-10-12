@@ -122,8 +122,8 @@ app.post('/api/admin/verify-email',async c=>{
   INSERT INTO erp_memberships(workspace_id,admin_id,role)
   SELECT id,owner_id,'owner' FROM workspace RETURNING workspace_id
  ), profile AS(
-  INSERT INTO rawi_account_profiles(admin_id,account_type)
-  SELECT id,$5 FROM account RETURNING admin_id
+  INSERT INTO rawi_account_profiles(admin_id,account_type,display_name)
+  SELECT id,$5,$4 FROM account RETURNING admin_id
  ), subscription AS(
   INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,period_starts_at,period_ends_at)
   SELECT id,$6,'trial',now(),now()+($7::int*interval '1 day')
@@ -243,6 +243,65 @@ app.get('/api/admin/my-subscription',async c=>{
  LEFT JOIN mif_subscription_plans p ON p.id=s.plan_id
  WHERE m.admin_id=$1 ORDER BY w.created_at DESC`,[c.get('adminId')]);
  return c.json({ok:true,data});
+});
+app.get('/api/admin/account/profile',async c=>{
+ const sql=centralDb(c),owner=c.get('adminId');
+ if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
+ const accounts=await query(sql,`SELECT a.email,p.display_name,a.created_at FROM admins a
+ LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[owner]);
+ if(!accounts.length)return fail(c,404,'Account not found');
+ const companies=await query(sql,`SELECT p.workspace_id,p.logo_data,p.name,p.address,p.commercial_registration,
+ p.tax_number,p.phone,p.mobile,p.website,p.emails,p.activity,p.completed_at,m.role
+ FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id
+ WHERE m.admin_id=$1 ORDER BY p.completed_at DESC NULLS LAST`,[owner]);
+ const subscriptions=await query(sql,`SELECT w.id workspace_id,s.status,s.messages_used,s.period_starts_at,s.period_ends_at,
+ pl.code plan_code,pl.title plan_name,pl.message_limit,pl.cycle
+ FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id
+ LEFT JOIN mif_tenant_subscriptions s ON s.workspace_id=w.id
+ LEFT JOIN mif_subscription_plans pl ON pl.id=s.plan_id WHERE m.admin_id=$1 ORDER BY w.created_at DESC`,[owner]);
+ return c.json({ok:true,account:{email:accounts[0].email,username:accounts[0].email,
+ display_name:accounts[0].display_name||'',created_at:accounts[0].created_at,
+ password_set:true},companies,subscriptions});
+});
+app.post('/api/admin/account/password',async c=>{
+ const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
+ const validated=z.object({current_password:z.string().min(1).max(200),new_password:z.string().min(12).max(200)}).safeParse(await parse(c));
+ if(!validated.success)return fail(c,400,'Choose a new password with at least 12 characters');
+ const row=(await query(sql,'SELECT password_hash,salt FROM admins WHERE id=$1',[c.get('adminId')]))[0];
+ if(!row||!await equal(await hashed(validated.data.current_password,row.salt),row.password_hash))return fail(c,403,'Current password is incorrect');
+ if(validated.data.current_password===validated.data.new_password)return fail(c,400,'New password must be different');
+ const salt=crypto.randomUUID(),password_hash=await hashed(validated.data.new_password,salt);
+ await query(sql,'UPDATE admins SET password_hash=$2,salt=$3 WHERE id=$1',[c.get('adminId'),password_hash,salt]);
+ return c.json({ok:true});
+});
+app.patch('/api/admin/account/profile',async c=>{
+ const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
+ const v=z.object({display_name:z.string().trim().min(2).max(150)}).safeParse(await parse(c));
+ if(!v.success)return fail(c,400,'Invalid display name');
+ const rows=await query(sql,'UPDATE rawi_account_profiles SET display_name=$2 WHERE admin_id=$1 RETURNING display_name',[c.get('adminId'),v.data.display_name]);
+ return rows.length?c.json({ok:true,data:rows[0]}):fail(c,404,'Account not found');
+});
+app.patch('/api/admin/account/company/:id',async c=>{
+ const sql=centralDb(c),id=c.req.param('id');
+ if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
+ if(!z.string().uuid().safeParse(id).success)return fail(c,400,'Invalid company');
+ const allowed=z.object({name:z.string().trim().min(2).max(150),address:z.string().trim().min(5).max(450),
+ commercial_registration:z.string().trim().max(50),tax_number:z.string().trim().max(50),
+ phone:z.string().trim().max(35),mobile:z.string().trim().max(35),
+ website:z.union([z.literal(''),z.url().max(250)]),emails:z.string().trim().max(450),
+ logo_data:z.string().max(250000).refine(v=>!v||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v))
+ }).refine(x=>!!x.phone||!!x.mobile).safeParse(await parse(c));
+ if(!allowed.success)return fail(c,400,'Invalid company details');
+ const v=allowed.data;
+ const rows=await query(sql,`WITH permitted AS(SELECT w.id FROM erp_workspaces w
+ JOIN erp_memberships m ON m.workspace_id=w.id WHERE w.id=$1 AND m.admin_id=$2 AND m.role='owner'),
+ company AS(UPDATE rawi_company_profiles p SET name=$3,address=$4,commercial_registration=$5,tax_number=$6,
+ phone=$7,mobile=$8,website=$9,emails=$10,logo_data=$11
+ FROM permitted x WHERE p.workspace_id=x.id RETURNING p.workspace_id)
+ UPDATE erp_workspaces w SET name=$3,legal_name=$3,address=$4,vat_number=$6,phone=coalesce(nullif($7,''),$8)
+ FROM company c WHERE w.id=c.workspace_id RETURNING w.id`,
+ [id,c.get('adminId'),v.name,v.address,v.commercial_registration,v.tax_number,v.phone,v.mobile,v.website,v.emails,v.logo_data]);
+ return rows.length?c.json({ok:true}):fail(c,403,'Only the company owner may edit its profile');
 });
 app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Database unavailable');const rows=await query(sql,`SELECT a.id,a.email,COALESCE(p.account_type,'enterprise') account_type FROM admins a LEFT JOIN rawi_account_profiles p ON p.admin_id=a.id WHERE a.id=$1`,[c.get('adminId')]);const pending=await query(centralDb(c),`SELECT w.id workspace_id FROM erp_workspaces w JOIN rawi_company_profiles p ON p.workspace_id=w.id WHERE w.owner_id=$1 AND p.completed_at IS NULL LIMIT 1`,[c.get('adminId')]);return rows.length?c.json({ok:true,id:rows[0].id,email:rows[0].email,account_type:rows[0].account_type,company_setup_required:pending.length>0,setup_workspace_id:pending[0]?.workspace_id||null,platform_owner:!!env(c).PLATFORM_OWNER_EMAIL&&rows[0].email.toLowerCase()===env(c).PLATFORM_OWNER_EMAIL.trim().toLowerCase()}):fail(c,401,'Account not found')});
 installRawiCompany(app,{centralDb,env,query});
