@@ -54,3 +54,53 @@ test('Scheduler uses one atomic due-task claim',async()=>{
  assert.match(statement,/FOR UPDATE SKIP LOCKED/);
  assert.match(statement,/erp_task_events/);
 });
+
+const invoiceId='44444444-4444-4444-8444-444444444444';
+const receivableId='55555555-5555-4555-8555-555555555555',revenueId='66666666-6666-4666-8666-666666666666',vatId='77777777-7777-4777-8777-777777777777';
+const issueUrl='/api/admin/erp/w/'+ws+'/invoices/'+invoiceId+'/issue';
+const issueAccounts={receivable_account_id:receivableId,revenue_account_id:revenueId,vat_account_id:vatId};
+test('Issuing an invoice changes draft status and posts balanced receivables, revenue and VAT in one SQL statement',async()=>{
+ const {app,calls}=api((sql)=>{
+  if(sql.includes('SELECT role FROM erp_memberships'))return [{role:'owner'}];
+  if(sql.includes('SELECT status,subtotal_halalas'))return [{status:'draft',subtotal_halalas:10000,vat_halalas:1500,total_halalas:11500}];
+  if(sql.includes('SELECT id,type FROM erp_accounts'))return [{id:receivableId,type:'asset'},{id:revenueId,type:'income'},{id:vatId,type:'liability'}];
+  if(sql.includes('WITH issued AS('))return [{id:invoiceId,invoice_no:'MIF-1',journal_entry_id:invoiceId}];
+  return [];
+ });
+ const response=await req(app,issueUrl,issueAccounts);
+ assert.equal(response.status,200,await response.clone().text());
+ assert.equal((await response.json()).posted,true);
+ const commit=calls.find(x=>x.sql.includes('WITH issued AS('));
+ assert.ok(commit);
+ assert.match(commit.sql,/UPDATE erp_invoices SET status='issued'/);
+ assert.match(commit.sql,/INSERT INTO erp_journal_entries/);
+ assert.match(commit.sql,/jsonb_build_object\('account_id',\$5::uuid/);
+ assert.deepEqual(commit.args,[ws,invoiceId,receivableId,revenueId,vatId]);
+});
+test('Sales invoice cannot be issued without valid company tax accounts',async()=>{
+ const {app,calls}=api(sql=>{
+  if(sql.includes('SELECT role FROM erp_memberships'))return [{role:'owner'}];
+  if(sql.includes('SELECT status,subtotal_halalas'))return [{status:'draft',subtotal_halalas:10000,vat_halalas:1500,total_halalas:11500}];
+  if(sql.includes('SELECT id,type FROM erp_accounts'))return [{id:receivableId,type:'asset'},{id:revenueId,type:'expense'},{id:vatId,type:'liability'}];
+  return [];
+ });
+ const result=await req(app,issueUrl,issueAccounts);
+ assert.equal(result.status,400);
+ assert.equal(calls.some(x=>x.sql.includes('WITH issued AS(')),false);
+});
+test('Direct issued status is refused unless the dedicated GL-safe route is used',async()=>{
+ const {app,calls}=api(sql=>sql.includes('SELECT role FROM erp_memberships')?[{role:'owner'}]:[]);
+ const result=await req(app,'/api/admin/erp/w/'+ws+'/invoices/'+invoiceId+'/status',{status:'issued'},'PATCH');
+ assert.equal(result.status,409);
+ assert.equal(calls.some(x=>x.sql.includes('UPDATE erp_invoices')),false);
+});
+test('Invoice paid transition verifies full posted receipts instead of trusting a click',async()=>{
+ const {app,calls}=api(sql=>{
+  if(sql.includes('SELECT role FROM erp_memberships'))return [{role:'owner'}];
+  if(sql.includes('UPDATE erp_invoices i SET status'))return [];
+  return [];
+ });
+ const response=await req(app,'/api/admin/erp/w/'+ws+'/invoices/'+invoiceId+'/status',{status:'paid'},'PATCH');
+ assert.equal(response.status,409);
+ assert.ok(calls.some(x=>x.sql.includes("pj.reference='RAWI-PAY-'")));
+});
