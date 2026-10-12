@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {BrainCircuit,MessageCircle,Plus,RefreshCw,Search,ArrowUpLeft,BookOpen,Check,FilePlus2,FolderKanban,Loader2,ChevronDown,Save,X,ShieldCheck} from 'lucide-react';
 import {api,useSite,tr} from './App.jsx';
 import './rawi-generated-workspace.css';
@@ -7,7 +7,8 @@ const blank=()=>({values:{},stage:'',source_thread_id:null});
 export default function RawiGeneratedWorkspace({onNewChat=()=>{},onOpenThread=()=>{}}){
  const {lang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [workspaces,setWorkspaces]=useState([]),[workspace,setWorkspace]=useState(''),[blueprint,setBlueprint]=useState(null),[status,setStatus]=useState('loading'),[error,setError]=useState(''),[repoKey,setRepoKey]=useState('');
- const [rows,setRows]=useState([]),[threads,setThreads]=useState([]),[search,setSearch]=useState(''),[draft,setDraft]=useState(null),[saving,setSaving]=useState(false),[generating,setGenerating]=useState(false),[showChats,setShowChats]=useState(false),[threadForImport,setThreadForImport]=useState(''),[relationRows,setRelationRows]=useState({});
+ const recordRequest=useRef(0);
+ const [recordsLoading,setRecordsLoading]=useState(false),[rows,setRows]=useState([]),[threads,setThreads]=useState([]),[search,setSearch]=useState(''),[draft,setDraft]=useState(null),[saving,setSaving]=useState(false),[generating,setGenerating]=useState(false),[showChats,setShowChats]=useState(false),[threadForImport,setThreadForImport]=useState(''),[relationRows,setRelationRows]=useState({});
  const base=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
  const selected=blueprint?.repositories?.find(x=>x.key===repoKey)||null;
  const source=threads.find(x=>x.id===threadForImport);
@@ -28,8 +29,8 @@ export default function RawiGeneratedWorkspace({onNewChat=()=>{},onOpenThread=()
  useEffect(()=>{setBlueprint(null);setRepoKey('');setRows([]);setThreads([]);if(workspace)loadBlueprint()},[workspace,lang]);
  const fetchThreads=async()=>{if(!base)return;try{const r=await api(base+'/repository');setThreads(r.data?.threads||[])}catch(e){setError(e.message)}};
  useEffect(()=>{if(status==='ready'&&workspace)fetchThreads()},[status,workspace]);
- const loadRecords=async()=>{if(!base||!selected)return;try{const r=await api(base+'/dynamic/'+selected.key+'/records');setRows(r.data||[])}catch(e){setError(e.message)}};
- useEffect(()=>{setRows([]);setDraft(null);setRelationRows({});if(selected&&workspace)loadRecords()},[repoKey,workspace,blueprint?.title]);
+ const loadRecords=async()=>{if(!base||!selected)return;const request=++recordRequest.current;setRecordsLoading(true);setError('');try{const r=await api(base+'/dynamic/'+selected.key+'/records');if(!Array.isArray(r.data))throw Error(L('تعذر تحميل سجلات المستودع','Unable to load repository records'));if(request===recordRequest.current)setRows(r.data)}catch(e){if(request===recordRequest.current)setError(e.message)}finally{if(request===recordRequest.current)setRecordsLoading(false)}};
+ useEffect(()=>{recordRequest.current++;setRows([]);setRecordsLoading(!!selected);setDraft(null);setRelationRows({});if(selected&&workspace)loadRecords()},[repoKey,workspace,blueprint?.title]);
  const relations=useMemo(()=>selected?.fields?.filter(f=>f.type==='relation')||[],[selected]);
  useEffect(()=>{if(!base||!relations.length)return;let active=true;Promise.all(relations.map(async f=>{
   try{const r=await api(base+'/dynamic/'+f.target+'/records');return [f.key,r.data||[]]}catch{return [f.key,[]]}
@@ -58,7 +59,7 @@ export default function RawiGeneratedWorkspace({onNewChat=()=>{},onOpenThread=()
  const main=blueprint?.repositories||[];
  return <section className="rawi-generated-app" dir={lang==='ar'?'rtl':'ltr'}>
   <header className="rawi-generated-head"><div className="rawi-generated-identity"><BrainCircuit size={25}/><div><span>{L('مساحة الشركة المولّدة بالذكاء الاصطناعي','AI-generated company application')}</span><h1>{blueprint?.title||L('مساحة عمل شركتك','Your company workspace')}</h1><p>{blueprint?.summary||L('راوي يبني مستودعات وسير عمل مخصصًا لنشاط شركتك، وليس إدارات عامة ثابتة.','Rawi builds repositories and processes specific to your business, not fixed ERP departments.')}</p></div></div>
-   <div className="rawi-generated-head-actions">{workspaces.length>1&&<select aria-label={L('الشركة','Company')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option value={w.id} key={w.id}>{w.name}</option>)}</select>}<button type="button" onClick={onNewChat}><MessageCircle size={16}/>{L('تحدث مع راوي','Chat with Rawi')}</button></div>
+   <div className="rawi-generated-head-actions">{workspaces.length>1&&<select aria-label={L('الشركة','Company')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option value={w.id} key={w.id}>{w.name}</option>)}</select>}<button type="button" onClick={loadBlueprint} disabled={!workspace||generating}><RefreshCw size={16}/>{L('تحديث التصميم','Refresh design')}</button><button type="button" onClick={onNewChat}><MessageCircle size={16}/>{L('تعديل المستودعات مع راوي','Redesign with Rawi')}</button></div>
   </header>
   {error&&<p className="rawi-generated-error" role="alert">{error}</p>}
   {status!=='ready'?<div className="rawi-generated-state">
@@ -88,7 +89,7 @@ export default function RawiGeneratedWorkspace({onNewChat=()=>{},onOpenThread=()
       {selected.stages.length>0&&<label className="rawi-generated-stage-select">{L('المرحلة','Stage')}<select value={draft.stage||selected.stages[0]} onChange={e=>setDraft(x=>({...x,stage:e.target.value}))}>{selected.stages.map(s=><option key={s} value={s}>{s}</option>)}</select></label>}
       <footer><span>{L('لن يحفظ راوي السجل إلا بعد مراجعتك وضغط حفظ.','No record is saved until you review and confirm.')}</span><button disabled={saving} type="submit"><Save size={16}/>{L('تأكيد وحفظ','Confirm and save')}</button></footer>
      </form>}
-     <div className="rawi-generated-records">{!visibleRows.length?<div className="rawi-generated-empty"><FilePlus2 size={26}/><p>{L('المستودع جاهز لاستقبال بيانات العمل من محادثاتك أو سجل جديد.','Your repository is ready for records from conversations or manual entry.')}</p></div>:visibleRows.map(row=><article key={row.id}><div className="rawi-generated-row-title"><BookOpen size={17}/><b>{String(Object.values(row.values_json||{})[0]||selected.name)}</b><small>{new Date(row.updated_at).toLocaleDateString(lang==='ar'?'ar-SA':'en-US')}</small></div><div className="rawi-generated-row-fields">{selected.fields.filter(f=>row.values_json?.[f.key]!==undefined).map(f=><div key={f.key}><small>{f.label}</small><strong>{display(f,row.values_json[f.key])}</strong></div>)}</div>
+     <div className="rawi-generated-records">{recordsLoading?<div className="rawi-generated-empty" role="status"><Loader2 className="mif-spinner" size={25}/><p>{L('جاري تحميل سجلات المستودع','Loading repository records')}</p></div>:error?<div className="rawi-generated-empty" role="alert"><p>{L('تعذر عرض السجلات. تحقق من الخطأ وحاول التحديث.','Unable to display records. Review the error and refresh.')}</p></div>:!visibleRows.length?<div className="rawi-generated-empty"><FilePlus2 size={26}/><p>{L('المستودع جاهز لاستقبال بيانات العمل من محادثاتك أو سجل جديد.','Your repository is ready for records from conversations or manual entry.')}</p></div>:visibleRows.map(row=><article key={row.id}><div className="rawi-generated-row-title"><BookOpen size={17}/><b>{String(Object.values(row.values_json||{})[0]||selected.name)}</b><small>{new Date(row.updated_at).toLocaleDateString(lang==='ar'?'ar-SA':'en-US')}</small></div><div className="rawi-generated-row-fields">{selected.fields.filter(f=>row.values_json?.[f.key]!==undefined).map(f=><div key={f.key}><small>{f.label}</small><strong>{display(f,row.values_json[f.key])}</strong></div>)}</div>
       <div className="rawi-generated-row-stage">{selected.stages.length>0&&<label>{L('المرحلة','Stage')}<select disabled={saving} value={row.stage||selected.stages[0]} onChange={e=>updateStage(row,e.target.value)}>{selected.stages.map(stage=><option key={stage}>{stage}</option>)}</select></label>}<button type="button" onClick={()=>openDraft(row.values_json||{},row.stage,row.source_thread_id,row.id)}>{L('تعديل السجل','Edit record')}</button></div>
      </article>)}</div>
     </>}</div>
