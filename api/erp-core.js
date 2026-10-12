@@ -137,6 +137,39 @@ export function installErpCore(app,{db,centralDb,query}){
   const rows=await query(g.sql,"UPDATE erp_documents SET status=$1 WHERE id=$2 AND workspace_id=$3 AND ((status='draft' AND $1 IN('confirmed','cancelled')) OR (status='confirmed' AND $1 IN('completed','cancelled'))) RETURNING id,status",[x.data.status,c.req.param('id'),g.workspace]);
   return rows.length?c.json({ok:true,data:rows[0]}):fail(c,409,'Invalid document transition');
  });
+ // A confirmed purchase order can be received fully into a verified company warehouse.
+ // The status change, positive stock balances and audit movements share one SQL transaction.
+ app.post('/api/admin/erp/w/:workspace/core/documents/:id/receive',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const id=c.req.param('id');
+  const v=z.object({warehouse_id:uid}).strict().safeParse(await body(c));
+  if(!uid.safeParse(id).success||!v.success)return fail(c,400,'Choose a valid purchase order and receiving warehouse');
+  const statement=`WITH received AS(
+    UPDATE erp_documents d SET status='completed'
+    FROM erp_warehouses w
+    WHERE d.workspace_id=$1 AND d.id=$2 AND d.kind='purchase' AND d.status='confirmed'
+      AND w.workspace_id=$1 AND w.id=$3
+    RETURNING d.id,d.doc_no,d.lines
+  ), goods AS(
+    SELECT (line->>'item_id')::uuid item_id,(line->>'base_quantity')::numeric quantity
+    FROM received d CROSS JOIN LATERAL jsonb_array_elements(d.lines) line
+    JOIN erp_items i ON i.id=(line->>'item_id')::uuid AND i.workspace_id=$1 AND i.type='stock'
+  ), added AS(
+    INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity)
+    SELECT $1,item_id,$3,quantity FROM goods
+    ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE
+     SET quantity=erp_stock.quantity+EXCLUDED.quantity
+    RETURNING item_id
+  ), movement AS(
+    INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason)
+    SELECT $1,a.item_id,$3,g.quantity,'Purchase receipt: '||d.doc_no
+    FROM added a JOIN goods g ON g.item_id=a.item_id CROSS JOIN received d
+    RETURNING id
+  ) SELECT r.id,r.doc_no,(SELECT COUNT(*)::int FROM movement) AS movement_count
+    FROM received r`;
+  const rows=await query(g.sql,statement,[g.workspace,id,v.data.warehouse_id]);
+  return rows.length?c.json({ok:true,data:rows[0]}):fail(c,409,'Purchase order must be confirmed, unreceived and assigned to a company warehouse');
+ });
  app.post('/api/admin/erp/w/:workspace/core/documents/:id/invoice',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;
   const id=c.req.param('id');if(!uid.safeParse(id).success)return fail(c,400,'Invalid sales document');
