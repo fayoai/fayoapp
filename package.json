@@ -37,7 +37,8 @@
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
     "zod": "^4.1.11",
-    "@capacitor/core": "8.5.2"
+    "@capacitor/core": "8.5.2",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
