@@ -16,7 +16,7 @@ const patterns=[
  ['contracts',/(?:عقد\s+موظف|عقد\s+عمل|employment\s+contract)/i],
  ['attendance',/(?:حضور\s+وانصراف|سجل\s+حضور|attendance\s+record)/i]
 ];
-const verb=/^\s*(?:من فضلك\s+|لو سمحت\s+|يا راوي[،,\s]+)*(?:اعمل|اعملي|أنشئ|انشئ|أنشئي|سجل|سجّل|جهز|جهّز|حضّر|حضر|أضف|اضف|افتح|create|prepare|draft|add|record)\b/i;
+const verb=/^\s*(?:من فضلك\s+|لو سمحت\s+|يا راوي[،,\s]+)*(?:اعمل|اعملي|أنشئ|انشئ|أنشئي|سجل|سجّل|جهز|جهّز|حضّر|حضر|أضف|اضف|افتح|create|prepare|draft|add|record)(?=\s|$)/i;
 export function plannedRepository(text){
  const source=String(text||'').trim();
  if(!verb.test(source))return null;
