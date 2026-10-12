@@ -32,3 +32,18 @@ ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_plan jsonb NOT 
 ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_inputs jsonb NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_source text NOT NULL DEFAULT 'basic';
 ALTER TABLE rawi_company_profiles ADD COLUMN IF NOT EXISTS setup_updated_at timestamptz;
+
+-- Interactive company discovery begins in chat only after official company setup.
+CREATE TABLE IF NOT EXISTS rawi_workspace_discovery(
+ workspace_id uuid PRIMARY KEY REFERENCES erp_workspaces(id) ON DELETE CASCADE,
+ owner_id uuid NOT NULL REFERENCES admins(id),
+ stage text NOT NULL DEFAULT 'intro' CHECK(stage IN ('intro','references','processes','review','completed')),
+ answers jsonb NOT NULL DEFAULT '{}'::jsonb,
+ proposal jsonb NOT NULL DEFAULT '{}'::jsonb,
+ research jsonb NOT NULL DEFAULT '[]'::jsonb,
+ thread_id uuid,
+ confirmed_at timestamptz,
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS rawi_workspace_discovery_owner ON rawi_workspace_discovery(owner_id,stage);
+ALTER TABLE rawi_account_profiles ADD COLUMN IF NOT EXISTS display_name text NOT NULL DEFAULT '';
