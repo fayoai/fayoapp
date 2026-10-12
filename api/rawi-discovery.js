@@ -78,7 +78,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  async function getContext(c,workspaceId,init=false){
   const sql=centralDb(c),owner=c.get('adminId');
   if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql||!uuid.safeParse(workspaceId).success)return {error:fail(c,404,'Workspace not found')};
-  const rows=await query(sql,`SELECT p.name,p.activity,p.description,p.setup_plan,p.setup_inputs,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
+  const rows=await query(sql,`SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,p.description,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
    FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id
    LEFT JOIN rawi_workspace_discovery d ON d.workspace_id=p.workspace_id AND d.owner_id=$2
    WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NOT NULL`,[workspaceId,owner]);
