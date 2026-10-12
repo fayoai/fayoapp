@@ -26,7 +26,7 @@ test('RAWI ERP chat and sign in have approved interaction and account-only downl
  assert.match(s,/installed&&/);
  assert.doesNotMatch(s,/form\.invitation/);
  assert.match(s,/const authPanel=/);
- assert.match(s,/className="rawi-install-in-account"/);
+ assert.match(s,/RawiCustomerAccount/);
  assert.doesNotMatch(s,/<header className="mif-topbar"/);
 });
 test('MIF Smart product manager is directly accessible at products route and shows seven approved cards',()=>{

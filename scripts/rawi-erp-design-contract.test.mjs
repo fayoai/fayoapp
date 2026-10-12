@@ -23,10 +23,10 @@ test('RAWI ERP has a distinct white mark on its blue background, preserving comp
 });
 test('RAWI ERP chat greeting types dynamically; no traditional heading',()=>{
  const src=read('src/MifSmartShell.jsx');
- assert.match(src,/function RawiGreeting\(\{lang\}\)/);
+ assert.match(src,/function RawiGreeting\(\{lang,customText/);
  assert.match(src,/setInterval/);
  assert.match(src,/كيف أقدر أساعدك اليوم؟/);
- assert.match(src,/<RawiGreeting lang=\{lang\}\/\>/);
+ assert.match(src,/<RawiGreeting lang=\{lang\} customText=/);
  assert.doesNotMatch(src,/<header className="mif-topbar"|mif-chat-welcome/);
 });
 test('Seven bottom tabs keep central New and route gated sections to sign-in within chat',()=>{
@@ -34,7 +34,7 @@ test('Seven bottom tabs keep central New and route gated sections to sign-in wit
  for(const tab of ['chats','operations','team','new','schedule','alerts','account'])assert.match(src,new RegExp("'"+tab+"'"));
  assert.match(src,/\['new','جديد','New',Plus\]/);
  assert.match(src,/id==='new'\?'new'/);
- assert.match(src,/className="rawi-install-in-account"/);
+ assert.match(src,/RawiCustomerAccount/);
  assert.doesNotMatch(src,/rawi-chat-install/);
  assert.match(src,/const authPanel=/);
  assert.match(src,/tab==='team'&&!checking&&authed&&<RawiTeamPanel/);

@@ -49,7 +49,7 @@ test('Login is compact, no invitation input, and PWA installation button is not 
  assert.doesNotMatch(backend,/hashInvite|user\.invitation/);
  assert.match(ui,/window\.localStorage\.setItem\('rawi-erp-installed','1'\)/);
  assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini"/);
- assert.match(ui,/!installed&&<button type="button" className="rawi-install-in-account"/);
+ assert.match(ui,/RawiCustomerAccount installed=\{installed\}/);
  assert.match(css,/\.mif-login-page\{width:min\(100%,365px\)/);
  assert.match(css,/\.mif-login-page\{[^}]*border:1px solid var\(--rawi-border\);border-radius:20px;background:#fff/);
  assert.match(css,/\.mif-body\.mif-body-auth\{[^}]*display:flex;align-items:center;justify-content:center/);
@@ -82,7 +82,7 @@ test('Fresh RAWI greeting sits in the middle while the single message composer r
  assert.match(css,/\.mif-chat-scroll\.is-empty\{[^}]*align-items:center;justify-content:flex-start;padding-top:/);
  assert.match(css,/\.mif-welcome-message\{[^}]*width:fit-content;max-width:100%;align-self:center/);
  assert.match(css,/\.mif-welcome-message p\{[^}]*margin:0/);
- assert.match(ui,/<RawiGreeting lang=\{lang\}\/>/);
+ assert.match(ui,/<RawiGreeting lang=\{lang\} customText=/);
  assert.equal((ui.match(/className="mif-composer"/g)||[]).length,1);
 });
 

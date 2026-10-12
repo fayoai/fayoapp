@@ -29,7 +29,7 @@ test('Chat-first app installs from bottom navigation',()=>{
  assert.match(shell,/rawi-erp-mark.svg/);
  assert.doesNotMatch(shell,/mif-logo.svg/);
  assert.doesNotMatch(shell,/\/mif\/console/);
- assert.match(shell,/className="rawi-install-in-account"/);
+ assert.match(shell,/RawiCustomerAccount/);
  assert.doesNotMatch(shell,/MIF Smart AI ERP|Odoo Community|<CommerceStore/);
 });
 test('Only installed applications are offered for download',()=>{
