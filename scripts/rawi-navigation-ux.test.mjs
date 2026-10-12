@@ -68,7 +68,7 @@ test('Team and notifications read real authorized company records; membership mu
 
 test('Account sign-up has exactly name, email and password and backend derives the workspace name',()=>{
  const ui=read('src/MifSmartShell.jsx'),api=read('api/app.js');
- const auth=ui.slice(ui.indexOf('const authPanel='),ui.indexOf(' return <div className="mif-app"'));
+ const auth=ui.slice(ui.indexOf('const authPanel='),ui.search(/return <div[^>]*className="mif-app"/));
  assert.match(auth,/signup&&<label>\{L\('الاسم'/);
  assert.match(auth,/L\('البريد الإلكتروني'/);
  assert.match(auth,/L\('كلمة المرور'/);
