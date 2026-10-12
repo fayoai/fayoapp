@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import QRCode from 'qrcode';
 import RawiBusinessTransactions from './RawiBusinessTransactions.jsx';
+import RawiInventoryTransactions from './RawiInventoryTransactions.jsx';
 import {BookOpen,Building2,ChartColumn,FilePlus2,Loader2,RefreshCw,Save,Search,SlidersHorizontal,X} from 'lucide-react';
 import {api,useSite,tr} from './App.jsx';
 import './rawi-standard.css';
@@ -174,6 +175,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
        {!selected.read_only&&selected.kind!=='document_sequences'&&<button type="button" className="primary" onClick={()=>startDraft()}><FilePlus2 size={16}/>{L('سجل جديد','New record')}</button>}</div>
       </header>
       <RawiBusinessTransactions prefix={prefix} kind={selected.kind} lookups={lookups} sourceDraft={businessDraft} onSaved={()=>{setBusinessDraft(null);loadRecords();refreshLookups();loadDrafts()}}/>
+      <RawiInventoryTransactions prefix={prefix} kind={selected.kind} lookups={lookups} onSaved={()=>{loadRecords();refreshLookups()}}/>
       {genericDraft&&<p className="rawi-std-info">{L('السجلات الجديدة هنا مسودات إدارية محفوظة، وليست فواتير صادرة أو قيودًا مرحّلة أو حركات مخزون منفذة. الاعتماد والترحيل يتطلبان العمليات المحاسبية والمخزنية المخصصة.','These are stored operational drafts, not issued invoices, posted journal entries or executed inventory movements.')}</p>}
       {selected.read_only&&<p className="rawi-std-info">{L('يُحسب التقرير من السجلات التشغيلية الفعلية، ولا ينشئ قيودًا أو إقرارات معتمدة.','This report reads operational data and does not issue certified statements.')}</p>}
       

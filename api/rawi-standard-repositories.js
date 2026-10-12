@@ -77,7 +77,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   const g=await gate(c);if(g.error)return g.error;
   const [contacts,items,warehouses,employees,accounts,purchaseOrders]=await Promise.all([
    query(g.sql,"SELECT id,name,kind FROM erp_contacts WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
-   query(g.sql,"SELECT id,name,sku,unit FROM erp_items WHERE workspace_id=$1 AND active=true ORDER BY name LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name,sku,unit,type FROM erp_items WHERE workspace_id=$1 AND active=true ORDER BY name LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,name FROM erp_warehouses WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,name FROM erp_employees WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,name,code,type FROM erp_accounts WHERE workspace_id=$1 ORDER BY code LIMIT 600",[g.workspace]),
@@ -86,7 +86,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   return c.json({ok:true,data:{
    customers:contacts.filter(x=>x.kind!=='vendor').map(x=>({id:x.id,name:x.name})),
    vendors:contacts.filter(x=>x.kind!=='customer').map(x=>({id:x.id,name:x.name})),
-   products:items.map(x=>({id:x.id,name:x.name,sku:x.sku,unit:x.unit})),
+   products:items.map(x=>({id:x.id,name:x.name,sku:x.sku,unit:x.unit,type:x.type})),
    warehouses:warehouses.map(x=>({id:x.id,name:x.name})),
    employees:employees.map(x=>({id:x.id,name:x.name})),
    accounts:accounts.map(x=>({id:x.id,name:x.code+' — '+x.name,type:x.type})),
