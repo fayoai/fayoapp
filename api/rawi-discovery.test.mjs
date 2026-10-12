@@ -10,15 +10,15 @@ const proposal={title:'Project Delivery System',sector:'Sports turf installation
   {key:'turf_jobs',name:'Turf jobs',description:'Installation projects',fields:[{key:'task',label:'Task',type:'text',required:true},{key:'pitch',label:'Pitch',type:'relation',target:'pitches',required:false}],stages:['Pending','Active','Delivered'],relations:[]}
  ],workflows:['Survey site','Deliver materials','Install and hand over']};
 function harness(){
- let state={stage:'intro',answers:{},proposal:{},research:[],setup_plan:{}};
+ let state={stage:'intro',answers:{},proposal:{},research:[],setup_plan:{},setup_inputs:{}};
  const calls=[],app=new Hono();
  app.use('/api/admin/*',async(c,next)=>{c.set('adminId',owner);await next()});
  const query=async(_sql,sql,params=[])=>{
   calls.push({sql,params});
-  if(sql.includes('SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,d.workspace_id'))return [{name:'Stadium Works',activity:'Sports turf installation',setup_plan:state.setup_plan,discovery_id:workspace,stage:state.stage,answers:state.answers,proposal:state.proposal,research:state.research}];
+  if(sql.includes('SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,d.workspace_id'))return [{name:'Stadium Works',activity:'Sports turf installation',setup_plan:state.setup_plan,setup_inputs:state.setup_inputs,discovery_id:workspace,stage:state.stage,answers:state.answers,proposal:state.proposal,research:state.research}];
   if(sql.includes('SELECT stage,answers,proposal,research FROM rawi_workspace_discovery'))return [state];
   if(sql.includes('SELECT code,model,encrypted_key'))return [];
-  if(sql.includes('UPDATE rawi_company_profiles p SET setup_plan=')){state.setup_plan=JSON.parse(params[2]);return [{workspace_id:workspace}]}
+  if(sql.includes('UPDATE rawi_company_profiles p SET setup_plan=')){state.setup_plan=JSON.parse(params[2]);state.setup_inputs=JSON.parse(params[3]);return [{workspace_id:workspace}]}
   if(sql.includes('UPDATE rawi_workspace_discovery SET stage=')){state={...state,stage:params[2],answers:JSON.parse(params[3]),proposal:JSON.parse(params[4]),research:JSON.parse(params[5])};return []}
   return [];
  };
