@@ -67,6 +67,29 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   return {sql,workspace,actor,role:rows[0].role};
  }
  function definition(c){return findStandardRepository(c.req.param('repository'))}
+
+ // Every dropdown is populated from actual records belonging to the same company.
+ app.get('/api/admin/erp/w/:workspace/standard/lookups',async c=>{
+  const g=await gate(c);if(g.error)return g.error;
+  const [contacts,items,warehouses,employees,accounts,purchaseOrders]=await Promise.all([
+   query(g.sql,"SELECT id,name,kind FROM erp_contacts WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name,sku,unit FROM erp_items WHERE workspace_id=$1 AND active=true ORDER BY name LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name FROM erp_warehouses WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name FROM erp_employees WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name,code FROM erp_accounts WHERE workspace_id=$1 ORDER BY code LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,values_json FROM rawi_dynamic_records WHERE workspace_id=$1 AND repository_key='std_purchase_orders' ORDER BY created_at DESC LIMIT 300",[g.workspace])
+  ]);
+  return c.json({ok:true,data:{
+   customers:contacts.filter(x=>x.kind!=='vendor').map(x=>({id:x.id,name:x.name})),
+   vendors:contacts.filter(x=>x.kind!=='customer').map(x=>({id:x.id,name:x.name})),
+   products:items.map(x=>({id:x.id,name:x.name,sku:x.sku,unit:x.unit})),
+   warehouses:warehouses.map(x=>({id:x.id,name:x.name})),
+   employees:employees.map(x=>({id:x.id,name:x.name})),
+   accounts:accounts.map(x=>({id:x.id,name:x.code+' — '+x.name})),
+   purchase_orders:purchaseOrders.map(x=>({id:x.id,name:x.values_json?.document_number||x.values_json?.field_1||x.id}))
+  }});
+ });
+
  app.get('/api/admin/erp/w/:workspace/standard/catalog',async c=>{
   const g=await gate(c);if(g.error)return g.error;
   return c.json({ok:true,groups:STANDARD_GROUPS,version:1});
@@ -75,6 +98,11 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   const g=await gate(c);if(g.error)return g.error;
   const repo=definition(c);if(!repo)return fail(c,404,'Unknown repository');
   if(repo.read_only)return c.json({ok:true,repository:repo,data:[],report_only:true});
+
+  if(repo.kind==='units'){
+   const units=await query(g.sql,"SELECT id,code,name,category,precision_digits,active,created_at FROM erp_units WHERE workspace_id=$1 ORDER BY category,name",[g.workspace]);
+   return c.json({ok:true,repository:repo,data:units.map(x=>common(x,{field_1:x.code,field_2:x.name,field_3:x.category,field_4:x.precision_digits,active:x.active}))});
+  }
   if(repo.kind==='document_sequences'){
    const [current,invoice]=await Promise.all([
     query(g.sql,"SELECT kind,year,number FROM erp_document_sequences WHERE workspace_id=$1 ORDER BY kind,year DESC LIMIT 200",[g.workspace]),
@@ -85,6 +113,34 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
     ...invoice.map(x=>({id:'invoice_'+x.year,stage:'',values_json:{field_1:'invoice',field_2:'MIF',field_3:Number(x.last_number)+1},updated_at:null}))
    ],read_only:true});
   }
+
+  if(repo.kind==='units'){
+   const fields=values;
+   const form={code:String(fields.field_1||'').toLowerCase(),name:fields.field_2,category:fields.field_3||'count',precision_digits:Number(fields.field_4??3)};
+   const valid=z.object({code:z.string().regex(/^[a-z][a-z0-9_]{0,19}$/),name:z.string().min(2).max(90),category:z.enum(['count','weight','volume','length','area','time','other']),precision_digits:z.number().int().min(0).max(6)}).safeParse(form);
+   if(!valid.success)return fail(c,400,'Invalid unit code, category or precision');
+   if(isUpdate){
+    const old=await query(g.sql,"SELECT code,category FROM erp_units WHERE workspace_id=$1 AND id=$2",[g.workspace,target]);
+    if(!old.length)return fail(c,404,'Unit missing');
+    if(old[0].code!==form.code||old[0].category!==form.category)return fail(c,409,'Code and category cannot change after creation');
+    const result=await query(g.sql,"UPDATE erp_units SET name=$3,precision_digits=$4 WHERE workspace_id=$1 AND id=$2 RETURNING id,code,name,category,precision_digits,active",[g.workspace,target,form.name,form.precision_digits]);
+    return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})});
+   }
+   const result=await query(g.sql,"INSERT INTO erp_units(workspace_id,code,name,category,precision_digits) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,code) DO NOTHING RETURNING id,code,name,category,precision_digits,active",[g.workspace,form.code,form.name,form.category,form.precision_digits]);
+   if(!result.length)return fail(c,409,'Unit code already exists');
+   return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})},201);
+  }
+  // Referential validation prevents cross-company IDs being stored as opaque text.
+  const referenced=repo.fields.filter(f=>f.type==='relation'&&values[f.key]);
+  if(referenced.length){
+   const targets={customers:['erp_contacts',"kind IN('customer','person')"],vendors:['erp_contacts',"kind IN('vendor','person')"],products:['erp_items','active=true'],warehouses:['erp_warehouses','TRUE'],employees:['erp_employees','TRUE'],accounts:['erp_accounts','TRUE'],purchase_orders:['rawi_dynamic_records',"repository_key='std_purchase_orders'"]};
+   for(const field of referenced){
+    const dest=targets[field.target];if(!dest)return fail(c,400,'Invalid linked record type');
+    const rows=await query(g.sql,'SELECT id FROM '+dest[0]+' WHERE workspace_id=$1 AND id=$2 AND '+dest[1],[g.workspace,values[field.key]]);
+    if(!rows.length)return fail(c,400,'Linked record belongs to another company or does not exist');
+   }
+  }
+
   const master=masterSpec(repo.kind);
   if(master){
    const args=repo.kind==='customers'||repo.kind==='vendors'?[g.workspace,master.kind]:[g.workspace];
@@ -106,10 +162,25 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   if(stage&&!repo.stages.includes(stage))return fail(c,400,'Invalid status');
   const master=masterSpec(repo.kind);
   if(master){
+   if(repo.kind==='products'){
+    const unitCode=String(values.field_3||'unit').trim().toLowerCase();
+    const u=await query(g.sql,"SELECT id,category FROM erp_units WHERE workspace_id=$1 AND code=$2 AND active=true",[g.workspace,unitCode]);
+    if(!u.length)return fail(c,400,'Choose a company unit of measure');
+    if(isUpdate){
+     const old=await query(g.sql,"SELECT unit FROM erp_items WHERE workspace_id=$1 AND id=$2",[g.workspace,target]);
+     if(!old.length)return fail(c,404,'Product not found');
+     if(old[0].unit!==unitCode)return fail(c,409,'Base unit cannot be changed after product creation; add a secondary unit with a conversion factor');
+    }
+   }
    let data;try{data=checkMaster(repo.kind,values)}catch(e){return fail(c,400,e.message)}
    if(isUpdate)data.push(target);
    let rows;try{rows=await query(g.sql,isUpdate?master.update:master.create,[g.workspace,...(master.kind?[master.kind]:[]),...data]);}
    catch(e){console.error('Master data save failed',String(e?.message||e).slice(0,150));return fail(c,409,'Conflicting reference or invalid company master data')}
+   if(rows.length&&repo.kind==='products'){
+    const unit=await query(g.sql,"SELECT id FROM erp_units WHERE workspace_id=$1 AND code=$2",[g.workspace,rows[0].unit]);
+    if(!unit.length)return fail(c,503,'Product base unit unavailable');
+    await query(g.sql,"INSERT INTO erp_item_units(workspace_id,item_id,unit_id,factor,is_base) VALUES($1,$2,$3,1,true) ON CONFLICT(workspace_id,item_id,unit_id) DO NOTHING",[g.workspace,rows[0].id,unit[0].id]);
+   }
    return rows.length?c.json({ok:true,data:common(rows[0],Object.fromEntries(master.render(rows[0]).map((v,i)=>['field_'+(i+1),v])))},isUpdate?200:201):fail(c,404,'Record not found');
   }
   if(isUpdate){
