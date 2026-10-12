@@ -84,7 +84,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
   const language=c.req.query('language')==='en'?'en':'ar';
   const completed=blueprintReady(g.company.setup_plan);
   const stage=completed?'completed':g.company.stage||'intro';
-  return c.json({ok:true,stage,completed,greeting:completed?'':discoveryGreeting(g.company,language),
+  return c.json({ok:true,stage,completed,greeting:completed?'':stage==='intro'?discoveryGreeting(g.company,language):nextDiscoveryQuestion(stage,language),
    has_proposal:!!g.company.proposal?.repositories?.length});
  });
  // This is a distinct AI-guided planning process, not a fixed ERP selection wizard.
