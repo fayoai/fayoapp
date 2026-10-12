@@ -34,13 +34,14 @@ export function installRawiCompany(app,{centralDb,env,query}){
  app.get('/api/admin/company/workspace-plan/:id',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');
   const id=c.req.param('id');if(!z.string().uuid().safeParse(id).success)return fail(c,400,'Invalid company');
-  const rows=await query(sql,"SELECT p.setup_plan,p.setup_source,p.name,p.activity,m.role FROM rawi_company_profiles p "+
+  const rows=await query(sql,"SELECT p.setup_plan,p.setup_source,p.setup_inputs,p.name,p.activity,m.role FROM rawi_company_profiles p "+
    "JOIN erp_memberships m ON m.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND m.admin_id=$2",
    [id,c.get('adminId')]);
   if(!rows.length)return fail(c,404,'Company not found');
   const company=rows[0];let plan=company.setup_plan||{},source=company.setup_source;
   // Workspace design begins only after an interactive discovery chat and explicit approval.
-  return c.json({ok:true,ready:blueprintReady(plan),data:blueprintReady(plan)?{...plan,source,name:company.name,activity:company.activity}:{name:company.name,activity:company.activity,source:'pending'}});
+  const approved=blueprintReady(plan)&&company.setup_inputs?.discovery===true;
+  return c.json({ok:true,ready:approved,data:approved?{...plan,source,name:company.name,activity:company.activity}:{name:company.name,activity:company.activity,source:'pending'}});
  });
  app.post('/api/admin/company/complete',async c=>{
   const sql=centralDb(c);if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql)return fail(c,404,'Not found');

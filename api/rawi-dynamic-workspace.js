@@ -13,12 +13,12 @@ export function installRawiDynamicWorkspace(app,{db,centralDb,env,query}){
   const member=await query(sql,'SELECT role FROM erp_memberships WHERE workspace_id=$1 AND admin_id=$2',[workspace,actor]);
   if(!member.length)return {error:fail(c,404,'Company workspace not found')};
   if(write&&member[0].role==='viewer')return {error:fail(c,403,'Workspace is read-only')};
-  const profiles=await query(central,`SELECT p.setup_plan,p.name,p.activity FROM rawi_company_profiles p
+  const profiles=await query(central,`SELECT p.setup_plan,p.setup_inputs,p.name,p.activity FROM rawi_company_profiles p
    JOIN erp_memberships m ON m.workspace_id=p.workspace_id
    WHERE p.workspace_id=$1 AND m.admin_id=$2 AND p.completed_at IS NOT NULL`,[workspace,actor]);
   if(!profiles.length)return {error:fail(c,404,'Company blueprint not found')};
   const plan=profiles[0].setup_plan;
-  if(!blueprintReady(plan))return {error:fail(c,409,'Company AI workspace has not been generated yet')};
+  if(!blueprintReady(plan)||profiles[0].setup_inputs?.discovery!==true)return {error:fail(c,409,'Company workspace must be approved in chat first')};
   return {sql,central,workspace,actor,plan,member:member[0]};
  }
  const repository=(ctx,name)=>ctx.plan.repositories.find(r=>r.key===name);

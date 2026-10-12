@@ -69,7 +69,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  async function getContext(c,workspaceId,init=false){
   const sql=centralDb(c),owner=c.get('adminId');
   if(env(c).MIF_APP_SURFACE!=='enterprise'||!sql||!uuid.safeParse(workspaceId).success)return {error:fail(c,404,'Workspace not found')};
-  const rows=await query(sql,`SELECT p.name,p.activity,p.setup_plan,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
+  const rows=await query(sql,`SELECT p.name,p.activity,p.setup_plan,p.setup_inputs,d.workspace_id AS discovery_id,d.stage,d.answers,d.proposal,d.research
    FROM rawi_company_profiles p JOIN erp_memberships m ON m.workspace_id=p.workspace_id
    LEFT JOIN rawi_workspace_discovery d ON d.workspace_id=p.workspace_id AND d.owner_id=$2
    WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner' AND p.completed_at IS NOT NULL`,[workspaceId,owner]);
@@ -82,7 +82,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  app.get('/api/admin/company/discovery/:id',async c=>{
   const g=await getContext(c,c.req.param('id'),true);if(g.error)return g.error;
   const language=c.req.query('language')==='en'?'en':'ar';
-  const completed=blueprintReady(g.company.setup_plan);
+  const completed=blueprintReady(g.company.setup_plan)&&g.company.setup_inputs?.discovery===true;
   const stage=completed?'completed':g.company.stage||'intro';
   return c.json({ok:true,stage,completed,greeting:completed?'':stage==='intro'?discoveryGreeting(g.company,language):nextDiscoveryQuestion(stage,language),
    has_proposal:!!g.company.proposal?.repositories?.length});
@@ -90,7 +90,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
  // This is a distinct AI-guided planning process, not a fixed ERP selection wizard.
  async function respond({c,workspace,user,message,language}){
   const g=await getContext(c,workspace,true);if(g.error)return null;
-  if(blueprintReady(g.company.setup_plan))return null;
+  if(blueprintReady(g.company.setup_plan)&&g.company.setup_inputs?.discovery===true)return null;
   const state=await query(g.sql,'SELECT stage,answers,proposal,research FROM rawi_workspace_discovery WHERE workspace_id=$1 AND owner_id=$2',[workspace,user]);
   if(!state.length)return null;
   const current=state[0],stage=current.stage==='completed'?'intro':current.stage;
