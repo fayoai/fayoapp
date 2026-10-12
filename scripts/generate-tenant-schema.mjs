@@ -1,5 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-const sources=["auth","ai-erp","erp-core","mif-chat","mif-platform","mif-guest","mif-saas","mif-website","rawi-advanced","rawi-chat-isolation","rawi-activities","rawi-onboarding","rawi-products","mif-inquiry-workflow"];
+const sources=["auth","ai-erp","erp-core","mif-chat","mif-platform","mif-guest","mif-saas","mif-website","rawi-advanced","rawi-chat-isolation","rawi-activities","rawi-onboarding","rawi-products","mif-inquiry-workflow","rawi-uom"];
 const input=sources.map(name=>readFileSync(new URL('../sql/'+name+'.sql',import.meta.url),'utf8')).join('\n');
 let buf='',quoted=false;const statements=[];
 for(let i=0;i<input.length;i++){
