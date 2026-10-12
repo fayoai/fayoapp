@@ -128,22 +128,6 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    ],read_only:true});
   }
 
-  if(repo.kind==='units'){
-   const fields=values;
-   const form={code:String(fields.field_1||'').toLowerCase(),name:fields.field_2,category:fields.field_3||'count',precision_digits:Number(fields.field_4??3)};
-   const valid=z.object({code:z.string().regex(/^[a-z][a-z0-9_]{0,19}$/),name:z.string().min(2).max(90),category:z.enum(['count','weight','volume','length','area','time','other']),precision_digits:z.number().int().min(0).max(6)}).safeParse(form);
-   if(!valid.success)return fail(c,400,'Invalid unit code, category or precision');
-   if(isUpdate){
-    const old=await query(g.sql,"SELECT code,category FROM erp_units WHERE workspace_id=$1 AND id=$2",[g.workspace,target]);
-    if(!old.length)return fail(c,404,'Unit missing');
-    if(old[0].code!==form.code||old[0].category!==form.category)return fail(c,409,'Code and category cannot change after creation');
-    const result=await query(g.sql,"UPDATE erp_units SET name=$3,precision_digits=$4 WHERE workspace_id=$1 AND id=$2 RETURNING id,code,name,category,precision_digits,active",[g.workspace,target,form.name,form.precision_digits]);
-    return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})});
-   }
-   const result=await query(g.sql,"INSERT INTO erp_units(workspace_id,code,name,category,precision_digits) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,code) DO NOTHING RETURNING id,code,name,category,precision_digits,active",[g.workspace,form.code,form.name,form.category,form.precision_digits]);
-   if(!result.length)return fail(c,409,'Unit code already exists');
-   return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})},201);
-  }
   // Referential validation prevents cross-company IDs being stored as opaque text.
   const referenced=repo.fields.filter(f=>f.type==='relation'&&values[f.key]);
   if(referenced.length){
@@ -174,6 +158,22 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   if(!values)return fail(c,400,'Check required fields and data types');
   const stage=req.data.stage??repo.stages[0]??'';
   if(stage&&!repo.stages.includes(stage))return fail(c,400,'Invalid status');
+  if(repo.kind==='units'){
+   const fields=values;
+   const form={code:String(fields.field_1||'').toLowerCase(),name:fields.field_2,category:fields.field_3||'count',precision_digits:Number(fields.field_4??3)};
+   const valid=z.object({code:z.string().regex(/^[a-z][a-z0-9_]{0,19}$/),name:z.string().min(2).max(90),category:z.enum(['count','weight','volume','length','area','time','other']),precision_digits:z.number().int().min(0).max(6)}).safeParse(form);
+   if(!valid.success)return fail(c,400,'Invalid unit code, category or precision');
+   if(isUpdate){
+    const old=await query(g.sql,"SELECT code,category FROM erp_units WHERE workspace_id=$1 AND id=$2",[g.workspace,target]);
+    if(!old.length)return fail(c,404,'Unit missing');
+    if(old[0].code!==form.code||old[0].category!==form.category)return fail(c,409,'Code and category cannot change after creation');
+    const result=await query(g.sql,"UPDATE erp_units SET name=$3,precision_digits=$4 WHERE workspace_id=$1 AND id=$2 RETURNING id,code,name,category,precision_digits,active",[g.workspace,target,form.name,form.precision_digits]);
+    return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})});
+   }
+   const result=await query(g.sql,"INSERT INTO erp_units(workspace_id,code,name,category,precision_digits) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,code) DO NOTHING RETURNING id,code,name,category,precision_digits,active",[g.workspace,form.code,form.name,form.category,form.precision_digits]);
+   if(!result.length)return fail(c,409,'Unit code already exists');
+   return c.json({ok:true,data:common(result[0],{field_1:result[0].code,field_2:result[0].name,field_3:result[0].category,field_4:result[0].precision_digits})},201);
+  }
   const master=masterSpec(repo.kind);
   if(master){
    if(repo.kind==='products'){
