@@ -90,14 +90,14 @@ export function installErpCore(app,{db,centralDb,query}){
    RETURNING s.item_id
   ), deposited AS(
    INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity)
-   SELECT $1,item_id,$4,$5::numeric FROM withdrawn
+   SELECT $1::uuid,item_id,$4::uuid,$5::numeric FROM withdrawn
    ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+EXCLUDED.quantity
    RETURNING item_id
   ), movements AS(
    INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason)
-   SELECT $1,$2,$3,-$5::numeric,$6::text||' (OUT)' FROM deposited
+   SELECT $1::uuid,$2::uuid,$3::uuid,-$5::numeric,$6::text||' (OUT)' FROM deposited
    UNION ALL
-   SELECT $1,$2,$4,$5::numeric,$6::text||' (IN)' FROM deposited
+   SELECT $1::uuid,$2::uuid,$4::uuid,$5::numeric,$6::text||' (IN)' FROM deposited
    RETURNING id
   ) SELECT (SELECT COUNT(*)::int FROM deposited) moved,
      (SELECT COUNT(*)::int FROM movements) movement_count`;
