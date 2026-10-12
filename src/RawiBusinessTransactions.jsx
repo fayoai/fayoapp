@@ -37,12 +37,27 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
   }catch(e){setError(e.message)}finally{setLoading(false)}
  };
  useEffect(()=>{setRows([]);setOpen(false);setIssueFor(null);setReceiveFor(null);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
- useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind||config?.section!=='documents')return;
-  setPartner(sourceDraft.partner_id||'');
-  const prepared=(sourceDraft.lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80);
-  setLines(prepared.length?prepared:[emptyLine()]);prepared.forEach(x=>loadUnits(x.item_id));
-  setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
-  setOpen(true);setError('');setMessage(L('راجع العميل والبنود ثم احفظ لإنشاء أمر فعلي؛ المسودة وحدها ليست أمرًا معتمدًا.','Review the partner and lines before creating a validated order.'));
+ useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind)return;
+  const values=sourceDraft.values||{};
+  if(config?.section==='documents'){
+   setPartner(sourceDraft.partner_id||'');
+   const prepared=(sourceDraft.lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80);
+   setLines(prepared.length?prepared:[emptyLine()]);prepared.forEach(x=>loadUnits(x.item_id));
+   setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
+  }else if(config?.section==='payments'){
+   const ref=kind==='sales_receipts'?values.field_5:values.field_1;
+   const method=String(values.field_4||'').toLowerCase();
+   setPayment({request_id:sourceDraft.id,reference:String(ref||sourceDraft.document_number||'سند راوي').slice(0,180),
+    amount:values.field_2==null?'':String(values.field_2),method:/نقد|cash/.test(method)?'cash':'bank',
+    invoice_id:'',cash_account_id:'',counterpart_account_id:'',details:'مسودة راوي: '+sourceDraft.id,
+    recorded_at:/^\\d{4}-\\d{2}-\\d{2}$/.test(String(values.field_3||''))?values.field_3:new Date().toISOString().slice(0,10)});
+  }else if(config?.section==='journal'){
+   setReference(String(values.field_1||sourceDraft.document_number||'قيد راوي').slice(0,120));
+   setMemo(String(values.field_3||'مسودة راوي: '+sourceDraft.id).slice(0,800));
+   if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(values.field_2||'')))setPostedOn(values.field_2);
+   setJournalLines([{account_id:'',debit:String(values.field_4||''),credit:''},{account_id:'',debit:'',credit:String(values.field_5||'')}]);
+  }else return;
+  setOpen(true);setError('');setMessage(L('المسودة جاهزة للمراجعة. اختر الحسابات أو البيانات الناقصة واعتمد العملية بنفسك.','Review the imported draft, select any missing accounts and confirm the actual transaction.'));
  },[sourceDraft?.token,prefix,kind]);
  if(!config)return null;
  const updateLine=(index,key,value)=>{setLines(old=>old.map((line,i)=>i===index?{...line,[key]:value,...(key==='item_id'?{unit_id:''}:{})}:line));if(key==='item_id')loadUnits(value)};
