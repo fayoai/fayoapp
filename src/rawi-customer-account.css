@@ -41,3 +41,13 @@
 .rawi-customer-account-error{background:#fff3f3;color:#a82f2f}.rawi-customer-account-notice{background:#f0f8f1;color:#267440}
 .rawi-customer-account-loading{display:flex;gap:10px;align-items:center;justify-content:center;min-height:170px;color:#8195ac;font-size:12px}
 @media(max-width:640px){.rawi-customer-account{padding:0 6px}.rawi-customer-account-card{padding:14px}.rawi-customer-company-info,.rawi-customer-password-form,.rawi-customer-company-form{grid-template-columns:1fr}.rawi-customer-account-pair{align-items:flex-start;flex-direction:column}.rawi-customer-account-title h1{font-size:19px}}
+
+
+.rawi-finance-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:1px solid #dce7f5;border-radius:12px;padding:13px;margin:12px 0;min-width:0}
+.rawi-finance-settings legend{font-size:14px;font-weight:750;padding:0 8px}
+.rawi-finance-settings>label,.rawi-zatca-config label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:700}
+.rawi-finance-settings :is(input,select){background:white;border:1px solid #dce7f5;border-radius:9px;min-width:0;width:100%;padding:9px;color:inherit;font-size:14px}
+.rawi-zatca-config{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#f7faff;border:1px solid #dce7f5;padding:12px;border-radius:10px;min-width:0}
+.rawi-zatca-config strong,.rawi-zatca-config p{grid-column:1/-1;margin:0}
+.rawi-zatca-config p{font-size:12px;line-height:1.8;color:#5f7494}
+@media(max-width:620px){.rawi-finance-settings,.rawi-zatca-config{grid-template-columns:minmax(0,1fr)}.rawi-finance-settings :is(input,select){min-height:44px;font-size:16px}}
