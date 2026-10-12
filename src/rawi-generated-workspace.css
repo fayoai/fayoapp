@@ -150,3 +150,12 @@
  .mif-app .rawi-generated-app :is(select,input,textarea){width:100%;max-width:100%;min-width:0}
  .mif-app .rawi-generated-app :is(.rawi-generated-row-fields,.rawi-generated-row-title,.rawi-generated-row-stage,.rawi-generated-chat-picker){min-width:0;max-width:100%;overflow-wrap:anywhere}
 }
+
+/* Repository screens must fit narrow phone viewports without overflowing their parent. */
+@media(max-width:760px){
+ .rawi-generated-app{width:100%;max-width:100%;min-width:0;overflow-x:clip}
+ .rawi-generated-layout{display:flex;flex-direction:column;min-width:0;width:100%}
+ .rawi-generated-nav,.rawi-generated-main{min-width:0;max-width:100%;width:100%}
+ .rawi-generated-form-fields,.rawi-generated-records{grid-template-columns:minmax(0,1fr)}
+ .rawi-generated-form :is(input,select,textarea){width:100%;min-width:0;max-width:100%;font-size:16px}
+}
