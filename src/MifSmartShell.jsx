@@ -146,11 +146,11 @@ export default function MifSmartShell(){
   try{
    const endpoint=privateChat?'/api/admin/chat/send':'/api/chat/public';
    const history=messages.slice(-12).filter(m=>['user','assistant'].includes(m.role)).map(m=>({role:m.role,content:String(m.content).slice(0,2500)}));
-   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(privateChat?{thread_id:active||null,workspace_id:workspaceId,question:text,documents:pendingDocs}:{question:text,history,documents:pendingDocs})});
+   const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(privateChat?{thread_id:active||null,workspace_id:workspaceId,question:text,documents:pendingDocs}:{question:text,history,documents:pendingDocs}),headers:{'Accept-Language':lang}});
    if(ctl.signal.aborted)return;
    if(privateChat&&r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(t=>setThreads(t.data||[])).catch(()=>{})}
    if(r.discovery_stage){setDiscovery(previous=>r.discovery_stage==='completed'?null:{...(previous||{}),workspace_id:workspaceId,stage:r.discovery_stage})}
-   setMessages(m=>[...m,{role:'assistant',content:r.answer,at:new Date().toISOString()}]);
+   setMessages(m=>[...m,{role:'assistant',content:r.answer,sources:r.sources||[],at:new Date().toISOString()}]);
   }catch(err){if(ctl.signal.aborted)return;setMessages(m=>m.slice(0,-1));setQuestion(question.trim());setDocuments(pendingDocs);setChatError(err.message)}finally{setAsking(false);requestRef.current=null}
  };
  const addDocuments=async event=>{
@@ -253,7 +253,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
      {!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={13}/>{L('تنزيل','Install')}</button>}
     </div>
     <div className={'mif-chat-scroll'+(!messages.length?' is-empty':'')} ref={areaRef} aria-live="polite">
-     {!messages.length?<RawiGreeting lang={lang} customText={authed&&discovery?.workspace_id===workspaceId?discovery.greeting:''}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
+     {!messages.length?<RawiGreeting lang={lang} customText={authed&&discovery?.workspace_id===workspaceId?discovery.greeting:''}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/>}<div><p>{m.content}</p>{Array.isArray(m.sources)&&m.sources.length>0&&<div className="rawi-answer-sources">{m.sources.map((source,index)=><a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" title={source.summary||''}>{index+1}. {source.title}</a>)}</div>}</div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
      {chatError&&<div className="mif-chat-error" role="alert">{chatError}</div>}
     </div>
     <form className="mif-composer" onSubmit={ask}>
