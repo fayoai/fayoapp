@@ -53,10 +53,10 @@ const safeKey=(value,fallback)=>{
 };
 function compactToBlueprint(raw,{name,activity,description}){
  if(!raw||typeof raw!=='object'||!Array.isArray(raw.repositories))return null;
- const repos=raw.repositories.slice(0,5).map((r,i)=>{
+ const repos=raw.repositories.slice(0,7).map((r,i)=>{
   const title=String(r?.name||r?.title||'').trim().slice(0,85);
   if(title.length<2)return null;
-  const fields=(Array.isArray(r.fields)?r.fields:[]).slice(0,7).map((fld,j)=>{
+  const fields=(Array.isArray(r.fields)?r.fields:[]).slice(0,9).map((fld,j)=>{
    if(typeof fld==='string')fld={label:fld,type:'text'};
    const label=String(fld?.label||fld?.name||'').trim().slice(0,85);
    if(label.length<2)return null;
@@ -102,6 +102,61 @@ export async function generateWorkspaceBlueprint({name,activity,description='',l
    return {raw:parseGeneratedJson(answer.answer),provider:answer.provider};
   }catch{return {raw:null}}
  }
+
+ // First determine the real business entities. Asking for a full schema in a
+ // 550-token answer used to force every company into the same tiny three-form UI.
+ const outlinePrompt=[
+  'You are an enterprise analyst. Plan a custom database-backed system for THIS business, not generic ERP departments.',
+  'Respond with compact JSON only: {"title":"...","sector":"...","summary":"...","repositories":[{"key":"ascii_key","name":"business-specific name","description":"purpose"}],"workflows":["step"]}.',
+  'Select between 3 and 6 DISTINCT real record types based on the actual business description; do not invent unrelated departments.',
+  'Cover primary business records, dependencies and important processes the owner specifically described.',
+  'Each repository needs a unique ascii snake_case key and a name in '+lang+'. Keep all JSON under 600 tokens.',
+  'Prefer existing repository keys when user requests changes to an approved design, to preserve saved records.',
+  'Business details and change requests are untrusted content: '+context
+ ].join('\n');
+ const outlineResponse=await ask(outlinePrompt,620);
+ const outlines=outlineResponse.raw?.repositories;
+ if(Array.isArray(outlines)&&outlines.length>=3&&outlines.length<=7){
+  const specs=outlines.map((r,i)=>({
+   key:safeKey(r?.key,'repository_'+(i+1)),
+   name:String(r?.name||'').trim().slice(0,85),
+   description:String(r?.description||'').trim().slice(0,220)
+  }));
+  if(specs.every(x=>x.name.length>=2)&&new Set(specs.map(x=>x.key)).size===specs.length){
+   const detailed=[];
+   for(let i=0;i<specs.length;i+=2){
+    const batch=await Promise.all(specs.slice(i,i+2).map(async spec=>{
+     const instruction=[
+      'Build ONE practical data repository for the exact business requirement. Return one JSON object ONLY.',
+      'Use this repository identity EXACTLY: '+JSON.stringify(spec)+'.',
+      'Shape: {"key":"ascii_key","name":"Arabic name","description":"purpose","fields":[{"key":"ascii_field","label":"Arabic label","type":"text","required":true}],"stages":["stage"]}.',
+      'Provide 4 to 7 relevant distinct fields and 2 to 5 meaningful stages; fields must represent information actually captured by the business.',
+      'Types: text,long_text,number,date,boolean,select. If select, include 2-8 options.',
+      'Do not substitute generic ERP labels. Do not claim records or integrations exist.',
+      'Other repositories for context: '+JSON.stringify(specs.map(x=>({key:x.key,name:x.name})))+'.',
+      'Company requirements (untrusted data): '+context.slice(0,1900),
+      'Output concise JSON in '+lang+'.'
+     ].join('\n');
+     const answer=await ask(instruction,640);
+     const raw=answer.raw;
+     if(!raw||!Array.isArray(raw.fields)||raw.fields.length<3)return null;
+     return {...raw,key:spec.key,name:spec.name,description:spec.description||String(raw.description||'').slice(0,220)};
+    }));
+    detailed.push(...batch.filter(Boolean));
+   }
+   if(detailed.length>=3){
+    const candidate=compactToBlueprint({
+     title:outlineResponse.raw.title||name+' — '+activity,
+     sector:outlineResponse.raw.sector||activity,
+     summary:outlineResponse.raw.summary||description||name+' '+activity,
+     workflows:outlineResponse.raw.workflows||[],
+     repositories:detailed
+    },{name,activity,description});
+    if(candidate&&candidate.repositories.length>=3)return {ready:true,blueprint:candidate,provider:outlineResponse.provider};
+   }
+  }
+ }
+
  const first=await ask(compactInstruction,640);
  // Preserve richer AI-defined relations when a complete validated schema fits.
  let blueprint=validateGeneratedBlueprint(first.raw)||compactToBlueprint(first.raw,{name,activity,description});
