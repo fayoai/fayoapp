@@ -135,3 +135,18 @@
  .mif-app .rawi-generated-row-stage select{max-width:155px}
  .mif-app .rawi-generated-summary strong{flex-basis:100%}
 }
+
+/* Small devices: keep repository workflows inside the actual viewport rather than a wider desktop grid. */
+@media(max-width:760px){
+ .mif-app .mif-body-operations{width:100%;min-width:0;max-width:100%;overflow-x:hidden;padding-inline:9px}
+ .mif-app .rawi-generated-app{width:100%;min-width:0;max-width:100%;overflow-x:clip;min-height:0}
+ .mif-app .rawi-generated-layout{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%}
+ .mif-app .rawi-generated-layout>.rawi-generated-nav{flex:none;width:100%;min-width:0;max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+ .mif-app .rawi-generated-layout>.rawi-generated-main{width:100%;min-width:0;max-width:100%;overflow:hidden}
+ .mif-app .rawi-generated-records,.mif-app .rawi-generated-form-fields{display:grid;grid-template-columns:minmax(0,1fr);width:100%;min-width:0}
+ .mif-app .rawi-generated-repo-head{min-width:0;max-width:100%}
+ .mif-app .rawi-generated-head-actions{flex:0 1 auto;min-width:0;max-width:100%}
+ .mif-app .rawi-generated-tools{min-width:0;max-width:100%}
+ .mif-app .rawi-generated-app :is(select,input,textarea){width:100%;max-width:100%;min-width:0}
+ .mif-app .rawi-generated-app :is(.rawi-generated-row-fields,.rawi-generated-row-title,.rawi-generated-row-stage,.rawi-generated-chat-picker){min-width:0;max-width:100%;overflow-wrap:anywhere}
+}
