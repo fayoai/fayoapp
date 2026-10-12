@@ -6,9 +6,10 @@ const customer=z.object({name:z.string().min(2).max(180),kind:z.enum(['customer'
 const task=z.object({title:z.string().min(2).max(200),description:z.string().max(3000).default(''),due_at:z.string().datetime({offset:true}),repeat:z.enum(['once','daily','weekly','monthly']).default('once')});
 const item=z.object({description:z.string().min(1).max(500),quantity:z.number().positive().max(100000),unit_price:z.number().min(0).max(10000000)});
 const invoice=z.object({customer_id:uid,template_id:uid.nullable().optional(),issued_on:z.iso.date().optional(),due_on:z.iso.date().nullable().optional(),notes:z.string().max(2000).default(''),lines:z.array(item).min(1).max(100)});
-export function invoiceTotals(lines){
+export function invoiceTotals(lines,vatRate=0.15){
+ if(!Number.isFinite(vatRate)||vatRate<0||vatRate>1)throw Error('Invalid sales tax rate');
  let subtotal=0,vat=0;
- const items=lines.map(l=>{const amount=Math.round(l.quantity*l.unit_price*100);if(!Number.isSafeInteger(amount))throw Error('Amount overflow');const tax=Math.round(amount*.15);subtotal+=amount;vat+=tax;return {...l,amount_halalas:amount,vat_halalas:tax}});
+ const items=lines.map(l=>{const amount=Math.round(l.quantity*l.unit_price*100);if(!Number.isSafeInteger(amount))throw Error('Amount overflow');const tax=Math.round(amount*vatRate);subtotal+=amount;vat+=tax;return {...l,amount_halalas:amount,vat_halalas:tax}});
  if(!Number.isSafeInteger(subtotal+vat)||subtotal+vat>1000000000000)throw Error('Amount overflow');
  return {lines:items,subtotal_halalas:subtotal,vat_halalas:vat,total_halalas:subtotal+vat};
 }
@@ -168,7 +169,8 @@ export function installAiErp(app,{db,env,query}){
   const contact=await query(g.sql,"SELECT id FROM erp_contacts WHERE workspace_id=$1 AND id=$2 AND kind IN('customer','person')",[g.id,x.customer_id]);
   if(!contact.length)return invalid(c,'Customer not found');
   if(x.template_id){const tmpl=await query(g.sql,'SELECT id FROM erp_invoice_templates WHERE workspace_id=$1 AND id=$2',[g.id,x.template_id]);if(!tmpl.length)return invalid(c,'Invoice template not found');}
-  let t;try{t=invoiceTotals(x.lines)}catch{return invalid(c,'Invalid invoice amounts')}
+  const companyRate=await query(g.sql,'SELECT vat_rate FROM erp_workspaces WHERE id=$1',[g.id]);
+  let t;try{t=invoiceTotals(x.lines,Number(companyRate[0]?.vat_rate??.15))}catch{return invalid(c,'Invalid invoice amounts')}
   const stmt="WITH seq AS(INSERT INTO erp_invoice_sequences(workspace_id,year,last_number) VALUES($1,EXTRACT(YEAR FROM CURRENT_DATE)::int,1) ON CONFLICT(workspace_id,year) DO UPDATE SET last_number=erp_invoice_sequences.last_number+1 RETURNING year,last_number), created AS(INSERT INTO erp_invoices(workspace_id,invoice_no,customer_id,template_id,issued_on,due_on,lines,subtotal_halalas,vat_halalas,total_halalas,notes,currency) SELECT $1,'MIF-'||seq.year||'-'||lpad(seq.last_number::text,6,'0'),$2,$3,COALESCE($4::date,CURRENT_DATE),$5::date,$6::jsonb,$7,$8,$9,$10,w.currency FROM seq CROSS JOIN erp_workspaces w WHERE w.id=$1 RETURNING *) SELECT * FROM created";
   const data=await query(g.sql,stmt,[g.id,x.customer_id,x.template_id||null,x.issued_on||null,x.due_on||null,JSON.stringify(t.lines),t.subtotal_halalas,t.vat_halalas,t.total_halalas,x.notes]);
   return c.json({ok:true,data:data[0]},201);
