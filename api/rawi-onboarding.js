@@ -1,6 +1,6 @@
 const digestBytes=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),x=>x.toString(16).padStart(2,'0')).join('');
 export function evaluationSettings(env={}){
- const days=Number(env.RAWI_TRIAL_DAYS||7),limit=Number(env.RAWI_TRIAL_MESSAGE_LIMIT||30);
+ const days=Number(env.RAWI_TRIAL_DAYS||7),limit=Number(env.RAWI_TRIAL_MESSAGE_LIMIT||100);
  if(!Number.isInteger(days)||days<1||days>30||!Number.isInteger(limit)||limit<1||limit>500)throw new Error('Invalid RAWI trial settings');
  return {days,limit,code:'rawi-evaluation'};
 }
