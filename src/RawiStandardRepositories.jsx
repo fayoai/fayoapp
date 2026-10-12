@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
+import QRCode from 'qrcode';
 import {BookOpen,Building2,ChartColumn,FilePlus2,Loader2,RefreshCw,Save,Search,SlidersHorizontal,X} from 'lucide-react';
 import {api,useSite,tr} from './App.jsx';
 import './rawi-standard.css';
@@ -10,6 +11,7 @@ export default function RawiStandardRepositories(){
  const [rows,setRows]=useState([]),[report,setReport]=useState(null),[draft,setDraft]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [loading,setLoading]=useState(true),[recordsLoading,setRecordsLoading]=useState(false),[saving,setSaving]=useState(false),[search,setSearch]=useState('');
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
+ const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
  const activeGroup=groups.find(g=>g.key===groupKey)||groups[0];
@@ -43,6 +45,20 @@ export default function RawiStandardRepositories(){
   finally{if(seq===request.current)setRecordsLoading(false)}
  };
  useEffect(()=>{request.current++;setDraft(null);setRows([]);setReport(null);setSearch('');if(selected&&workspace)loadRecords()},[workspace,repoKey,groups]);
+
+ useEffect(()=>{setQrImage(null);setRealInvoices([]);if(selected?.kind!=='sales_invoices'||!prefix)return;let alive=true;
+  api(prefix+'/invoices').then(r=>{if(alive)setRealInvoices(r.data||[])}).catch(e=>{if(alive)setError(e.message)});
+  return()=>{alive=false}
+ },[workspace,repoKey,groups]);
+ const showInvoiceQr=async invoice=>{
+  setError('');setQrImage(null);
+  try{
+   const result=await api(prefix+'/system/invoices/'+encodeURIComponent(invoice.id)+'/qr');
+   const dataUrl=await QRCode.toDataURL(result.tlv_base64,{width:220,margin:2,errorCorrectionLevel:'M'});
+   setQrImage({invoice_no:result.invoice_no,dataUrl,phase2_compliant:result.phase2_compliant});
+  }catch(e){setError(e.message)}
+ };
+
  const selectGroup=key=>{setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
  const startDraft=row=>{setError('');setNotice('');setDraft(row?{id:row.id,stage:row.stage||'',values:{...row.values_json}}:{stage:selected?.stages?.[0]||'',values:{}})};
  const fieldChange=(key,value)=>setDraft(old=>({...old,values:{...old.values,[key]:value}}));
@@ -97,6 +113,16 @@ export default function RawiStandardRepositories(){
       </header>
       {genericDraft&&<p className="rawi-std-info">{L('السجلات الجديدة هنا مسودات إدارية محفوظة، وليست فواتير صادرة أو قيودًا مرحّلة أو حركات مخزون منفذة. الاعتماد والترحيل يتطلبان العمليات المحاسبية والمخزنية المخصصة.','These are stored operational drafts, not issued invoices, posted journal entries or executed inventory movements.')}</p>}
       {selected.read_only&&<p className="rawi-std-info">{L('يُحسب التقرير من السجلات التشغيلية الفعلية، ولا ينشئ قيودًا أو إقرارات معتمدة.','This report reads operational data and does not issue certified statements.')}</p>}
+      
+      {selected.kind==='sales_invoices'&&<section className="rawi-std-issued"><h3>{L('الفواتير الفعلية الصادرة','Actual ERP invoices')}</h3>
+       <p className="rawi-std-info">{L('رمز QR يظهر للفواتير الصادرة بعد اكتمال اسم الشركة والرقم الضريبي وتفعيل QR في ملف الشركة. لا يمثل هذا الرمز وحده تكامل المرحلة الثانية.','QR is available for issued invoices with a registered Saudi tax profile. Basic QR alone is not Phase 2 integration.')}</p>
+       {realInvoices.length?<div className="rawi-std-invoices">{realInvoices.map(invoice=><div key={invoice.id}>
+        <strong>{invoice.invoice_no}</strong><span>{invoice.customer_name||'—'} · {invoice.status} · {(Number(invoice.total_halalas||0)/100).toFixed(2)}</span>
+        {['issued','paid'].includes(invoice.status)&&<button type="button" onClick={()=>showInvoiceQr(invoice)}>{L('عرض QR','Show QR')}</button>}
+       </div>)}</div>:<p>{L('لا توجد فواتير تشغيلية صادرة بعد','No operational invoices have been issued yet')}</p>}
+       {qrImage&&<div className="rawi-std-qr" role="dialog" aria-label={L('رمز الفاتورة','Invoice QR')}><strong>{qrImage.invoice_no}</strong><img src={qrImage.dataUrl} alt={L('رمز QR الأساسي للفاتورة','Basic invoice QR code')}/><small>{L('QR أساسي، ليس شهادة توافق مع المرحلة الثانية','Basic QR, not Phase 2 certification')}</small><button type="button" onClick={()=>setQrImage(null)}>{L('إغلاق','Close')}</button></div>}
+      </section>}
+
       {selected.kind==='document_sequences'&&<form className="rawi-std-sequence" onSubmit={saveSequence}>
        <label>{L('نوع المستند','Document type')}<select value={sequenceKind} onChange={e=>setSequenceKind(e.target.value)}>{sequences.map(r=><option key={r.kind} value={r.kind}>{r.name} — {groups.find(g=>g.key===r.group)?.title}</option>)}</select></label>
        <label>{L('الرقم التالي (لا يمكن الرجوع للخلف)','Next number (cannot decrease)')}<input type="number" min="1" required value={sequenceValue} onChange={e=>setSequenceValue(e.target.value)}/></label>
