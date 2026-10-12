@@ -92,3 +92,14 @@
 .rawi-std-drafts-empty{margin:0;padding:12px 4px;color:#627d9e;font-size:13px}
 @media(max-width:920px){.rawi-std-drafts-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.rawi-std-drafts{padding:11px}.rawi-std-drafts-list{grid-template-columns:minmax(0,1fr);max-height:250px}.rawi-std-drafts-head h2{font-size:15px}.rawi-std-draft-open{min-height:64px}}
+
+/* Dense enterprise table mode for every standard business repository. */
+.rawi-std-view-mode{display:flex;gap:4px;background:#edf3fb;border:1px solid #d3e1f3;padding:3px;border-radius:9px}
+.rawi-std-view-mode button{border:0;background:transparent;color:#607995;padding:6px 11px;border-radius:7px;font-size:12px;font-weight:700}
+.rawi-std-view-mode button.active{background:#fff;color:#1558bb;box-shadow:0 1px 4px #0a315015}
+.rawi-std-table-wrap table{min-width:680px;font-size:13px}
+.rawi-std-table-wrap :is(td,th){padding:13px 11px;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.rawi-std-table-wrap td strong{font-weight:760;color:#244264}
+.rawi-std-table-wrap tbody tr:hover{background:#f7faff}
+.rawi-std-table-wrap td .rawi-std-record-actions{flex-wrap:nowrap}
+@media(max-width:620px){.rawi-std-tools{flex-wrap:wrap}.rawi-std-view-mode{margin-inline-start:auto}.rawi-std-table-wrap{overscroll-behavior-x:contain}.rawi-std-table-wrap :is(td,th){padding:12px}}
