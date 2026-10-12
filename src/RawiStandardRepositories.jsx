@@ -152,6 +152,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
   return String(value);
  };
  const visible=useMemo(()=>rows.filter(x=>JSON.stringify(x.values_json||{}).toLocaleLowerCase().includes(search.toLocaleLowerCase())),[rows,search]);
+ const displayReportValue=(key,value)=>key.endsWith('_halalas')&&value!==undefined&&value!==null?(Number(value)/100).toLocaleString(lang==='ar'?'ar-SA':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):String(value??'—');
  const liveKinds=new Set(['sales_orders','purchase_orders','sales_invoices','journal_entries','sales_receipts','accounting_receipts','payment_vouchers','price_lists','stock_count','internal_transfer']);
  const liveSelected=!!selected&&liveKinds.has(selected.kind);
  const genericDraft=selected&&!liveSelected&&!selected.read_only&&selected.storage!=='erp'&&selected.kind!=='system_designs'&&selected.kind!=='document_sequences';
@@ -223,7 +224,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
       </form>}
       {selected.read_only?recordsLoading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/></div>:<div className="rawi-std-report">
        {report?.notice&&<p className="rawi-std-info">{report.notice}</p>}
-       {report?.data?.length?<div className="rawi-std-table-wrap"><table><thead><tr>{report.columns?.map(key=><th key={key}>{({code:'رمز الحساب',name:'الحساب',type:'النوع',debit_halalas:'مدين (هللة)',credit_halalas:'دائن (هللة)',balance_halalas:'الرصيد (هللة)',invoices:'الفواتير',taxable_sales_halalas:'المبيعات الخاضعة (هللة)',output_vat_halalas:'ضريبة المخرجات (هللة)'})[key]||key}</th>)}</tr></thead><tbody>{report.data.map((r,i)=><tr key={i}>{report.columns?.map(k=><td key={k}>{String(r[k]??'—')}</td>)}</tr>)}</tbody></table></div>:<div className="rawi-std-empty">{L('لا توجد بيانات منشورة للتقرير','No posted report data')}</div>}
+       {report?.data?.length?<div className="rawi-std-table-wrap"><table><thead><tr>{report.columns?.map(key=><th key={key}>{({code:'رمز الحساب',name:'الحساب',type:'النوع',debit_halalas:'مدين (ر.س)',credit_halalas:'دائن (ر.س)',balance_halalas:'الرصيد (ر.س)',invoices:'الفواتير',taxable_sales_halalas:'المبيعات الخاضعة (ر.س)',output_vat_halalas:'ضريبة المخرجات (ر.س)',period:'الشهر',transactions:'عدد الحركات',receipts_halalas:'المقبوضات (ر.س)',payments_halalas:'المدفوعات (ر.س)',net_halalas:'صافي الحركة (ر.س)'})[key]||key}</th>)}</tr></thead><tbody>{report.data.map((r,i)=><tr key={i}>{report.columns?.map(k=><td key={k}>{displayReportValue(k,r[k])}</td>)}</tr>)}</tbody></table></div>:<div className="rawi-std-empty">{L('لا توجد بيانات منشورة للتقرير','No posted report data')}</div>}
       </div>:<>
        {draft&&!liveSelected&&<form className="rawi-std-form" onSubmit={save}>
         <div className="rawi-std-form-top"><strong>{draft.id?L('تعديل السجل','Edit record'):L('إضافة سجل','Create record')}</strong><button type="button" aria-label={L('إغلاق','Close')} onClick={()=>setDraft(null)}><X size={18}/></button></div>
