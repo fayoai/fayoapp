@@ -197,3 +197,7 @@
 .rawi-business-plan small{font-size:11px;line-height:1.7;color:#657a95}
 .rawi-business-departments{display:flex;flex-wrap:wrap;gap:6px}
 .rawi-business-departments span{border-radius:8px;border:1px solid #d4e2f8;background:#fff;padding:6px 9px;font-size:11px;font-weight:700;color:#2853a2}
+
+.rawi-answer-sources{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;border-top:1px solid #dce8fa;padding-top:9px}
+.rawi-answer-sources a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid #cbdcf8;border-radius:8px;padding:6px 9px;max-width:100%;overflow-wrap:anywhere;color:#225aa9;font-size:11px;line-height:1.5;background:#f5f9ff}
+.rawi-answer-sources a:hover{text-decoration:underline}
