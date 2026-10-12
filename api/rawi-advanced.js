@@ -100,7 +100,13 @@ export function installRawiAdvanced(app,{db,query}){
   const statement=`WITH recorded AS(
    INSERT INTO rawi_payments(id,workspace_id,direction,method,amount_halalas,reference,details,invoice_id,recorded_at)
    SELECT COALESCE($1::uuid,gen_random_uuid()),$2,$3,$4,$5,$6,$7,$8,$9::date
-   WHERE ($8::uuid IS NULL OR EXISTS(SELECT 1 FROM erp_invoices WHERE workspace_id=$2 AND id=$8 AND status IN('issued','paid')))
+   WHERE ($8::uuid IS NULL OR EXISTS(
+    SELECT 1 FROM erp_invoices i WHERE i.workspace_id=$2 AND i.id=$8 AND i.status='issued'
+     AND i.total_halalas>=$5+(
+      SELECT COALESCE(SUM(p.amount_halalas),0) FROM rawi_payments p
+      JOIN erp_journal_entries j ON j.workspace_id=p.workspace_id AND j.reference='RAWI-PAY-'||p.id::text
+      WHERE p.workspace_id=$2 AND p.invoice_id=i.id AND p.direction='incoming')
+   ))
    ON CONFLICT(id) DO NOTHING RETURNING id
   ), posted AS(
    INSERT INTO erp_journal_entries(workspace_id,reference,memo,posted_on,lines,debit_halalas,credit_halalas)
