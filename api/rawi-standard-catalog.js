@@ -5,8 +5,8 @@ const readOnly=new Set(['trial_balance','income_statement','balance_sheet','cash
 const master=new Set(['customers','vendors','products','warehouses','chart_accounts','employee_file']);
 const stageValues=(key,group)=>readOnly.has(key)?[]:master.has(key)?[]:
  key==='system_designs'?['مسودة','معتمد','مؤرشف']:
- group==='employees'?['مسودة','ساري','مكتمل','ملغي']:
- ['مسودة','معتمد','مكتمل','ملغي'];
+ group==='employees'?['مسودة','للمراجعة']:
+ ['مسودة','للمراجعة'];
 const toField=(item,index)=>{
  const [label,type='text']=item.split('|');
  return {key:'field_'+(index+1),label,type,required:index===0};
