@@ -41,8 +41,10 @@ async function requestProvider(provider,messages,instructions,maxTokens=800){
  const {code,key,model}=provider;
  if(code==='workers_ai'){
   if(!provider.binding?.run)throw Object.assign(new Error('Workers AI binding is unavailable'),{status:503});
-  const response=await provider.binding.run(model,{messages:[{role:'system',content:instructions},...messages],max_tokens:maxTokens});
-  const answer=String(response?.response||response?.result?.response||'').trim();
+  const response=await provider.binding.run(model,{messages:[{role:'system',content:instructions},...messages],max_completion_tokens:maxTokens});
+  // Modern GLM Workers AI returns OpenAI-compatible choices, while older Llama models use response.
+  const text=response?.response??response?.result?.response??response?.choices?.[0]?.message?.content??response?.result?.choices?.[0]?.message?.content??'';
+  const answer=(typeof text==='string'?text:Array.isArray(text)?text.map(x=>x.text||'').join(''):'').trim();
   if(!answer)throw new Error('Workers AI returned no text');
   return {answer:answer.slice(0,12000),provider:code,model,input_tokens:0,output_tokens:0};
  }
