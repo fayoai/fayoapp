@@ -209,13 +209,13 @@
 .mif-app .mif-chat-error{overflow-wrap:anywhere;max-width:100%}
 .mif-app .mif-bubble>div{overflow-wrap:anywhere;min-width:0}
 @media(max-width:760px){
- .mif-app{width:100%;height:100dvh;min-height:0;max-height:100dvh;overflow:hidden}
- .mif-app .mif-body{box-sizing:border-box;flex:1 1 0;min-height:0;width:100%;max-width:100%;margin:0 0 calc(64px + env(safe-area-inset-bottom));padding:9px 10px;overflow-y:auto;overflow-x:hidden}
+ .mif-app{width:100%;height:var(--rawi-screen-height,100dvh);min-height:0;max-height:var(--rawi-screen-height,100dvh);overflow:hidden}
+ .mif-app .mif-body{box-sizing:border-box;flex:1 1 0;min-height:0;width:100%;max-width:100%;margin:0 0 calc(64px + env(safe-area-inset-bottom));padding:9px 10px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
  .mif-app .mif-body-chats{height:auto;display:flex;min-height:0;overflow:hidden;padding:0 8px}
  .mif-app .mif-chat-page{width:100%;max-width:100%;min-width:0;height:100%;min-height:0;overflow:hidden;grid-template-rows:minmax(32px,auto) minmax(0,1fr) auto}
  .mif-app .rawi-chat-tools{min-height:32px;max-width:100%;min-width:0;gap:5px;flex-wrap:wrap}
  .mif-app .rawi-identity-label{max-width:min(35vw,150px);min-width:0;text-overflow:ellipsis}
- .mif-app .mif-chat-scroll{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:6px 2px 12px}
+ .mif-app .mif-chat-scroll{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px 2px 12px}
  .mif-app .mif-chat-messages{min-width:0;max-width:100%;gap:12px;padding:5px 0}
  .mif-app .mif-bubble{max-width:100%;gap:8px;overflow-wrap:anywhere;word-break:break-word}
  .mif-app .mif-bubble.user{max-width:94%;padding:10px 12px}

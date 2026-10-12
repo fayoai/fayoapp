@@ -63,8 +63,14 @@ test('Private and public identities name the actual RAWI developer/operator and 
  await routeAI('مين عملك؟',p,[],'','enterprise');
  assert.match(instructions,/MIF Smart/);
  assert.match(instructions,/Do not invent an individual founder/);
+ assert.match(instructions,/نظام راوي/);
+ assert.match(instructions,/Rawi ERP/);
  await routeAI('مين بيدير راوي؟',p,[],'','enterprise-public');
  assert.match(instructions,/MIF Smart/);
+});
+test('Private chat history keeps tenant routing on opening and deleting',()=>{
+ const ui=readFileSync(new URL('../src/MifSmartShell.jsx',import.meta.url),'utf8');
+ assert.match(ui,/chat\/threads\/'\+encodeURIComponent\(id\)\+'\?workspace_id='\+encodeURIComponent\(workspaceId\)/);
 });
 test('Mobile app has bounded scroll, full-width composer and seven adaptive navigation items',()=>{
  const css=readFileSync(new URL('../src/mif-smart-shell.css',import.meta.url),'utf8');

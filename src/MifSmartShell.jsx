@@ -47,8 +47,10 @@ export default function MifSmartShell(){
  const [threads,setThreads]=useState([]),[active,setActive]=useState(''),[messages,setMessages]=useState([]),[question,setQuestion]=useState(''),[asking,setAsking]=useState(false),[chatError,setChatError]=useState(''),[documents,setDocuments]=useState([]),[filesBusy,setFilesBusy]=useState(false),[recording,setRecording]=useState(false),[transcribing,setTranscribing]=useState(false);
  const [installPrompt,setInstallPrompt]=useState(null),[installOpen,setInstallOpen]=useState(false),[installing,setInstalling]=useState(false),[installed,setInstalled]=useState(isInstalled);
  const [integrationOpen,setIntegrationOpen]=useState(false),[notice,setNotice]=useState('');
- const areaRef=useRef(null),questionRef=useRef(null),requestRef=useRef(null),fileRef=useRef(null),speechRef=useRef(null),recorderRef=useRef(null),recordTimeoutRef=useRef(null);
+ const areaRef=useRef(null),questionRef=useRef(null),requestRef=useRef(null),fileRef=useRef(null),speechRef=useRef(null),recorderRef=useRef(null),recordTimeoutRef=useRef(null),viewportRef=useRef(null);
  const device=useMemo(platform,[]),authed=!!session;
+ // Adapt the application height to Android/iOS visual viewport when the keyboard appears.
+ useEffect(()=>{const viewport=window.visualViewport;const resize=()=>{const height=Math.round(viewport?.height||window.innerHeight);if(height>0)viewportRef.current?.style.setProperty('--rawi-screen-height',height+'px')};resize();viewport?.addEventListener('resize',resize);window.addEventListener('resize',resize);window.addEventListener('orientationchange',resize);return()=>{viewport?.removeEventListener('resize',resize);window.removeEventListener('resize',resize);window.removeEventListener('orientationchange',resize)}},[]);
  const refreshSession=useCallback(async()=>{try{const r=await api('/api/admin/me');setSession(r);if(r.company_setup_required){setSignupStep('company');setTab('company')}return true}catch{setSession(null);return false}finally{setChecking(false)}},[]);
  useEffect(()=>{if(signupStep!=='company'||!authed)return;
   api('/api/admin/company/setup').then(r=>{if(r.data)setCompany(old=>({...old,...r.data,workspace_id:r.data.workspace_id,name:r.data.name||''}))}).catch(()=>setCompanyError(L('تعذر تحميل بيانات الشركة','Could not load company details')))
@@ -103,7 +105,7 @@ export default function MifSmartShell(){
  const navigate=key=>{setIntegrationOpen(false);setChatError('');setTab(key);const url=new URL(window.location.href);url.searchParams.set('view',key);window.history.pushState({},'',url)};
  const selectTab=key=>{if(session?.company_setup_required){navigate('company');return}if(key==='new'){startNew();return}navigate(key)};
  const startNew=()=>{if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');setDocuments([]);setChatError('');navigate('new')};
- const openThread=async id=>{if(!authed)return;if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');navigate('thread');try{const r=await api('/api/admin/chat/threads/'+encodeURIComponent(id));setActive(id);setMessages(r.data||[])}catch(e){setChatError(e.message)}};
+ const openThread=async id=>{if(!authed)return;if(requestRef.current)requestRef.current.abort();requestRef.current=null;setAsking(false);setActive('');setMessages([]);setQuestion('');navigate('thread');try{const r=await api('/api/admin/chat/threads/'+encodeURIComponent(id)+'?workspace_id='+encodeURIComponent(workspaceId));setActive(id);setMessages(r.data||[])}catch(e){setChatError(e.message)}};
  const submitAuth=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{
   if(signup){if(registrationEnabled===false)throw new Error(L('التسجيل غير متاح الآن. يرجى التواصل مع الإدارة.','Registration is currently closed. Contact the platform operator.'));
    const result=await api('/api/admin/register',{method:'POST',body:JSON.stringify({...form,language:lang})});
@@ -217,7 +219,7 @@ export default function MifSmartShell(){
   }catch(error){stream?.getTracks().forEach(track=>track.stop());setRecording(false);setChatError(L('لا يمكن استخدام الميكروفون. تحقق من أذونات المتصفح.','Microphone access is unavailable. Check browser permissions.'))}
  };
  const install=async()=>{if(installed)return;if(installPrompt){setInstalling(true);try{await installPrompt.prompt();const result=await installPrompt.userChoice;if(result?.outcome==='accepted'){setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}}setInstallPrompt(null);setInstallOpen(false)}finally{setInstalling(false)}}else setInstallOpen(true)};
- const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
+ const deleteThread=async id=>{if(!authed)return;try{await api('/api/admin/chat/threads/'+encodeURIComponent(id)+'?workspace_id='+encodeURIComponent(workspaceId),{method:'DELETE'});setThreads(t=>t.filter(x=>x.id!==id));if(id===active)startNew()}catch(e){setNotice(e.message)}};
 const authPanel=<section className="mif-login-page rawi-login-compact" aria-label={L('الدخول أو إنشاء حساب','Sign in or sign up')}>
   <div className="rawi-auth-heading"><img src="/rawi-erp-mark.svg" alt="" width="32" height="32" style={{width:32,height:32,maxWidth:32,maxHeight:32,flex:"0 0 32px"}}/><strong>{signupStep==='verify'?L('تأكيد البريد الإلكتروني','Verify your email'):signup?L('إنشاء حساب جديد','Create account'):L('تسجيل الدخول','Sign in')}</strong></div>
   {signupStep==='verify'?<>
@@ -244,7 +246,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
    </form>
   </>}
  </section>;
- return <div className="mif-app" dir={lang==='ar'?'rtl':'ltr'}>
+ return <div ref={viewportRef} className="mif-app" dir={lang==='ar'?'rtl':'ltr'}>
   <main className={'mif-body mif-body-'+((tab==='new'||tab==='thread')?'chats':tab)+(!authed&&!checking&&protectedTabs.includes(tab)?' mif-body-auth':'')}>
    {(tab==='new'||tab==='thread')&&<section className="mif-chat-page">
     <div className="rawi-chat-tools rawi-enterprise-tools">

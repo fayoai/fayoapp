@@ -223,7 +223,9 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    return fail(c,e.status||502,e.message);
   }
   const answer=result.answer;
-  await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[claim[0].workspace_id,user,result.provider,result.model,result.input_tokens,result.output_tokens]);
+  // Metrics must never discard an AI response if logging temporarily fails.
+  try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES($1,$2,$3,$4,$5,$6)',[claim[0].workspace_id,user,result.provider,result.model,result.input_tokens,result.output_tokens])}
+  catch(e){console.error('RAWI private AI usage audit failed',e?.message)}
   if(!id){
    const created=await query(sql,'INSERT INTO mif_chat_threads(owner_id,title,workspace_id) VALUES($1,$2,$3) RETURNING id',[user,v.data.question.slice(0,95),workspace]);
    id=created[0].id;

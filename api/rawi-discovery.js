@@ -108,8 +108,9 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
   const aside=/^(?:[\\s؟?!.,]*)?(?:انت مين|إنت مين|مين انت|مين إنت|اسمك ايه|اسمك إيه|اسمك|مين عملك|مين اللي عملك|مين الي عملك|من عملك|من طورك|من صممك|مين طورك|مين صنعك|مين برمجك|من صنعك|مين بيديرك|من يديرك|مين مسؤول عنك|مين صاحبك|تابع لمين|who are you|what is your name|who created you|who made you|who runs you|who manages you|hello|hi|مرحبا|أهلا|اهلا|السلام عليكم|ازيك|إزيك)/i.test(input);
   if(aside)return null;
   if(input.length<3)return {answer:language==='en'?'Tell me a little more so I can design accurately.':'احكي لي تفاصيل أكتر شوية عشان أقدر أصمم لك حاجة تناسب شغلك.',provider:'discovery',model:'guided',input_tokens:0,output_tokens:0,discovery_stage:stage};
-  const ai=await getAIProviders(g.sql,env(c),query).catch(()=>[]);
-  if(!ai.length&&env(c).AI?.run)ai.push({code:'workers_ai',model:'@cf/meta/llama-3.1-8b-instruct-fp8',binding:env(c).AI});
+  const ai=await getAIProviders(g.sql,env(c),query);
+  // Never advance company discovery on fake scripted turns when AI is offline.
+  if(!ai.length)throw Object.assign(new Error('محادثة راوي غير متصلة بنموذج ذكاء اصطناعي. يرجى تفعيل مزوّد AI من إدارة MIF Smart.'),{status:503});
   const details=(language==='en'?'Company: ':'الشركة: ')+g.company.name+'; '+g.company.activity;
   let following,answer,proposal=current.proposal||{},research=current.research||[],provider='discovery',model='guided';
   if(stage==='intro'){
@@ -123,7 +124,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
       +'Do not give a fixed script or a predefined ERP departments list. Ask at most two specific questions. Write 80-140 words in '+(language==='en'?'English':'Egyptian Arabic')+'.';
      const response=await routeAI(prompt,ai,[],'','enterprise',[],480);
      answer=response.answer;provider=response.provider;model=response.model;
-    }catch{}
+    }catch(error){throw error}
    }
   }else if(stage==='references'){
    next.preferences=input;following='processes';
@@ -144,9 +145,9 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
      const prepared=await routeAI(prompt,ai,[],'','enterprise',[],450);
      suggestion=String(prepared.answer||'').trim().slice(0,1800);
      provider=prepared.provider;model=prepared.model;
-    }catch{}
+    }catch(error){throw error}
    }
-   answer=researchIntro+(suggestion?suggestion+'\n\n':'')+question;
+   answer=researchIntro+suggestion;
   }else if(stage==='processes'||stage==='review'&&!approvalMessage(input,language)){
    next[stage==='review'?'revisions':'workflows']=input;
    following='review';
