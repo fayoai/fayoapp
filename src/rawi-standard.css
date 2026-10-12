@@ -49,3 +49,13 @@
 .rawi-std-sequence{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}
 @media(max-width:920px){.rawi-std-layout{grid-template-columns:minmax(0,1fr)}.rawi-std-side{flex-direction:row;overflow-x:auto;overflow-y:hidden;max-height:none;scrollbar-width:thin}.rawi-std-side button{flex:0 0 auto;white-space:nowrap}.rawi-std-records{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.rawi-std{gap:9px}.rawi-std-heading,.rawi-std-repo-header{flex-direction:column;align-items:stretch;padding:12px}.rawi-std-heading select{max-width:100%;width:100%}.rawi-std-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:7px}.rawi-std-groups button{min-width:0;justify-content:space-between;font-size:12px;padding:9px}.rawi-std-fields,.rawi-std-record-fields{grid-template-columns:minmax(0,1fr)}.rawi-std-fields :is(input,select,textarea),.rawi-std-sequence :is(input,select){font-size:16px;min-height:44px}.rawi-std-sequence{display:flex;flex-direction:column;align-items:stretch}.rawi-std-form{padding:11px}.rawi-std-header-actions button{flex:1}.rawi-std-form>button{align-self:stretch}}
+
+
+.rawi-std-issued{display:flex;flex-direction:column;gap:10px;border:1px solid #dce7f7;background:#fff;border-radius:12px;padding:13px;min-width:0}
+.rawi-std-issued h3{font-size:15px;margin:0}
+.rawi-std-invoices{display:grid;gap:7px}
+.rawi-std-invoices>div{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid #e5edfa;border-radius:10px}
+.rawi-std-invoices strong{font-size:13px}.rawi-std-invoices span{font-size:12px;color:#68809f;flex:1}
+.rawi-std-invoices button,.rawi-std-qr button{background:#f2f7ff;border:1px solid #cfddf1;border-radius:8px;color:#275cab;padding:7px 11px;font-size:12px}
+.rawi-std-qr{display:flex;flex-direction:column;align-items:center;gap:9px;max-width:300px;border:1px solid #dce7f7;border-radius:12px;padding:14px;background:#fff}
+.rawi-std-qr img{width:220px;height:220px;max-width:100%}.rawi-std-qr small{font-size:11px;text-align:center;color:#677f9f}
