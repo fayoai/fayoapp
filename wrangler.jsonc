@@ -29,6 +29,7 @@
   "ai": {"binding": "AI"},
   "vars": {
     "MIF_APP_SURFACE": "mif",
+    "PUBLIC_CHAT_ENABLED": "true",
     "RAWI_ENTERPRISE_ORIGIN": "https://rawi-enterprise.fayosaas.workers.dev",
     "NEON_PROJECT_ID": "blue-wave-63999494",
     "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
