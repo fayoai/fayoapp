@@ -11,15 +11,18 @@ export const designChangeRequested=input=>{
 const cancelled=input=>/^(?:الغ(?:ي|اء) التعديل|إلغاء التعديل|تراجع عن التعديل|cancel(?: revision)?|discard(?: changes)?)[.!؟\s]*$/i.test(String(input||'').trim());
 const approval=input=>/^(?:اعتمد(?: التصميم)?|موافق(?: على التصميم)?|وافق|نفذ(?: التصميم)?|ابدأ التنفيذ|تمام اعتمد|approve(?: the design)?|approved|confirm(?: design)?|build it|yes approve)[.!\s]*$/i.test(String(input||'').trim());
 const reply=(answer,model,extra={})=>({answer,model,provider:'discovery',input_tokens:0,output_tokens:0,...extra});
+// The production database restricts discovery.stage to intro/references/processes/review/completed.
+// Use an explicit flag in the existing JSONB answers instead of inventing a SQL-invalid stage.
+export const revisionPending=current=>current?.stage==='revision_review'||(current?.stage==='completed'&&current?.answers?.revision_pending===true);
 
 export async function handleApprovedDesignRevision({c,company,current,workspace,user,message,language,central,query,settings,design=generateWorkspaceBlueprint,providers=getAIProviders}){
  const input=String(message||'').trim().slice(0,2500);
- if(current.stage!=='revision_review'&&!designChangeRequested(input))return null;
- if(current.stage==='revision_review'&&cancelled(input)){
-  await query(central,"UPDATE rawi_workspace_discovery SET stage='completed',proposal='{}'::jsonb,updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user]);
+ if(!revisionPending(current)&&!designChangeRequested(input))return null;
+ if(revisionPending(current)&&cancelled(input)){
+  await query(central,"UPDATE rawi_workspace_discovery SET stage='completed',proposal='{}'::jsonb,answers=answers-'revision_pending',updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user]);
   return reply(language==='en'?'The proposed changes were cancelled. Your published repositories and data are unchanged.':'تم إلغاء مسودة التعديل. مستودعاتك الحالية وسجلاتها لم تتغير.','revision-cancelled');
  }
- if(current.stage==='revision_review'&&approval(input)){
+ if(revisionPending(current)&&approval(input)){
   if(!blueprintReady(current.proposal))return reply(language==='en'?'No valid design revision is waiting for approval.':'لا توجد مسودة تعديل سليمة لاعتمادها.','revision-invalid');
   const tenant=c.get('tenantSQL');
   if(!tenant)throw Object.assign(new Error('Customer database is unavailable for safe design approval'),{status:503});
@@ -39,7 +42,7 @@ export async function handleApprovedDesignRevision({c,company,current,workspace,
  if(input.length<3)return null;
  const ai=await providers(central,settings,query);
  if(!ai.length)throw Object.assign(new Error('AI design provider is not available'),{status:503});
- const prior=current.stage==='revision_review'&&blueprintReady(current.proposal)?current.proposal:company.setup_plan;
+ const prior=revisionPending(current)&&blueprintReady(current.proposal)?current.proposal:company.setup_plan;
  const tenant=c.get('tenantSQL');
  let recent=[];
  if(tenant)recent=await query(tenant,"SELECT m.content FROM mif_chat_messages m JOIN mif_chat_threads t ON t.id=m.thread_id WHERE t.workspace_id=$1 AND t.owner_id=$2 AND m.role='user' ORDER BY m.created_at DESC LIMIT 8",[workspace,user]).catch(()=>[]);
@@ -53,7 +56,7 @@ export async function handleApprovedDesignRevision({c,company,current,workspace,
  ].join('\n');
  const generated=await design({name:company.name,activity:company.activity,description:details,language,providers:ai,routeAI});
  if(!generated.ready)return reply(language==='en'?'I could not generate a reliable revision. Your current repositories remain unchanged; please clarify the records and workflow you need.':'ماقدرتش أطلع تعديل موثوق. التصميم الحالي لم يتغير. وضّح السجلات ومراحل العمل المطلوبة وجرّب تاني.','revision-unavailable');
- await query(central,"UPDATE rawi_workspace_discovery SET stage='revision_review',proposal=$3::jsonb,updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user,JSON.stringify(generated.blueprint)]);
+ await query(central,"UPDATE rawi_workspace_discovery SET stage='completed',proposal=$3::jsonb,answers=jsonb_set(answers,'{revision_pending}','true'::jsonb,true),updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user,JSON.stringify(generated.blueprint)]);
  const plan=generated.blueprint;
  const detail=plan.repositories.map((r,i)=>(i+1)+'. '+r.name+' — '+r.description+'\n  '+(language==='en'?'Fields: ':'الحقول: ')+r.fields.map(x=>x.label).join('، ')+'\n  '+(language==='en'?'Stages: ':'المراحل: ')+(r.stages.join(' ← ')||'—')).join('\n');
  return reply((language==='en'?'Proposed design revision (NOT published):\n':'مقترح تعديل المستودعات (لم يُنشر بعد):\n')+detail+

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {handleApprovedDesignRevision,designChangeRequested} from './rawi-revision.js';
+import {handleApprovedDesignRevision,designChangeRequested,revisionPending} from './rawi-revision.js';
 import {generateWorkspaceBlueprint,validateGeneratedBlueprint} from './rawi-generated-blueprint.js';
 
 const workspace='11111111-1111-4111-8111-111111111111';
@@ -19,7 +19,7 @@ const revision=validateGeneratedBlueprint({
    {key:'summary',label:'Inspection summary',type:'text',required:true},{key:'date',label:'Inspection date',type:'date',required:false}],
    stages:['Planned','Completed'],relations:[]}]
 });
-const call=async({stage='completed',message='عدل مستودعات المشاريع',existing=original,proposal=revision,used=[]}={})=>{
+const call=async({stage='completed',pending=false,message='عدل مستودعات المشاريع',existing=original,proposal=revision,used=[]}={})=>{
  const writes=[],tenant={};
  const query=async(_db,sql,params=[])=>{
   writes.push({sql,params});
@@ -31,7 +31,7 @@ const call=async({stage='completed',message='عدل مستودعات المشا�
  const result=await handleApprovedDesignRevision({
   c:{get:k=>k==='tenantSQL'?tenant:null},
   company:{name:'Sports Installers',activity:'Install sports pitches',description:'Outdoor courts',setup_plan:existing},
-  current:{stage,proposal,answers:{overview:'Construction projects and material deliveries'}},
+  current:{stage,proposal,answers:{overview:'Construction projects and material deliveries',...(pending?{revision_pending:true}:{})}},
   workspace,user,message,language:'ar',central:{},settings:{},query,
   providers:async()=>[{code:'stub'}],design:async()=>({ready:true,blueprint:revision})
  });
@@ -44,20 +44,27 @@ test('Design revisions are not triggered by ordinary questions',async()=>{
 test('Approved company can request a new preview without overwriting its stored plan',async()=>{
  const x=await call();
  assert.match(x.result.answer,/لم يُنشر/);
- assert.ok(x.writes.some(e=>e.sql.includes("stage='revision_review'")));
+ assert.ok(x.writes.some(e=>e.sql.includes("stage='completed'")&&e.sql.includes("jsonb_set(answers,'{revision_pending}'")));
+ assert.equal(x.writes.some(e=>e.sql.includes("stage='revision_review'")),false);
  assert.equal(x.writes.some(e=>e.sql.includes('UPDATE rawi_company_profiles')),false);
 });
 test('Revision approval cannot remove a populated field or repository',async()=>{
- const x=await call({stage:'revision_review',message:'اعتمد التصميم',
+ const x=await call({pending:true,message:'اعتمد التصميم',
   proposal:validateGeneratedBlueprint({...original,repositories:[original.repositories[1],revision.repositories[2]]}),
   used:[{repository_key:'projects',field_key:'title'}]});
  assert.match(x.result.answer,/حماية البيانات/);
  assert.equal(x.writes.some(e=>e.sql.includes('UPDATE rawi_company_profiles')),false);
 });
+test('Production-compatible pending revision flag does not require an unsupported discovery stage',()=>{
+ assert.equal(revisionPending({stage:'completed',answers:{revision_pending:true}}),true);
+ assert.equal(revisionPending({stage:'completed',answers:{}}),false);
+ assert.equal(revisionPending({stage:'revision_review',answers:{}}),true);
+});
 test('Explicit approval saves a compatible revised plan',async()=>{
- const x=await call({stage:'revision_review',message:'اعتمد التصميم',used:[{repository_key:'projects',field_key:'title'}]});
+ const x=await call({pending:true,message:'اعتمد التصميم',used:[{repository_key:'projects',field_key:'title'}]});
  assert.match(x.result.answer,/اعتمدت التعديل/);
  assert.ok(x.writes.some(e=>e.sql.includes('UPDATE rawi_company_profiles')));
+ assert.ok(x.writes.some(e=>e.sql.includes("answers=answers-'revision_pending'")));
 });
 test('A richer generated plan has independent repositories and real record fields',async()=>{
  const entities=['projects','materials','inspections','deliveries'];
