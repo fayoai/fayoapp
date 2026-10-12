@@ -262,7 +262,7 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
   if(env(c).MIF_APP_SURFACE==='enterprise'&&!discoveryPending&&!v.data.documents?.length){
    try{
     draftAction=await createRawiCommandDraft({app,c,sql,query,workspace,user,threadId:id,question:v.data.question,providers:await getAIProviders(centralDb(c),env(c),query)});
-    if(draftAction)answer=draftAction.status==='saved'?draftAction.message:answer+'\n\n'+draftAction.message;
+    if(draftAction)answer=draftAction.message;
    }catch(e){
     console.error('RAWI requested draft operation failed',String(e?.message||e).slice(0,160));
     draftAction={status:'not_saved',message:'تعذر تنفيذ الأمر وحفظ المسودة؛ لم يتم اعتماد أو ترحيل أي مستند.'};
