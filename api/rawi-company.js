@@ -52,7 +52,7 @@ export function installRawiCompany(app,{centralDb,env,query}){
    'changed AS( UPDATE erp_workspaces w SET name=$3,legal_name=$3,address=$4,vat_number=$6,phone=$7 '+
    'FROM allowed a WHERE w.id=a.id RETURNING w.id ), saved AS( '+
    'UPDATE rawi_company_profiles p SET logo_data=$5,name=$3,address=$4,commercial_registration=$8, '+
-   'tax_number=$6,phone=$7,mobile=$9,website=$10,emails=$11,activity=$12,description='',completed_at=now(), '+
+   'tax_number=$6,phone=$7,mobile=$9,website=$10,emails=$11,activity=$12,description=$13,completed_at=now(), '+
    'setup_plan=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_plan ELSE $14::jsonb END, '+
    'setup_source=CASE WHEN p.setup_inputs @> jsonb_build_object(\'name\',$3::text,\'activity\',$12::text) AND p.setup_plan ? \'repositories\' THEN p.setup_source ELSE \'pending\' END, '+
    'setup_inputs=jsonb_build_object(\'name\',$3::text,\'activity\',$12::text),setup_updated_at=now() '+
