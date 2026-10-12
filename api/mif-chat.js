@@ -1,5 +1,6 @@
 import {seal,unsealProviderSecret,providerEncryptionKey} from './ai-erp.js';
 import {getAIProviders,routeAI} from './ai-router.js';
+import {designChangeRequested} from './rawi-revision.js';
 import {freePublicSearch,wantsPublicSearch,sourceContext,sourceLinks} from './rawi-free-search.js';
 import {z} from 'zod';
 import {documentsSchema} from './rawi-documents.js';
@@ -201,6 +202,7 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
     }catch(discoveryError){
      // Temporary onboarding failures must not disable the member's AI conversation.
      console.error('RAWI discovery response failed',String(discoveryError?.message||discoveryError).slice(0,180));
+     if(designChangeRequested(v.data.question)||/^(?:اعتمد(?: التصميم)?|approve(?: the design)?)/i.test(v.data.question.trim()))throw discoveryError;
      result=null;
     }
    }
@@ -222,9 +224,11 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    const blueprint=companyInfo[0]?.setup_plan;
    const dynamicStats=blueprint?.repositories?.length?await query(sql,`SELECT repository_key,COUNT(*)::int records
      FROM rawi_dynamic_records WHERE workspace_id=$1 GROUP BY repository_key`,[workspace]).catch(()=>[]):[];
+   const recentOwnerMessages=companyInfo[0]?await query(sql,"SELECT m.content FROM mif_chat_messages m JOIN mif_chat_threads t ON t.id=m.thread_id WHERE t.workspace_id=$1 AND t.owner_id=$2 AND m.role='user' ORDER BY m.created_at DESC LIMIT 6",[workspace,user]).catch(()=>[]):[];
    const business=companyInfo[0]?{
     name:companyInfo[0].name,activity:companyInfo[0].activity,sector:blueprint?.sector,
     description:blueprint?.summary,
+    latest_owner_requirements:recentOwnerMessages.map(x=>String(x.content).slice(0,180)),
     company_specific_repositories:(blueprint?.repositories||[]).map(r=>({
      key:r.key,name:r.name,stages:r.stages,fields:r.fields.map(f=>({key:f.key,label:f.label,type:f.type})),
      saved_records:dynamicStats.find(x=>x.repository_key===r.key)?.records||0
@@ -233,7 +237,7 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    const research=!v.data.documents?.length&&wantsPublicSearch(v.data.question)?await freePublicSearch(v.data.question,{language:/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'}):null;
    const cite=research?.sources?.length?sourceContext(research,/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'):'';
    const questionForAI=cite?v.data.question+'\n\n'+cite:v.data.question;
-   result=await routeAI(questionForAI,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3700),'enterprise',v.data.documents||[],1100);
+   result=await routeAI(questionForAI,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({business,workspaces:stats}).slice(0,3000),'enterprise',v.data.documents||[],1100);
    if(research?.sources?.length){
     result.sources=research.sources;
     if(!research.sources.some(x=>result.answer.includes(x.url)))result.answer+='\n\n'+sourceLinks(research);
