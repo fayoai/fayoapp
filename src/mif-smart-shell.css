@@ -253,3 +253,8 @@
  .mif-app .mif-composer-field{min-height:52px}
  .mif-app .mif-chat-scroll.is-empty{padding-top:8px}
 }
+
+/* AI-saved operational drafts must remain one tap away from the conversation. */
+.rawi-draft-chat-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:10px 13px;border:1px solid #b8cef1;border-radius:10px;background:#ebf3ff;color:#1c5bac;font-size:13px;font-weight:750;line-height:1.5;cursor:pointer;max-width:100%;white-space:normal;text-align:start}
+.rawi-draft-chat-link:hover{background:#dfeeff}
+@media(max-width:600px){.rawi-draft-chat-link{min-height:44px;width:100%;font-size:13px}}
