@@ -143,6 +143,6 @@ export function validateRepositoryRecord(repo,values,partial=false){
   safe[k]=v;
  }
  if(!partial&&repo.fields.some(f=>f.required&&(safe[f.key]===undefined||safe[f.key]==='')))return null;
- if(!Object.keys(safe).length)return null;
+ if(!Object.keys(safe).length && !partial)return null;
  return safe;
 }
