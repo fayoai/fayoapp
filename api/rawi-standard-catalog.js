@@ -19,7 +19,7 @@ export const STANDARD_GROUPS=Object.freeze(specs.map(([key,title,entries])=>({
   description:'',read_only:readOnly.has(suffix),
   storage:master.has(suffix)?'erp':'records',
   kind:suffix
- })
+ }))
 })));
 export const STANDARD_REPOSITORIES=STANDARD_GROUPS.flatMap(group=>group.repositories);
 export const findStandardRepository=key=>STANDARD_REPOSITORIES.find(r=>r.key===key)||null;
