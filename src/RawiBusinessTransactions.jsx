@@ -24,6 +24,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  const [reference,setReference]=useState(''),[memo,setMemo]=useState(''),[postedOn,setPostedOn]=useState(new Date().toISOString().slice(0,10)),[journalLines,setJournalLines]=useState([emptyJournalLine(),emptyJournalLine()]);
  const [payment,setPayment]=useState(emptyPayment),[priceItem,setPriceItem]=useState(''),[salePrice,setSalePrice]=useState('');
  const [issueFor,setIssueFor]=useState(null),[issueAccounts,setIssueAccounts]=useState({receivable_account_id:'',revenue_account_id:'',vat_account_id:''});
+ const [receiveFor,setReceiveFor]=useState(null),[receiveWarehouse,setReceiveWarehouse]=useState('');
  const list=useMemo(()=>kind==='sales_orders'?rows.filter(r=>r.kind==='sale'):kind==='purchase_orders'?rows.filter(r=>r.kind==='purchase'):kind==='sales_receipts'||kind==='accounting_receipts'?rows.filter(r=>r.direction==='incoming'):kind==='payment_vouchers'?rows.filter(r=>r.direction==='outgoing'):rows,[rows,kind]);
  const loadUnits=async itemId=>{if(!itemId||unitOptions[itemId])return;try{const r=await api(prefix+'/system/items/'+encodeURIComponent(itemId)+'/units');setUnitOptions(prev=>({...prev,[itemId]:r.data||[]}))}catch(e){setError(e.message)}};
  const refresh=async()=>{if(!prefix||!config)return;setLoading(true);setError('');
@@ -35,7 +36,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    else {const d=await api(prefix+'/advanced/payments');setRows(d.payments||[]);setInvoices(d.invoices||[]);}
   }catch(e){setError(e.message)}finally{setLoading(false)}
  };
- useEffect(()=>{setRows([]);setOpen(false);setIssueFor(null);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
+ useEffect(()=>{setRows([]);setOpen(false);setIssueFor(null);setReceiveFor(null);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
  useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind||config?.section!=='documents')return;
   setPartner(sourceDraft.partner_id||'');
   const prepared=(sourceDraft.lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80);
@@ -99,6 +100,14 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    return L('صدرت الفاتورة وتم ترحيل قيدها المحاسبي','Invoice issued and journal entry posted');
   });
  };
+ const receivePurchase=event=>{event.preventDefault();if(!receiveFor||!receiveWarehouse||busy)return;
+  if(!window.confirm(L('تأكيد استلام جميع الأصناف المخزنية لأمر الشراء في المستودع المحدد؟','Confirm full goods receipt of this purchase order into the chosen warehouse?')))return;
+  request(async()=>{
+   const r=await api(prefix+'/core/documents/'+encodeURIComponent(receiveFor.id)+'/receive',{method:'POST',body:JSON.stringify({warehouse_id:receiveWarehouse})});
+   setReceiveFor(null);setReceiveWarehouse('');
+   return L('تم استلام أمر الشراء وتسجيل ','Purchase order received with ')+r.data?.movement_count+L(' حركات مخزنية',' inventory movements');
+  });
+ };
  const action=(id,mode)=>request(async()=>{
   if(mode==='paid'){await api(prefix+'/invoices/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({status:'paid'})});return L('تم تحديث حالة الفاتورة إلى مدفوعة بعد التحقق من السندات المرحّلة','Invoice marked paid after validating posted receipts')}
   if(mode==='confirm'){if(!window.confirm(L('تأكيد أمر البيع أو الشراء؟','Confirm the sales or purchase order?')))return L('لم تُنفّذ عملية','No change made');await api(prefix+'/core/documents/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({status:'confirmed'})});return L('تم تأكيد الأمر','Order confirmed')}
@@ -112,6 +121,12 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    <div className="rawi-live-actions"><button type="button" onClick={refresh} disabled={loading||busy}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>{canCreate&&<button type="button" className="rawi-live-primary" onClick={()=>setOpen(x=>!x)}><Plus size={16}/>{L('إنشاء عملية فعلية','New transaction')}</button>}</div>
   </header>
   {error&&<p role="alert" className="rawi-live-error">{error}</p>}{message&&<p role="status" className="rawi-live-notice">{message}</p>}
+  {receiveFor&&kind==='purchase_orders'&&<form className="rawi-live-editor" onSubmit={receivePurchase}>
+   <strong>{L('استلام أمر شراء كامل: ','Receive entire purchase order: ')}{receiveFor.doc_no}</strong>
+   <p className="rawi-live-hint">{L('سيضيف الاستلام جميع الأصناف المخزنية بالكميات الأساسية إلى المستودع، ويسجل الحركات، ويحوّل الأمر إلى مكتمل. لا يتم إنشاء فاتورة مورد أو قيد محاسبي تلقائيًا.','Receives all stock items into the warehouse and completes the purchase order. Supplier invoice and payable journal are not created automatically.')}</p>
+   <label>{L('مستودع الاستلام','Receiving warehouse')}<select required value={receiveWarehouse} onChange={e=>setReceiveWarehouse(e.target.value)}><option value="">{L('اختر المستودع','Select warehouse')}</option>{(lookups.warehouses||[]).map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+   <div className="rawi-live-actions"><button type="button" onClick={()=>setReceiveFor(null)}>{L('إلغاء','Cancel')}</button><button className="rawi-live-primary" type="submit" disabled={busy}><Save size={16}/>{L('تأكيد الاستلام','Post receipt')}</button></div>
+  </form>}
   {issueFor&&config.section==='invoices'&&<form className="rawi-live-editor" onSubmit={issueInvoice}>
    <strong>{L('إصدار وترحيل الفاتورة: ','Issue and post invoice: ')}{issueFor.invoice_no}</strong>
    <p className="rawi-live-hint">{L('قيد تلقائي: مدين الذمم المدينة بإجمالي الفاتورة، دائن الإيرادات قبل الضريبة، ودائن ضريبة المخرجات. اختر الحسابات المطابقة من دليل الشركة.','Balanced GL: debit receivables for gross total; credit revenue for subtotal and output VAT. Choose matching GL accounts.')}</p>
@@ -162,7 +177,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    <td>{currency(row.total_halalas??row.amount_halalas??row.debit_halalas??row.sale_price_halalas)}</td>
    <td>{config.section==='payments'?(row.journal_entry_id?L('مرحل محاسبيًا','Posted to ledger'):L('غير مرحل','Unposted')):config.section==='invoices'?(row.journal_entry_id?row.status+' · '+L('قيد مُرحّل','GL posted'):row.status+' · '+L('غير مرحل','GL unposted')):row.status|| (config.section==='pricing'?(row.active?L('نشط','Active'):L('غير نشط','Inactive')):L('مسجل','Recorded'))}</td>
    {config.section==='invoices'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>{setIssueFor(row);setOpen(false)}}><CheckCircle2 size={14}/>{L('مراجعة وإصدار','Review and issue')}</button>}{row.status==='issued'&&row.journal_entry_id&&Number(row.received_halalas||0)>=Number(row.total_halalas)&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(L('تأكيد أن سندات القبض المرحّلة تغطي كامل الفاتورة؟','Mark paid after verifying posted receipts cover the full amount?')))action(row.id,'paid')}}>{L('تسوية مدفوعة','Mark paid')}</button>}</td>}
-   {config.section==='documents'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>action(row.id,'confirm')}><CheckCircle2 size={14}/>{L('تأكيد الأمر','Confirm')}</button>}{row.kind==='sale'&&['confirmed','completed'].includes(row.status)&&<button type="button" disabled={busy||invoices.some(i=>i.source_document_id===row.id)} onClick={()=>action(row.id,'invoice')}><FileText size={14}/>{invoices.some(i=>i.source_document_id===row.id)?L('تمت الفوترة','Invoiced'):L('إنشاء فاتورة','Invoice')}</button>}</td>}
+   {config.section==='documents'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>action(row.id,'confirm')}><CheckCircle2 size={14}/>{L('تأكيد الأمر','Confirm')}</button>}{row.kind==='purchase'&&row.status==='confirmed'&&<button type="button" disabled={busy} onClick={()=>setReceiveFor(row)}><CheckCircle2 size={14}/>{L('استلام للمستودع','Receive stock')}</button>}{row.kind==='sale'&&['confirmed','completed'].includes(row.status)&&<button type="button" disabled={busy||invoices.some(i=>i.source_document_id===row.id)} onClick={()=>action(row.id,'invoice')}><FileText size={14}/>{invoices.some(i=>i.source_document_id===row.id)?L('تمت الفوترة','Invoiced'):L('إنشاء فاتورة','Invoice')}</button>}</td>}
    </tr>)}</tbody></table></div>:<div className="rawi-live-empty">{L('لا توجد معاملات فعلية في هذا المستودع حتى الآن','No operational transactions yet')}</div>}
   {kind==='sales_invoices'&&<p className="rawi-live-hint">{L('لإنشاء فاتورة فعلية: أنشئ أمر بيع، أكّد الأمر، ثم اضغط إنشاء فاتورة. المسودة وحدها لا تُصدر فاتورة.','To create an invoice: create a sales order, confirm it, then issue the invoice. Drafts are not issued invoices.')}</p>}
  </section>;
