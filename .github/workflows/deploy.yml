@@ -98,6 +98,8 @@ jobs:
           done
       - name: Test active MIF and RAWI ERP Worker boundaries
         run: npm run smoke:surfaces
+      - name: Verify guest AI responses on both public Workers
+        run: node scripts/smoke-ai-free.mjs
       - name: Verify real database-backed application runtimes
         shell: bash
         env:
