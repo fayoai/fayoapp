@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Hono} from 'hono';
 import {installRawiUom,unitsToBase,resolveItemUnit} from './rawi-uom.js';
 import {STANDARD_GROUPS} from './rawi-standard-catalog.js';
+import {tenantMigrationSteps} from './tenant-schema.generated.js';
 
 const workspace='11111111-1111-4111-8111-111111111111';
 const item='22222222-2222-4222-8222-222222222222';
@@ -62,4 +63,11 @@ test('UOM cannot cross categories or bypass viewer restrictions',async()=>{
  assert.equal((await mock({unitCategory:'weight'}).request(route,options)).status,409);
  assert.equal((await mock({role:'viewer'}).request(route,options)).status,403);
  assert.equal((await mock({knownItem:false}).request(route,options)).status,404);
+});
+
+test('UOM migrations append after existing tenant schema versions',()=>{
+ assert.ok(tenantMigrationSteps.length>=107);
+ assert.ok(tenantMigrationSteps.slice(98).some(x=>x.includes('CREATE TABLE IF NOT EXISTS erp_units')));
+ assert.ok(tenantMigrationSteps.slice(98).some(x=>x.includes('CREATE TABLE IF NOT EXISTS erp_item_units')));
+ assert.equal(tenantMigrationSteps.slice(0,98).some(x=>x.includes('CREATE TABLE IF NOT EXISTS erp_units')),false);
 });
