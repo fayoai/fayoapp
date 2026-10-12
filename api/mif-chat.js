@@ -1,9 +1,11 @@
 import {seal,unsealProviderSecret,providerEncryptionKey} from './ai-erp.js';
 import {getAIProviders,routeAI} from './ai-router.js';
+import {freePublicSearch,wantsPublicSearch,sourceContext,sourceLinks} from './rawi-free-search.js';
 import {z} from 'zod';
 import {documentsSchema} from './rawi-documents.js';
 const uuid=z.string().uuid();
-const input=z.object({question:z.string().trim().min(1).max(2500),documents:documentsSchema.optional()});
+const messageHistory=z.array(z.object({role:z.enum(['user','assistant']),content:z.string().max(2500)})).max(12).optional();
+const input=z.object({question:z.string().trim().min(1).max(2500),documents:documentsSchema.optional(),history:messageHistory});
 const authInput=input.extend({thread_id:uuid.nullable().optional(),workspace_id:uuid.nullable().optional()});
 const fail=(c,status,error)=>c.json({ok:false,error},status);
 const parse=async c=>{try{return await c.req.json()}catch{return {}}};
@@ -121,10 +123,17 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    const visitorMode=cfg.MIF_APP_SURFACE==='enterprise'?'enterprise-public':'mif-public';
    const products=visitorMode==='mif-public'?await query(sql,'SELECT code,title_ar,title_en,summary_ar,summary_en FROM mif_products WHERE published=true ORDER BY sort_order,created_at LIMIT 12'):[];
    const catalogue=JSON.stringify(products.map(p=>({code:p.code,title_ar:p.title_ar,title_en:p.title_en,summary_ar:p.summary_ar,summary_en:p.summary_en}))).slice(0,3000);
-   const result=await routeAI(v.data.question,await getAIProviders(centralDb(c),cfg,query),[],catalogue,visitorMode,v.data.documents||[]);
+   const hasResearch=!v.data.documents?.length&&wantsPublicSearch(v.data.question);
+   const references=hasResearch?await freePublicSearch(v.data.question,{language:/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'}):null;
+   const researchText=references?.sources?.length?sourceContext(references,/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'):'';
+   const prompt=researchText?v.data.question+'\n\n'+researchText:v.data.question;
+   const result=await routeAI(prompt,await getAIProviders(centralDb(c),cfg,query),v.data.history||[],catalogue,visitorMode,v.data.documents||[],1100);
+   if(researchText&&result.answer&&!references.sources.some(x=>result.answer.includes(x.url))){
+    result.answer+='\n\n'+sourceLinks(references);
+   }
    // Public requests are recorded without visitor IP, email or an invented tenant.
    try{await query(sql,'INSERT INTO mif_ai_usage(workspace_id,actor_id,provider,model,input_tokens,output_tokens) VALUES(NULL,NULL,$1,$2,$3,$4)',[result.provider,result.model,result.input_tokens,result.output_tokens])}catch(e){console.error('MIF public AI usage audit failed',e.message)}
-   return c.json({ok:true,answer:result.answer});
+   return c.json({ok:true,answer:result.answer,model:result.model,provider:result.provider,sources:references?.sources||[],research_scope:references?.scope||null});
   }catch(e){return fail(c,e.status||502,e.message)}
  });
  app.get('/api/admin/chat/threads',async c=>{
@@ -200,7 +209,14 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
      saved_records:dynamicStats.find(x=>x.repository_key===r.key)?.records||0
     }))
    }:null;
-   result=await routeAI(v.data.question,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3700),'enterprise',v.data.documents||[]);
+   const research=!v.data.documents?.length&&wantsPublicSearch(v.data.question)?await freePublicSearch(v.data.question,{language:/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'}):null;
+   const cite=research?.sources?.length?sourceContext(research,/[\u0600-\u06ff]/.test(v.data.question)?'ar':'en'):'';
+   const questionForAI=cite?v.data.question+'\n\n'+cite:v.data.question;
+   result=await routeAI(questionForAI,await getAIProviders(centralDb(c),env(c),query),history,JSON.stringify({workspaces:stats,business}).slice(0,3700),'enterprise',v.data.documents||[],1100);
+   if(research?.sources?.length){
+    result.sources=research.sources;
+    if(!research.sources.some(x=>result.answer.includes(x.url)))result.answer+='\n\n'+sourceLinks(research);
+   }
    }
   }catch(e){
    await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
@@ -213,6 +229,6 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    id=created[0].id;
   }
   await query(sql,"WITH first AS(INSERT INTO mif_chat_messages(thread_id,role,content) VALUES($1,'user',$2) RETURNING id), second AS(INSERT INTO mif_chat_messages(thread_id,role,content) SELECT $1,'assistant',$3 FROM first RETURNING id) UPDATE mif_chat_threads SET updated_at=now() WHERE id=$1 AND owner_id=$4",[id,v.data.question,answer,user]);
-  return c.json({ok:true,thread_id:id,answer,...(result.discovery_stage?{discovery_stage:result.discovery_stage,design_ready:!!result.design_ready}:{})});
+  return c.json({ok:true,thread_id:id,answer,provider:result.provider,model:result.model,sources:result.sources||[],...(result.discovery_stage?{discovery_stage:result.discovery_stage,design_ready:!!result.design_ready}:{})});
  });
 }
