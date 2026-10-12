@@ -24,7 +24,7 @@ function harness(){
  };
  const ai={run:async(_model,request)=>{
   const prompt=String(request.messages?.at(-1)?.content||'');
-  if(prompt.includes('Return ONLY a valid minified JSON'))return {response:JSON.stringify(proposal)};
+  if(prompt.includes('Output ONLY one short JSON object')||prompt.includes('Build ONE distinct repository'))return {response:JSON.stringify(proposal)};
   return {response:'بالنسبة لشركتك نقدر ننظم تنفيذ الملاعب والتكلفة والتوريد. حابب تشوف شكل البرنامج شبه أودو ولا واجهة أبسط؟'};
  }};
  const discovery=installRawiDiscovery(app,{centralDb:()=>({}),env:c=>c.env||{},query});
