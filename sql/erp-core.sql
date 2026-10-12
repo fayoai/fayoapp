@@ -162,7 +162,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS erp_item_units_base_unique ON erp_item_units(w
 CREATE INDEX IF NOT EXISTS erp_item_units_unit_index ON erp_item_units(workspace_id,unit_id);
 -- Existing products retain their legacy unit and inventory quantities unchanged.
 INSERT INTO erp_units(workspace_id,code,name,category)
-SELECT DISTINCT workspace_id,unit,CASE WHEN unit='unit' THEN 'وحدة' ELSE unit END,'count'
+SELECT DISTINCT workspace_id,unit,CASE WHEN unit='unit' THEN 'وحدة' ELSE unit END,
+CASE WHEN unit IN('kg','g') THEN 'weight' WHEN unit IN('l','ml') THEN 'volume' WHEN unit IN('m','cm') THEN 'length' ELSE 'count' END
 FROM erp_items WHERE unit<>'' ON CONFLICT(workspace_id,code) DO NOTHING;
 INSERT INTO erp_item_units(workspace_id,item_id,unit_id,factor,is_base)
 SELECT i.workspace_id,i.id,u.id,1,true FROM erp_items i
