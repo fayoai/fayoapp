@@ -62,10 +62,11 @@ export function installErpCore(app,{db,centralDb,query}){
  app.post('/api/admin/erp/w/:workspace/core/movements',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;const v=stockSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid stock adjustment');
   const x=v.data;
-  let converted;try{converted=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:x.item_id,unitId:x.unit_id,quantity:Math.abs(x.delta)})}catch(e){return fail(c,400,e.message)}
-  const delta=Math.sign(x.delta)*converted.baseQuantity;
+  let converted=null;
+  if(x.unit_id){try{converted=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:x.item_id,unitId:x.unit_id,quantity:Math.abs(x.delta)})}catch(e){return fail(c,400,e.message)}}
+  const delta=converted?Math.sign(x.delta)*converted.baseQuantity:x.delta;
   const sql='WITH available AS(SELECT i.id FROM erp_items i JOIN erp_warehouses w ON w.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.type=$5 AND w.id=$3), updated AS(INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity) SELECT $1,$2,$3,GREATEST($4,0) FROM available WHERE $4>=0 OR EXISTS(SELECT 1 FROM erp_stock WHERE workspace_id=$1 AND item_id=$2 AND warehouse_id=$3) ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+$4 WHERE erp_stock.quantity+$4>=0 RETURNING quantity), event AS(INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason) SELECT $1,$2,$3,$4,$6 FROM updated RETURNING id) SELECT updated.quantity,event.id FROM updated,event';
-  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,delta,'stock',x.reason+' ('+(x.unit_id?converted.unit_code:'base')+')']);
+  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,delta,'stock',x.unit_id?x.reason+' ('+converted.unit_code+')':x.reason]);
   return rows.length?c.json({ok:true,data:rows[0]},201):fail(c,409,'Insufficient stock or item/warehouse unavailable');
  });
  app.post('/api/admin/erp/w/:workspace/core/documents',async c=>{
