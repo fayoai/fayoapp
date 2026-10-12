@@ -43,6 +43,8 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
   catch(e){setError(e.message)}finally{setBusy(false)}
  };
  const create=event=>{event.preventDefault();
+  if(config.section==='journal'&&!window.confirm(L('تأكيد تسجيل القيد المتوازن في دفتر اليومية؟','Confirm posting the balanced journal entry?')))return;
+  if(config.section==='payments'&&!window.confirm(L('تأكيد تسجيل السند؟ لن تُرحّل قيود محاسبية أو تُسوّى فواتير تلقائيًا.','Confirm recording this voucher? No GL entries or invoice reconciliation will be posted automatically.')))return;
   request(async()=>{
    if(config.section==='documents'){
     const result=await api(prefix+'/core/documents',{method:'POST',body:JSON.stringify({kind:config.type,partner_id:partner,lines:lines.map(x=>({item_id:x.item_id,quantity:Number(x.quantity)})),notes})});
@@ -53,7 +55,6 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
     const converted=journalLines.map(x=>({account_id:x.account_id,debit:Number(x.debit||0),credit:Number(x.credit||0)}));
     const debit=converted.reduce((n,x)=>n+x.debit,0),credit=converted.reduce((n,x)=>n+x.credit,0);
     if(!debit||Math.abs(debit-credit)>0.001)throw Error(L('يجب أن يتساوى إجمالي المدين والدائن','Total debits and credits must balance'));
-    if(!window.confirm(L('تأكيد تسجيل القيد في دفتر اليومية؟','Confirm posting this journal entry?')))return '';
     await api(prefix+'/core/journal',{method:'POST',body:JSON.stringify({reference,memo,posted_on:postedOn,lines:converted})});
     setReference('');setMemo('');setJournalLines([emptyJournalLine(),emptyJournalLine()]);
     return L('تم حفظ القيد المتوازن في دفتر اليومية','Balanced journal entry posted');
@@ -68,7 +69,6 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
     return L('تم تحديث سعر بيع الصنف في ملف المنتجات، وستستخدمه أوامر البيع التالية','Product sale price updated for new sales orders');
    }
    if(config.section==='payments'){
-    if(!window.confirm(L('تأكيد تسجيل السند؟ هذا السجل لا يقوم بتسوية الفاتورة أو ترحيل قيد تلقائيًا.','Record this voucher? It does not automatically reconcile or post accounting entries.')))return '';
     await api(prefix+'/advanced/payments',{method:'POST',body:JSON.stringify({
      direction:config.direction,reference:payment.reference,amount_halalas:Math.round(Number(payment.amount)*100),
      method:payment.method,invoice_id:payment.invoice_id||null,recorded_at:payment.recorded_at,details:payment.details
@@ -79,7 +79,8 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
   });
  };
  const action=(id,mode)=>request(async()=>{
-  if(mode==='confirm'){await api(prefix+'/core/documents/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({status:'confirmed'})});return L('تم تأكيد الأمر','Order confirmed')}
+  if(mode==='issue'){await api(prefix+'/invoices/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({status:'issued'})});return L('تم إصدار الفاتورة','Invoice issued')}
+  if(mode==='confirm'){if(!window.confirm(L('تأكيد أمر البيع أو الشراء؟','Confirm the sales or purchase order?')))return L('لم تُنفّذ عملية','No change made');await api(prefix+'/core/documents/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({status:'confirmed'})});return L('تم تأكيد الأمر','Order confirmed')}
   if(mode==='invoice'){const r=await api(prefix+'/core/documents/'+encodeURIComponent(id)+'/invoice',{method:'POST',body:'{}'});return L('تم إنشاء الفاتورة المرتبطة: ','Linked invoice created: ')+(r.data?.invoice_no||'')}
  });
  const available=kind==='purchase_orders'?lookups.vendors||[]:lookups.customers||[];
@@ -121,11 +122,12 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},onSaved
    </div>}
    <button type="submit" className="rawi-live-primary" disabled={busy}><Save size={16}/>{busy?L('جاري الحفظ','Saving'):L('حفظ في قاعدة الشركة','Save transaction')}</button>
   </form>}
-  {loading?<div className="rawi-live-empty"><Loader2 size={19} className="mif-spinner"/>{L('جاري تحميل الحركات','Loading transactions')}</div>:list.length?<div className="rawi-live-table"><table><thead><tr><th>{L('المرجع','Reference')}</th><th>{L('التاريخ','Date')}</th><th>{L('الإجمالي (ر.س)','Amount (SAR)')}</th><th>{L('الحالة','Status')}</th>{config.section==='documents'&&<th>{L('الإجراءات','Actions')}</th>}</tr></thead><tbody>{list.map(row=><tr key={row.id}>
+  {loading?<div className="rawi-live-empty"><Loader2 size={19} className="mif-spinner"/>{L('جاري تحميل الحركات','Loading transactions')}</div>:list.length?<div className="rawi-live-table"><table><thead><tr><th>{L('المرجع','Reference')}</th><th>{L('التاريخ','Date')}</th><th>{L('الإجمالي (ر.س)','Amount (SAR)')}</th><th>{L('الحالة','Status')}</th>{(config.section==='documents'||config.section==='invoices')&&<th>{L('الإجراءات','Actions')}</th>}</tr></thead><tbody>{list.map(row=><tr key={row.id}>
    <td><FileText size={14}/>{row.doc_no||row.invoice_no||row.reference||row.sku+' — '+row.name}</td>
    <td>{String(row.created_at||row.recorded_at||row.posted_on||'').slice(0,10)}</td>
    <td>{currency(row.total_halalas??row.amount_halalas??row.debit_halalas??row.sale_price_halalas)}</td>
    <td>{row.status|| (config.section==='pricing'?(row.active?L('نشط','Active'):L('غير نشط','Inactive')):L('مسجل','Recorded'))}</td>
+   {config.section==='invoices'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(L('إصدار الفاتورة بعد مراجعتها؟','Issue this invoice after review?')))action(row.id,'issue')}}><CheckCircle2 size={14}/>{L('إصدار فاتورة','Issue invoice')}</button>}</td>}
    {config.section==='documents'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>action(row.id,'confirm')}><CheckCircle2 size={14}/>{L('تأكيد الأمر','Confirm')}</button>}{row.kind==='sale'&&['confirmed','completed'].includes(row.status)&&<button type="button" disabled={busy||invoices.some(i=>i.source_document_id===row.id)} onClick={()=>action(row.id,'invoice')}><FileText size={14}/>{invoices.some(i=>i.source_document_id===row.id)?L('تمت الفوترة','Invoiced'):L('إنشاء فاتورة','Invoice')}</button>}</td>}
    </tr>)}</tbody></table></div>:<div className="rawi-live-empty">{L('لا توجد معاملات فعلية في هذا المستودع حتى الآن','No operational transactions yet')}</div>}
   {kind==='sales_invoices'&&<p className="rawi-live-hint">{L('لإنشاء فاتورة فعلية: أنشئ أمر بيع، أكّد الأمر، ثم اضغط إنشاء فاتورة. المسودة وحدها لا تُصدر فاتورة.','To create an invoice: create a sales order, confirm it, then issue the invoice. Drafts are not issued invoices.')}</p>}
