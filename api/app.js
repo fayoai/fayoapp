@@ -39,7 +39,17 @@ const loginData=z.object({email:z.email().max(180),password:z.string().min(1).ma
 const hashed=passwordHash;
 async function equal(a,b){const x=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(a)));const y=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(b)));return x.every((n,i)=>n===y[i])}
 function originOK(c){const origin=c.req.header('origin');if(!origin)return true;try{const src=new URL(origin),dst=new URL(c.req.url);return src.origin===dst.origin||(['localhost','127.0.0.1'].includes(src.hostname)&&['localhost','127.0.0.1'].includes(dst.hostname))}catch{return false}}
-app.onError((e,c)=>{console.error('ERP request failed',e?.message);return fail(c,500,'Server operation failed')});
+app.onError((e,c)=>{
+ const incident=crypto.randomUUID().slice(0,8);
+ console.error('RAWI request failed',incident,c.req.method,c.req.path,e?.code||'',String(e?.message||e).slice(0,350));
+ const sqlState=String(e?.code||'');
+ const issue=sqlState==='23505'?{status:409,message:'الرقم أو المرجع موجود بالفعل'}:
+  sqlState==='23503'?{status:409,message:'العملية مرتبطة بسجل غير موجود أو تعارض صلاحية الشركة'}:
+  sqlState==='23514'||sqlState==='23502'?{status:400,message:'البيانات تخالف قواعد التحقق في قاعدة الشركة'}:
+  sqlState==='42P01'||sqlState==='42703'?{status:503,message:'هيكل قاعدة الشركة يحتاج تحديثًا قبل تنفيذ العملية'}:
+  {status:500,message:'تعذر إكمال العملية على الخادم'};
+ return c.json({ok:false,error:issue.message+' (مرجع: '+incident+')',incident_id:incident,code:sqlState||'RAWI_OPERATION_FAILED'},issue.status);
+});
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');c.header('X-Content-Type-Options','nosniff');c.header('X-Frame-Options','DENY');c.header('Referrer-Policy','strict-origin-when-cross-origin');if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&!originOK(c))return fail(c,403,'Cross-origin request rejected');await next()});
 function signupReady(settings){
  try{return settings.REGISTRATION_ENABLED==='true'&&!!settings.DATABASE_URL&&settings.SESSION_SECRET?.length>=32&&mailReady(settings)&&!!neonTenantConfig(settings)}catch{return false}
