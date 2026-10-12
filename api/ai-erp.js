@@ -159,7 +159,7 @@ export function installAiErp(app,{db,env,query}){
  });
  app.get('/api/admin/erp/w/:workspace/invoices',async c=>{
   const g=await gate(c);if(g.err)return g.err;
-  const data=await query(g.sql,'SELECT i.*,c.name customer_name FROM erp_invoices i JOIN erp_contacts c ON c.id=i.customer_id WHERE i.workspace_id=$1 ORDER BY i.created_at DESC LIMIT 500',[g.id]);
+  const data=await query(g.sql,`SELECT i.*,c.name customer_name,j.id AS journal_entry_id,pmt.received_halalas FROM erp_invoices i JOIN erp_contacts c ON c.id=i.customer_id LEFT JOIN erp_journal_entries j ON j.workspace_id=i.workspace_id AND j.reference='RAWI-INV-'||i.id::text LEFT JOIN LATERAL (SELECT COALESCE(SUM(p.amount_halalas),0)::bigint received_halalas FROM rawi_payments p JOIN erp_journal_entries pj ON pj.workspace_id=p.workspace_id AND pj.reference='RAWI-PAY-'||p.id::text WHERE p.workspace_id=i.workspace_id AND p.invoice_id=i.id AND p.direction='incoming') pmt ON TRUE WHERE i.workspace_id=$1 ORDER BY i.created_at DESC LIMIT 500`,[g.id]);
   return c.json({ok:true,data});
  });
  app.post('/api/admin/erp/w/:workspace/invoices',async c=>{
@@ -175,11 +175,60 @@ export function installAiErp(app,{db,env,query}){
   const data=await query(g.sql,stmt,[g.id,x.customer_id,x.template_id||null,x.issued_on||null,x.due_on||null,JSON.stringify(t.lines),t.subtotal_halalas,t.vat_halalas,t.total_halalas,x.notes]);
   return c.json({ok:true,data:data[0]},201);
  });
+ // Sales issuance is an atomic invoice transition and a balanced journal entry.
+ app.post('/api/admin/erp/w/:workspace/invoices/:record/issue',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  if(!uid.safeParse(c.req.param('record')).success)return invalid(c,'Invalid invoice');
+  const v=z.object({receivable_account_id:uid,revenue_account_id:uid,vat_account_id:uid.nullable().optional()}).strict().safeParse(await body(c));
+  if(!v.success)return invalid(c,'Select receivables, revenue and VAT ledger accounts');
+  const x=v.data,unique=[x.receivable_account_id,x.revenue_account_id,...(x.vat_account_id?[x.vat_account_id]:[])];
+  if(new Set(unique).size!==unique.length)return invalid(c,'Each invoice posting account must be different');
+  const rows=await query(g.sql,"SELECT status,subtotal_halalas,vat_halalas,total_halalas FROM erp_invoices WHERE workspace_id=$1 AND id=$2",[g.id,c.req.param('record')]);
+  const inv=rows[0];
+  if(!inv||inv.status!=='draft')return invalid(c,'Only an unissued draft can be issued',409);
+  if(Number(inv.total_halalas)<=0)return invalid(c,'Invoice amount must be positive');
+  if(Number(inv.vat_halalas)>0&&!x.vat_account_id)return invalid(c,'A VAT payable account is required for taxable invoices');
+  const accounts=await query(g.sql,'SELECT id,type FROM erp_accounts WHERE workspace_id=$1 AND id=ANY($2::uuid[])',[g.id,unique]);
+  if(accounts.length!==unique.length||accounts.find(a=>a.id===x.receivable_account_id)?.type!=='asset'
+   ||accounts.find(a=>a.id===x.revenue_account_id)?.type!=='income'
+   ||(x.vat_account_id&&accounts.find(a=>a.id===x.vat_account_id)?.type!=='liability'))
+   return invalid(c,'Use a receivables asset account, revenue income account and VAT liability account');
+  const statement=`WITH issued AS(
+     UPDATE erp_invoices SET status='issued'
+     WHERE workspace_id=$1 AND id=$2 AND status='draft' AND total_halalas>0
+     RETURNING id,invoice_no,issued_on,subtotal_halalas,vat_halalas,total_halalas
+   ), posted AS(
+     INSERT INTO erp_journal_entries(workspace_id,reference,memo,posted_on,lines,debit_halalas,credit_halalas)
+     SELECT $1,'RAWI-INV-'||id::text,'Sales invoice '||invoice_no,issued_on,
+      jsonb_build_array(
+       jsonb_build_object('account_id',$3::uuid,'debit_halalas',total_halalas,'credit_halalas',0),
+       jsonb_build_object('account_id',$4::uuid,'debit_halalas',0,'credit_halalas',subtotal_halalas)
+      ) || CASE WHEN vat_halalas>0 THEN
+       jsonb_build_array(jsonb_build_object('account_id',$5::uuid,'debit_halalas',0,'credit_halalas',vat_halalas))
+       ELSE '[]'::jsonb END,
+      total_halalas,total_halalas
+     FROM issued RETURNING id,reference
+   ) SELECT issued.id,issued.invoice_no,posted.id AS journal_entry_id
+     FROM issued JOIN posted ON posted.reference='RAWI-INV-'||issued.id::text`;
+  const data=await query(g.sql,statement,[g.id,c.req.param('record'),x.receivable_account_id,x.revenue_account_id,x.vat_account_id||null]);
+  return data.length?c.json({ok:true,data:data[0],posted:true}):invalid(c,'Invoice was already issued or posting could not complete',409);
+ });
  app.patch('/api/admin/erp/w/:workspace/invoices/:record/status',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;
   const x=z.object({status:z.enum(['issued','paid','cancelled'])}).safeParse(await body(c));
   if(!x.success||!uid.safeParse(c.req.param('record')).success)return invalid(c,'Invalid invoice');
-  const data=await query(g.sql,"UPDATE erp_invoices SET status=$1 WHERE workspace_id=$2 AND id=$3 AND ((status='draft' AND $1 IN('issued','cancelled')) OR (status='issued' AND $1 IN('paid','cancelled'))) RETURNING id,status",[x.data.status,g.id,c.req.param('record')]);
+  if(x.data.status==='issued')return invalid(c,'Use the invoice issue action with mapped ledger accounts',409);
+  // Paid requires a posted invoice and reconciled posted customer receipts.
+  // Never cancel issued invoices without a correcting credit note.
+  const statement=`UPDATE erp_invoices i SET status=$1 WHERE i.workspace_id=$2 AND i.id=$3
+   AND ((i.status='draft' AND $1='cancelled')
+    OR (i.status='issued' AND $1='paid' AND EXISTS(
+      SELECT 1 FROM erp_journal_entries ij WHERE ij.workspace_id=i.workspace_id AND ij.reference='RAWI-INV-'||i.id::text)
+      AND i.total_halalas<=(SELECT COALESCE(SUM(p.amount_halalas),0) FROM rawi_payments p
+       JOIN erp_journal_entries pj ON pj.workspace_id=p.workspace_id AND pj.reference='RAWI-PAY-'||p.id::text
+       WHERE p.workspace_id=i.workspace_id AND p.invoice_id=i.id AND p.direction='incoming')))
+   RETURNING i.id,i.status`;
+  const data=await query(g.sql,statement,[x.data.status,g.id,c.req.param('record')]);
   return data.length?c.json({ok:true,data:data[0]}):invalid(c,'Invalid invoice status transition',409);
  });
  app.get('/api/admin/erp/w/:workspace/tasks',c=>list(c,'erp_tasks'));
