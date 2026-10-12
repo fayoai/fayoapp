@@ -63,13 +63,13 @@ test('Private and public identities name the actual RAWI developer/operator and 
  const own=await routeAI('مين عملك؟',p,[],'','enterprise');
  assert.match(own.answer,/MIF Smart/);
  assert.equal(own.provider,'mif-smart');
- assert.match(instructions,/Do not invent an individual founder/);
- assert.match(instructions,/نظام راوي/);
- assert.match(instructions,/Rawi ERP/);
- const operator=await routeAI('مين بيدير راوي؟',p,[],'','enterprise-public');
+ const operator=await routeAI('مين بيديرك؟',p,[],'','enterprise-public');
  assert.match(operator.answer,/MIF Smart/);
  await routeAI('إزاي أرتب مشروعاتي؟',p,[],'','enterprise');
  assert.match(instructions,/MIF Smart/);
+ assert.match(instructions,/Do not invent an individual founder/);
+ assert.match(instructions,/نظام راوي/);
+ assert.match(instructions,/Rawi ERP/);
 });
 test('Private chat history keeps tenant routing on opening and deleting',()=>{
  const ui=readFileSync(new URL('../src/MifSmartShell.jsx',import.meta.url),'utf8');
