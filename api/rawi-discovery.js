@@ -21,20 +21,45 @@ export function nextDiscoveryQuestion(stage,language='ar'){
  }[stage]||'';
 }
 export const approvalMessage=(text,language='ar')=>/^(?:اعتمد(?: التصميم)?|موافق(?: على التصميم)?|وافق|نفذ(?: التصميم)?|ابدأ التنفيذ|تمام اعتمد|approve(?: the design)?|approved|confirm(?: design)?|build it|yes approve)[.!\s]*$/i.test(String(text||'').trim());
-async function onlineReferences(activity,env){
+async function onlineReferences(activity,env,providers=[]){
  const key=String(env.BRAVE_SEARCH_API_KEY||'').trim();
- if(!key)return {available:false,sources:[]};
- try{
-  // Search is about the sector only; no user messages, credentials, financial or tenant data leave the platform.
-  const q=(String(activity).slice(0,100)+' business management software features comparison').trim();
-  const url=new URL('https://api.search.brave.com/res/v1/web/search');url.searchParams.set('q',q);url.searchParams.set('count','5');
-  const response=await fetch(url,{headers:{Accept:'application/json','X-Subscription-Token':key},signal:AbortSignal.timeout(8000)});
-  if(!response.ok)throw Error('search provider unavailable');
-  const body=await response.json();
-  return {available:true,sources:(body.web?.results||[]).slice(0,5).flatMap(x=>{
-   try{const uri=new URL(x.url);if(uri.protocol!=='https:')return [];return [{title:String(x.title||'').slice(0,120),url:uri.href,summary:String(x.description||'').replace(/<[^>]*>/g,'').slice(0,260)}]}catch{return []}
-  })};
- }catch{return {available:false,sources:[]}}
+ const clean=results=>(results||[]).slice(0,6).flatMap(x=>{
+  try{const uri=new URL(x.url);if(uri.protocol!=='https:')return [];
+   return [{title:String(x.title||'').slice(0,120),url:uri.href,summary:String(x.summary||'').replace(/<[^>]*>/g,'').slice(0,260)}]}
+  catch{return []}
+ });
+ // Prefer an operator-provisioned Brave web-search API.
+ if(key){
+  try{
+   const url=new URL('https://api.search.brave.com/res/v1/web/search');
+   url.searchParams.set('q',String(activity).slice(0,100)+' software management comparison tools official');
+   url.searchParams.set('count','5');
+   const r=await fetch(url,{headers:{Accept:'application/json','X-Subscription-Token':key},signal:AbortSignal.timeout(8000)});
+   if(!r.ok)throw Error('Brave search unavailable');
+   const body=await r.json();
+   const sources=clean((body.web?.results||[]).map(x=>({title:x.title,url:x.url,summary:x.description})));
+   if(sources.length)return {available:true,sources};
+  }catch{}
+ }
+ // OpenAI Responses web_search_preview is an alternative live source, if enabled by MIF admin.
+ const openai=providers.find(x=>x.code==='openai'&&x.key);
+ if(openai){
+  try{
+   const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',
+    headers:{'Content-Type':'application/json',Authorization:'Bearer '+openai.key},
+    body:JSON.stringify({model:openai.model,input:'Find official software product descriptions and feature comparisons relevant to the business sector: '+String(activity).slice(0,100)+'. Search the web and cite the sources; do not invent links.',
+     tools:[{type:'web_search_preview'}],store:false,max_output_tokens:500}),
+    signal:AbortSignal.timeout(16000)});
+   if(!r.ok)throw Error('OpenAI web search unavailable');
+   const payload=await r.json(),hits=[];
+   for(const item of payload.output||[])for(const part of item.content||[])for(const citation of part.annotations||[]){
+    if(citation.type==='url_citation'&&citation.url)hits.push({title:citation.title||'Website',url:citation.url,summary:''});
+   }
+   const sources=clean(hits);
+   if(sources.length)return {available:true,sources};
+  }catch{}
+ }
+ return {available:false,sources:[]};
 }
 function proposalText(blueprint,language){
  if(language==='en')return 'My proposed company application:\n'+blueprint.repositories.map((r,i)=>(i+1)+'. '+r.name+' — '+r.description+'\n   Fields: '+r.fields.map(f=>f.label).join(', ')+'\n   Stages: '+(r.stages.join(' → ')||'As needed')).join('\n')+'\n\n'+nextDiscoveryQuestion('review','en');
@@ -80,7 +105,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
    answer=nextDiscoveryQuestion(following,language);
   }else if(stage==='references'){
    next.preferences=input;following='processes';
-   const results=await onlineReferences(g.company.activity,env(c));
+   const results=await onlineReferences(g.company.activity,env(c),ai);
    research=results.sources;
    const lines=research.slice(0,3).map((x,i)=>(i+1)+'. '+x.title+' — '+x.url).join('\n');
    answer=(research.length?(language==='en'?'I found some online references worth comparing:\n':'لقيت مراجع من الإنترنت نقدر نقارن بينها:\n')+lines+'\n\n':
