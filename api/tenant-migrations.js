@@ -29,6 +29,12 @@ export async function seedTenantIdentity({central,tenant,query,workspaceId,appli
  await query(tenant,`INSERT INTO mif_tenant_subscriptions(workspace_id,plan_id,status,messages_used,period_starts_at,period_ends_at)
   VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(workspace_id) DO NOTHING`,
   [row.workspace_id,row.plan_id,row.subscription_status,row.messages_used,row.period_starts_at,row.period_ends_at]);
+ await query(tenant,`INSERT INTO erp_units(workspace_id,code,name,category,precision_digits)
+  SELECT $1,v.code,v.name,v.category,v.digits FROM (VALUES
+   ('unit','وحدة','count',3),('pcs','قطعة','count',0),('box','كرتون','count',0),
+   ('dozen','دستة','count',0),('kg','كيلوجرام','weight',3),('g','جرام','weight',3),
+   ('m','متر','length',3),('l','لتر','volume',3)
+  ) v(code,name,category,digits) ON CONFLICT(workspace_id,code) DO NOTHING`,[row.workspace_id]);
  await query(tenant,`INSERT INTO erp_invoice_templates(workspace_id,name)
  SELECT $1,'RAWI' WHERE NOT EXISTS(SELECT 1 FROM erp_invoice_templates WHERE workspace_id=$1)`,[row.workspace_id]);
  const check=await query(tenant,`SELECT w.id FROM erp_workspaces w
