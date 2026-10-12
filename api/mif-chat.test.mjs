@@ -79,6 +79,7 @@ test('Unapproved customer can finish conversational business design even after o
   query:async(_sql,sql,args=[])=>{
    calls.push({sql,args});
    if(sql.includes('SELECT COUNT(*)::int n FROM mif_chat_messages'))return [{n:0}];
+   if(sql.startsWith('WITH target AS'))return [];
    if(sql.includes('SELECT w.id FROM erp_workspaces w JOIN erp_memberships'))return [{id:ws}];
    if(sql.includes('FROM rawi_company_profiles p')&&sql.includes("p.setup_inputs->>'discovery' IS DISTINCT FROM 'true'"))return [{exists:1}];
    if(sql.includes('INSERT INTO mif_chat_threads'))return [{id:thread}];
@@ -99,6 +100,7 @@ test('Ordinary signed-in AI remains quota protected and explains where to review
  installMifChat(app,{db:()=>({}),centralDb:()=>({}),env:c=>c.env||{},rawiDiscovery:{respond:async()=>null},
   query:async(_sql,sql,args=[])=>{
    if(sql.includes('SELECT COUNT(*)::int n FROM mif_chat_messages'))return [{n:0}];
+   if(sql.startsWith('WITH target AS'))return [];
    if(sql.includes('SELECT w.id FROM erp_workspaces w JOIN erp_memberships'))return [{id:ws}];
    return [];
   }});
