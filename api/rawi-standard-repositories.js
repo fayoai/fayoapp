@@ -94,6 +94,16 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   }});
  });
 
+ // One source of truth for the Operations landing page: actual saved company drafts.
+ app.get('/api/admin/erp/w/:workspace/standard/drafts',async c=>{
+  const g=await gate(c);if(g.error)return g.error;
+  const rows=await query(g.sql,"SELECT id,repository_key,stage,values_json,created_at,updated_at FROM rawi_dynamic_records WHERE workspace_id=$1 AND stage='مسودة' ORDER BY updated_at DESC LIMIT 60",[g.workspace]);
+  const data=rows.filter(row=>{const r=findStandardRepository(row.repository_key);return r&&!r.read_only&&r.storage==='records'}).map(row=>{
+   const r=findStandardRepository(row.repository_key);
+   return {...row,repository_name:r.name,group:r.group,source_thread_id:row.values_json?.rawi_source_thread_id||null};
+  });
+  return c.json({ok:true,data});
+ });
  app.get('/api/admin/erp/w/:workspace/standard/catalog',async c=>{
   const g=await gate(c);if(g.error)return g.error;
   return c.json({ok:true,groups:STANDARD_GROUPS,version:1});
@@ -225,7 +235,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    }
   }
   if(isUpdate){
-   const rows=await query(g.sql,"UPDATE rawi_dynamic_records SET values_json=$4::jsonb||(CASE WHEN values_json ? 'document_number' THEN jsonb_build_object('document_number',values_json->>'document_number') ELSE '{}'::jsonb END),stage=$5,updated_by=$6,updated_at=now() WHERE workspace_id=$1 AND repository_key=$2 AND id=$3 RETURNING *",[g.workspace,repo.key,target,JSON.stringify(values),stage,g.actor]);
+   const rows=await query(g.sql,"UPDATE rawi_dynamic_records SET values_json=$4::jsonb||(CASE WHEN values_json ? 'document_number' THEN jsonb_build_object('document_number',values_json->>'document_number') ELSE '{}'::jsonb END)||(CASE WHEN values_json ? 'rawi_source_thread_id' THEN jsonb_build_object('rawi_source_thread_id',values_json->>'rawi_source_thread_id') ELSE '{}'::jsonb END)||(CASE WHEN values_json ? 'rawi_command_fingerprint' THEN jsonb_build_object('rawi_command_fingerprint',values_json->>'rawi_command_fingerprint') ELSE '{}'::jsonb END),stage=$5,updated_by=$6,updated_at=now() WHERE workspace_id=$1 AND repository_key=$2 AND id=$3 RETURNING *",[g.workspace,repo.key,target,JSON.stringify(values),stage,g.actor]);
    return rows.length?c.json({ok:true,data:rows[0]}):fail(c,404,'Record not found');
   }
   if(docKinds.has(repo.kind)){
