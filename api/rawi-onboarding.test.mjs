@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {evaluationSettings,ensureEvaluationPlan,enforceAuthLimit} from './rawi-onboarding.js';
 test('Evaluation is bounded, free and never claims external AI provider credits',()=>{
- assert.deepEqual(evaluationSettings({}),{days:7,limit:30,code:'rawi-evaluation'});
+ assert.deepEqual(evaluationSettings({}),{days:7,limit:100,code:'rawi-evaluation'});
  assert.deepEqual(evaluationSettings({RAWI_TRIAL_DAYS:'3',RAWI_TRIAL_MESSAGE_LIMIT:'12'}),{days:3,limit:12,code:'rawi-evaluation'});
  for(const n of ['0','31','xyz','-1'])assert.throws(()=>evaluationSettings({RAWI_TRIAL_DAYS:n}));
  for(const n of ['0','501','NaN'])assert.throws(()=>evaluationSettings({RAWI_TRIAL_MESSAGE_LIMIT:n}));
