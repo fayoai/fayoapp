@@ -14,6 +14,7 @@ const make=(role='owner',hasStock=true)=>{
   if(statement.includes('SELECT role FROM erp_memberships'))return [{role}];
   if(statement.includes('SELECT i.id,i.unit,i.sale_price_halalas'))return [{id:product,unit:'unit',sale_price_halalas:300,cost_halalas:200,unit_code:'unit',unit_sale_halalas:null,unit_purchase_halalas:null}];
   if(statement.includes('WITH allowed AS('))return [{moved:hasStock?1:0,movement_count:hasStock?2:0}];
+  if(statement.includes('WITH received AS('))return hasStock?[{id:product,doc_no:'PO-000012',movement_count:2}]:[];
   return [];
  };
  installErpCore(app,{db:()=>({}),centralDb:()=>({}),query});
@@ -50,4 +51,24 @@ test('Stock counting passes the old on-hand balance to optimistic concurrency gu
  assert.ok(statement);
  assert.match(statement.statement,/erp_stock.quantity=\$7/);
  assert.equal(statement.args[6],5);
+});
+
+test('Confirmed purchase receipts atomically update the purchase order, stock and audit movements',async()=>{
+ const h=make();
+ const doc='66666666-6666-4666-8666-666666666666';
+ const response=await h.post('/api/admin/erp/w/'+ws+'/core/documents/'+doc+'/receive',{warehouse_id:dest});
+ assert.equal(response.status,200,await response.clone().text());
+ const entry=h.calls.find(x=>x.statement.includes('WITH received AS('));
+ assert.ok(entry);
+ assert.match(entry.statement,/UPDATE erp_documents d SET status='completed'/);
+ assert.match(entry.statement,/d.kind='purchase' AND d.status='confirmed'/);
+ assert.match(entry.statement,/INSERT INTO erp_stock\(workspace_id,item_id,warehouse_id,quantity\)/);
+ assert.match(entry.statement,/INSERT INTO erp_stock_movements/);
+ assert.equal(entry.args[2],dest);
+});
+test('Purchase receipt with no confirmable document does not record a stock movement',async()=>{
+ const h=make('owner',false);
+ const doc='66666666-6666-4666-8666-666666666666';
+ const response=await h.post('/api/admin/erp/w/'+ws+'/core/documents/'+doc+'/receive',{warehouse_id:dest});
+ assert.equal(response.status,409);
 });
