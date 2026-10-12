@@ -36,7 +36,7 @@ export async function handleApprovedDesignRevision({c,company,current,workspace,
   const saved=await query(central,"UPDATE rawi_company_profiles SET setup_plan=$3::jsonb,setup_source='ai',setup_updated_at=now() WHERE workspace_id=$1 AND setup_plan=$4::jsonb AND EXISTS (SELECT 1 FROM erp_memberships WHERE workspace_id=$1 AND admin_id=$2 AND role='owner') RETURNING workspace_id",
    [workspace,user,JSON.stringify(candidate),JSON.stringify(company.setup_plan)]);
   if(!saved.length)throw Object.assign(new Error('The company design changed; reload the latest version before approval'),{status:409});
-  await query(central,"UPDATE rawi_workspace_discovery SET stage='completed',proposal='{}'::jsonb,updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user]);
+  await query(central,"UPDATE rawi_workspace_discovery SET stage='completed',proposal='{}'::jsonb,answers=answers-'revision_pending',updated_at=now() WHERE workspace_id=$1 AND owner_id=$2",[workspace,user]);
   return reply(language==='en'?'Approved. Open Operations to see the revised repositories and your retained records.':'اعتمدت التعديل وحفظته. افتح «العمليات» وشوف مستودعاتك الجديدة، وسجلاتك السابقة محفوظة.','revision-approved',{discovery_stage:'completed',design_ready:true});
  }
  if(input.length<3)return null;
