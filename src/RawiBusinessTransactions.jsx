@@ -3,7 +3,7 @@ import {api,useSite,tr} from './App.jsx';
 import {CheckCircle2,FileText,Loader2,Plus,RefreshCw,Save,ShieldCheck} from 'lucide-react';
 import './rawi-business-transactions.css';
 
-const emptyLine=()=>({item_id:'',quantity:1});
+const emptyLine=()=>({item_id:'',unit_id:'',quantity:1});
 const emptyJournalLine=()=>({account_id:'',debit:'',credit:''});
 const emptyPayment=()=>({reference:'',amount:'',method:'bank',invoice_id:'',details:'',recorded_at:new Date().toISOString().slice(0,10)});
 const currency=n=>(Number(n||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -20,10 +20,11 @@ const kinds={
 export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceDraft=null,onSaved=()=>{}}){
  const {lang}=useSite(),L=(a,e)=>tr(lang,a,e),config=kinds[kind];
  const [rows,setRows]=useState([]),[invoices,setInvoices]=useState([]),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[open,setOpen]=useState(false);
- const [partner,setPartner]=useState(''),[lines,setLines]=useState([emptyLine()]),[notes,setNotes]=useState('');
+ const [partner,setPartner]=useState(''),[lines,setLines]=useState([emptyLine()]),[notes,setNotes]=useState(''),[unitOptions,setUnitOptions]=useState({});
  const [reference,setReference]=useState(''),[memo,setMemo]=useState(''),[postedOn,setPostedOn]=useState(new Date().toISOString().slice(0,10)),[journalLines,setJournalLines]=useState([emptyJournalLine(),emptyJournalLine()]);
  const [payment,setPayment]=useState(emptyPayment),[priceItem,setPriceItem]=useState(''),[salePrice,setSalePrice]=useState('');
  const list=useMemo(()=>kind==='sales_orders'?rows.filter(r=>r.kind==='sale'):kind==='purchase_orders'?rows.filter(r=>r.kind==='purchase'):kind==='sales_receipts'||kind==='accounting_receipts'?rows.filter(r=>r.direction==='incoming'):kind==='payment_vouchers'?rows.filter(r=>r.direction==='outgoing'):rows,[rows,kind]);
+ const loadUnits=async itemId=>{if(!itemId||unitOptions[itemId])return;try{const r=await api(prefix+'/system/items/'+encodeURIComponent(itemId)+'/units');setUnitOptions(prev=>({...prev,[itemId]:r.data||[]}))}catch(e){setError(e.message)}};
  const refresh=async()=>{if(!prefix||!config)return;setLoading(true);setError('');
   try{
    if(config.section==='documents'){const [d,i]=await Promise.all([api(prefix+'/core/documents'),api(prefix+'/invoices')]);setRows(d.data||[]);setInvoices(i.data||[]);}
@@ -36,12 +37,13 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  useEffect(()=>{setRows([]);setOpen(false);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
  useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind||config?.section!=='documents')return;
   setPartner(sourceDraft.partner_id||'');
-  setLines((sourceDraft.lines||[]).map(x=>({item_id:x.item_id,quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80));
+  const prepared=(sourceDraft.lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)||1})).filter(x=>x.item_id).slice(0,80);
+  setLines(prepared.length?prepared:[emptyLine()]);prepared.forEach(x=>loadUnits(x.item_id));
   setNotes('مسودة راوي '+(sourceDraft.document_number||'')+' | المصدر: '+sourceDraft.id);
   setOpen(true);setError('');setMessage(L('راجع العميل والبنود ثم احفظ لإنشاء أمر فعلي؛ المسودة وحدها ليست أمرًا معتمدًا.','Review the partner and lines before creating a validated order.'));
  },[sourceDraft?.token,prefix,kind]);
  if(!config)return null;
- const updateLine=(index,key,value)=>setLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
+ const updateLine=(index,key,value)=>{setLines(old=>old.map((line,i)=>i===index?{...line,[key]:value,...(key==='item_id'?{unit_id:''}:{})}:line));if(key==='item_id')loadUnits(value)};
  const updateJournal=(index,key,value)=>setJournalLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
  const totals=journalLines.reduce((acc,x)=>({debit:acc.debit+Number(x.debit||0),credit:acc.credit+Number(x.credit||0)}),{debit:0,credit:0});
  const request=async(fn)=>{if(busy)return;setBusy(true);setError('');setMessage('');
@@ -54,7 +56,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
   request(async()=>{
    if(config.section==='documents'){
     if(sourceDraft?.kind===kind&&rows.some(d=>String(d.notes||'').includes(sourceDraft.id)))throw Error(L('تم إنشاء أمر فعلي من هذه المسودة بالفعل. افتح الأمر السابق بدل التكرار.','This draft has already been used to create an operational order.'));
-    const result=await api(prefix+'/core/documents',{method:'POST',body:JSON.stringify({kind:config.type,partner_id:partner,lines:lines.map(x=>({item_id:x.item_id,quantity:Number(x.quantity)})),notes})});
+    const result=await api(prefix+'/core/documents',{method:'POST',body:JSON.stringify({kind:config.type,partner_id:partner,lines:lines.map(x=>({item_id:x.item_id,quantity:Number(x.quantity),...(x.unit_id?{unit_id:x.unit_id}:{})})),notes})});
     setPartner('');setLines([emptyLine()]);setNotes('');
     return L('تم إنشاء مستند '+result.data.doc_no+' كمسودة تشغيلية','Saved '+result.data.doc_no+' as a draft');
    }
@@ -104,7 +106,8 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
     <div className="rawi-live-line-label"><strong>{L('بنود الأمر','Order lines')}</strong><button type="button" onClick={()=>setLines(a=>[...a,emptyLine()])}>{L('إضافة بند','Add line')}</button></div>
     {lines.map((line,i)=><div key={i} className="rawi-live-line">
      <label>{L('الصنف','Product')}<select required value={line.item_id} onChange={e=>updateLine(i,'item_id',e.target.value)}><option value="">{L('اختر المنتج','Select item')}</option>{(lookups.products||[]).map(p=><option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}</select></label>
-     <label>{L('الكمية بوحدة الأساس','Base unit quantity')}<input type="number" required min="0.001" max="100000" step="0.001" value={line.quantity} onChange={e=>updateLine(i,'quantity',e.target.value)}/></label>
+     <label>{L('وحدة القياس','Unit')}<select value={line.unit_id||''} onChange={e=>updateLine(i,'unit_id',e.target.value)}><option value="">{L('وحدة الأساس','Base unit')}</option>{(unitOptions[line.item_id]||[]).filter(x=>!x.is_base).map(u=><option value={u.unit_id} key={u.unit_id}>{u.name} (×{Number(u.factor)})</option>)}</select></label>
+     <label>{L('الكمية','Quantity')}<input type="number" required min="0.001" max="100000" step="0.001" value={line.quantity} onChange={e=>updateLine(i,'quantity',e.target.value)}/></label>
      <button type="button" disabled={lines.length===1} onClick={()=>setLines(a=>a.filter((_,j)=>j!==i))}>{L('حذف','Remove')}</button></div>)}
    </>}
    {config.section==='journal'&&<>
