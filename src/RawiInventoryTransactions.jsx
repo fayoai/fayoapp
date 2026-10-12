@@ -3,7 +3,7 @@ import {api,useSite,tr} from './App.jsx';
 import {ArrowLeftRight,ClipboardCheck,Loader2,RefreshCw,Save,Warehouse} from 'lucide-react';
 import './rawi-inventory-transactions.css';
 
-export default function RawiInventoryTransactions({prefix,kind,lookups={},onSaved=()=>{}}){
+export default function RawiInventoryTransactions({prefix,kind,lookups={},sourceDraft=null,onSaved=()=>{}}){
  const {lang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [stock,setStock]=useState([]),[movements,setMovements]=useState([]),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false);
@@ -15,6 +15,20 @@ export default function RawiInventoryTransactions({prefix,kind,lookups={},onSave
   catch(e){setError(e.message)}finally{setLoading(false)}
  };
  useEffect(()=>{setStock([]);setMovements([]);setItemId('');setWarehouseId('');setDestination('');setQuantity('');if(active)load()},[prefix,kind]);
+ useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind||!active)return;
+  const values=sourceDraft.values||{};
+  if(kind==='stock_count'){
+   setWarehouseId(String(values.field_1||''));
+   setItemId(String(values.field_3||''));
+   setQuantity(values.field_4===undefined?'':String(values.field_4));
+  }else if(kind==='internal_transfer'){
+   setWarehouseId(String(values.field_1||''));
+   setDestination(String(values.field_2||''));
+   setItemId('');setQuantity('');
+  }
+  setReference('مسودة راوي '+(sourceDraft.document_number||sourceDraft.id));
+  setNotice(L('تم تجهيز البيانات المتاحة من المسودة. راجع الكميات والمستودعات قبل اعتماد الحركة.','Draft fields loaded. Review warehouses and quantities before posting.'));
+ },[sourceDraft?.token,prefix,kind]);
  useEffect(()=>{setUnits([]);setUnitId('');if(!itemId||!prefix||!active)return;let valid=true;
   api(prefix+'/system/items/'+encodeURIComponent(itemId)+'/units').then(r=>{if(valid)setUnits(r.data||[])}).catch(e=>{if(valid)setError(e.message)});
   return()=>{valid=false}
