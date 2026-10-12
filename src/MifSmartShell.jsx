@@ -66,7 +66,7 @@ export default function MifSmartShell(){
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e);setInstalled(false)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false);setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}};const display=window.matchMedia('(display-mode: standalone)');const onDisplay=()=>{if(display.matches)setInstalled(true)};display.addEventListener?.('change',onDisplay);window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{display.removeEventListener?.('change',onDisplay);window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
- useEffect(()=>{if(!authed){setWorkspaces([]);setWorkspaceId('');return}api('/api/admin/erp/workspaces').then(r=>{const list=r.data||[];setWorkspaces(list);setWorkspaceId(prev=>list.some(w=>w.id===prev)?prev:(list[0]?.id||''))}).catch(()=>setWorkspaces([]))},[authed,tenantGeneration]);
+ useEffect(()=>{if(!authed){setWorkspaces([]);setWorkspaceId('');return}api('/api/admin/erp/workspaces').then(r=>{const list=r.data||[];setWorkspaces(list);setWorkspaceId(prev=>list.some(w=>w.id===prev)?prev:(list[0]?.id||''))}).catch(()=>setWorkspaces([]))},[authed,tenantGeneration,session?.company_setup_required]);
  useEffect(()=>{
   // Company details must be saved before tenant provisioning is permitted.
   if(!authed||session?.company_setup_required){setTenantSetup(null);return}
@@ -125,6 +125,8 @@ export default function MifSmartShell(){
  const submitCompany=async e=>{e.preventDefault();setCompanyBusy(true);setCompanyError('');try{
   await api('/api/admin/company/complete',{method:'POST',body:JSON.stringify(company)});
   const ok=await refreshSession();if(!ok)throw new Error(L('تعذر تحديث الجلسة','Could not refresh session'));
+  setWorkspaceId(company.workspace_id);
+  setWorkspaces(old=>old.some(w=>w.id===company.workspace_id)?old:[...old,{id:company.workspace_id,name:company.name,role:'owner'}]);
   setSignupStep('auth');startNew();
  }catch(e){setCompanyError(e.message)}finally{setCompanyBusy(false)}};
  const selectCompanyLogo=async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;
@@ -137,6 +139,7 @@ export default function MifSmartShell(){
   const pendingDocs=documents.map(({name,mime_type,data})=>({name,mime_type,data}));
   const privateChat=authed&&!!workspaceId;
   if(tab!=='new'&&tab!=='thread')return;
+  if(authed&&tenantSetup){setChatError(L('راوي بيجهز قاعدة الشركة. رسالتك هتفضل مكانها؛ جرّب بمجرد اكتمال التهيئة.','Rawi is preparing the company database. Please send once it is ready.'));return}
   if(authed&&!workspaceId){setChatError(L('مساحة الشركة قيد التجهيز. انتظر اكتمال قاعدة البيانات في أعلى الشاشة.','Your company workspace is being prepared. Wait for database setup at the top.'));return}
   setQuestion('');setDocuments([]);if(questionRef.current)questionRef.current.style.height='auto';setChatError('');setAsking(true);setMessages(m=>[...m,{role:'user',content:text+(pendingDocs.length?'\n📎 '+pendingDocs.map(d=>d.name).join('، '):''),at:new Date().toISOString()}]);
   const ctl=new AbortController();requestRef.current=ctl;
