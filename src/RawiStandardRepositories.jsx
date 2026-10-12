@@ -85,7 +85,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const selectGroup=key=>{setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
- const draftToLive=new Set(['sales_orders','purchase_orders','sales_receipts','accounting_receipts','payment_vouchers','journal_entries','stock_count','internal_transfer']);
+ const draftToLive=new Set(['sales_orders','purchase_orders','sales_invoices','sales_receipts','accounting_receipts','payment_vouchers','journal_entries','stock_count','internal_transfer']);
  const prepareBusinessDraft=row=>{
   const target=groups.flatMap(group=>group.repositories).find(repo=>repo.key===row.repository_key);
   if(!target||!draftToLive.has(target.kind))return;
