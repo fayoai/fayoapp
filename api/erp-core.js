@@ -15,7 +15,7 @@ const accountSchema=z.object({code:z.string().trim().min(2).max(30),name:safeNam
 const docSchema=z.object({kind:z.enum(['sale','purchase']),partner_id:uid,lines:z.array(z.object({item_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(100000)})).min(1).max(80),notes:z.string().max(2000).default('')});
 const journalSchema=z.object({reference:z.string().trim().min(2).max(120),memo:z.string().max(800).default(''),posted_on:z.iso.date().optional(),lines:z.array(z.object({account_id:uid,debit:cash.default(0),credit:cash.default(0)})).min(2).max(100)});
 const stockSchema=z.object({item_id:uid,warehouse_id:uid,unit_id:uid.optional(),delta:z.number().min(-1000000).max(1000000).refine(n=>n!==0&&Number.isInteger(n*1000)),reason:z.string().trim().min(2).max(250),expected_quantity:z.number().finite().min(0).max(1000000000).optional()});
-const transferSchema=z.object({item_id:uid,source_warehouse_id:uid,target_warehouse_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(1000000),reference:z.string().trim().min(2).max(120)}).refine(x=>x.source_warehouse_id!==x.target_warehouse_id,{message:'Warehouses must be distinct'});
+const transferSchema=z.object({item_id:uid,source_warehouse_id:uid,target_warehouse_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(1000000),reference:z.string().trim().min(2).max(120),request_id:uid.optional()}).refine(x=>x.source_warehouse_id!==x.target_warehouse_id,{message:'Warehouses must be distinct'});
 const tables={items:'erp_items',warehouses:'erp_warehouses',stock:'erp_stock',movements:'erp_stock_movements',documents:'erp_documents',accounts:'erp_accounts',journal:'erp_journal_entries',employees:'erp_employees',projects:'erp_projects',expenses:'erp_expenses'};
 export function journalTotals(lines){
  let debit=0,credit=0;
@@ -94,14 +94,14 @@ export function installErpCore(app,{db,centralDb,query}){
    ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+EXCLUDED.quantity
    RETURNING item_id
   ), movements AS(
-   INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason)
-   SELECT $1::uuid,$2::uuid,$3::uuid,-$5::numeric,$6::text||' (OUT)' FROM deposited
+   INSERT INTO erp_stock_movements(id,workspace_id,item_id,warehouse_id,delta,reason)
+   SELECT CASE WHEN $7::uuid IS NULL THEN gen_random_uuid() ELSE md5($7::text||':out')::uuid END,$1::uuid,$2::uuid,$3::uuid,-$5::numeric,$6::text||' (OUT)' FROM deposited
    UNION ALL
-   SELECT $1::uuid,$2::uuid,$4::uuid,$5::numeric,$6::text||' (IN)' FROM deposited
+   SELECT CASE WHEN $7::uuid IS NULL THEN gen_random_uuid() ELSE md5($7::text||':in')::uuid END,$1::uuid,$2::uuid,$4::uuid,$5::numeric,$6::text||' (IN)' FROM deposited
    RETURNING id
   ) SELECT (SELECT COUNT(*)::int FROM deposited) moved,
      (SELECT COUNT(*)::int FROM movements) movement_count`;
-  const data=await query(g.sql,statement,[g.workspace,x.item_id,x.source_warehouse_id,x.target_warehouse_id,qty,x.reference]);
+  const data=await query(g.sql,statement,[g.workspace,x.item_id,x.source_warehouse_id,x.target_warehouse_id,qty,x.reference,x.request_id||null]);
   if(data[0]?.moved!==1||data[0]?.movement_count!==2)return fail(c,409,'Insufficient source stock, unavailable item or invalid warehouses');
   return c.json({ok:true,moved_quantity:qty,reference:x.reference},201);
  });
