@@ -1,0 +1,25 @@
+.rawi-inventory-live{display:flex;flex-direction:column;gap:12px;min-width:0;padding:14px;background:#fff;border:1px solid #d7e4f3;border-radius:14px;color:#294768}
+.rawi-inventory-live *{box-sizing:border-box}
+.rawi-inventory-live header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rawi-inventory-live header>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.rawi-inventory-live header strong{display:flex;align-items:center;gap:7px;font-size:15px}
+.rawi-inventory-live header small{color:#6c829f;font-size:12px}
+.rawi-inventory-live button{display:inline-flex;align-items:center;gap:7px;justify-content:center;padding:10px;border:1px solid #d3dff0;border-radius:8px;background:#f6faff;color:#295fa9;cursor:pointer}
+.rawi-inventory-live button:disabled{opacity:.5;cursor:not-allowed}
+.rawi-inventory-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;background:#f8fbff;border:1px solid #e1eafa;border-radius:11px}
+.rawi-inventory-editor label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;min-width:0;color:#516f95}
+.rawi-inventory-editor :is(input,select){width:100%;min-width:0;background:#fff;padding:11px;border:1px solid #cdddf1;border-radius:9px;font-size:14px;color:#314f70}
+.rawi-inventory-balance{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#496e9f}
+.rawi-inventory-balance span{display:flex;align-items:center;gap:6px}
+.rawi-inventory-editor>button[type=submit]{background:#2167df;color:#fff;border-color:#2167df;font-weight:750;justify-self:start;padding:11px 17px}
+.rawi-inventory-table{min-width:0;overflow-x:auto;border:1px solid #e1eafa;border-radius:10px;background:#fff}
+.rawi-inventory-table>strong{display:block;font-size:13px;padding:12px 13px;border-bottom:1px solid #e1eafa;background:#f5f8ff}
+.rawi-inventory-table table{border-collapse:collapse;width:100%;min-width:470px;font-size:12px}
+.rawi-inventory-table :is(td,th){padding:11px 12px;border-bottom:1px solid #e9f0fb;text-align:start}
+.rawi-inventory-table th{color:#496b92;background:#f9fbff}
+.rawi-inventory-table tr:last-child td{border-bottom:0}
+.rawi-inventory-table p{margin:10px;font-size:12px;color:#72839b}
+.rawi-inventory-error,.rawi-inventory-notice{margin:0;padding:10px;border-radius:8px;border:1px solid #f4c3c7;background:#fff4f5;color:#aa303b;font-size:12px}
+.rawi-inventory-notice{border-color:#c4e6cc;background:#f3fff7;color:#2d7045}
+.rawi-inventory-loading{display:flex;justify-content:center;padding:25px}
+@media(max-width:620px){.rawi-inventory-live{padding:11px}.rawi-inventory-live header{flex-direction:column;align-items:stretch}.rawi-inventory-editor{grid-template-columns:minmax(0,1fr);padding:11px}.rawi-inventory-editor :is(input,select){min-height:44px;font-size:16px}.rawi-inventory-editor>button[type=submit]{justify-self:stretch}.rawi-inventory-balance{grid-column:auto}}
