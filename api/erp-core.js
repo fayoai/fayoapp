@@ -14,7 +14,8 @@ const expenseSchema=z.object({description:safeName,amount:z.number().positive().
 const accountSchema=z.object({code:z.string().trim().min(2).max(30),name:safeName,type:z.enum(['asset','liability','equity','income','expense'])});
 const docSchema=z.object({kind:z.enum(['sale','purchase']),partner_id:uid,lines:z.array(z.object({item_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(100000)})).min(1).max(80),notes:z.string().max(2000).default('')});
 const journalSchema=z.object({reference:z.string().trim().min(2).max(120),memo:z.string().max(800).default(''),posted_on:z.iso.date().optional(),lines:z.array(z.object({account_id:uid,debit:cash.default(0),credit:cash.default(0)})).min(2).max(100)});
-const stockSchema=z.object({item_id:uid,warehouse_id:uid,unit_id:uid.optional(),delta:z.number().min(-1000000).max(1000000).refine(n=>n!==0&&Number.isInteger(n*1000)),reason:z.string().trim().min(2).max(250)});
+const stockSchema=z.object({item_id:uid,warehouse_id:uid,unit_id:uid.optional(),delta:z.number().min(-1000000).max(1000000).refine(n=>n!==0&&Number.isInteger(n*1000)),reason:z.string().trim().min(2).max(250),expected_quantity:z.number().finite().min(0).max(1000000000).optional()});
+const transferSchema=z.object({item_id:uid,source_warehouse_id:uid,target_warehouse_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(1000000),reference:z.string().trim().min(2).max(120)}).refine(x=>x.source_warehouse_id!==x.target_warehouse_id,{message:'Warehouses must be distinct'});
 const tables={items:'erp_items',warehouses:'erp_warehouses',stock:'erp_stock',movements:'erp_stock_movements',documents:'erp_documents',accounts:'erp_accounts',journal:'erp_journal_entries',employees:'erp_employees',projects:'erp_projects',expenses:'erp_expenses'};
 export function journalTotals(lines){
  let debit=0,credit=0;
@@ -65,9 +66,44 @@ export function installErpCore(app,{db,centralDb,query}){
   let converted=null;
   if(x.unit_id){try{converted=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:x.item_id,unitId:x.unit_id,quantity:Math.abs(x.delta)})}catch(e){return fail(c,400,e.message)}}
   const delta=converted?Math.sign(x.delta)*converted.baseQuantity:x.delta;
-  const sql='WITH available AS(SELECT i.id FROM erp_items i JOIN erp_warehouses w ON w.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.type=$5 AND w.id=$3), updated AS(INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity) SELECT $1,$2,$3,GREATEST($4,0) FROM available WHERE $4>=0 OR EXISTS(SELECT 1 FROM erp_stock WHERE workspace_id=$1 AND item_id=$2 AND warehouse_id=$3) ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+$4 WHERE erp_stock.quantity+$4>=0 RETURNING quantity), event AS(INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason) SELECT $1,$2,$3,$4,$6 FROM updated RETURNING id) SELECT updated.quantity,event.id FROM updated,event';
-  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,delta,'stock',x.unit_id?x.reason+' ('+converted.unit_code+')':x.reason]);
+  const sql='WITH available AS(SELECT i.id FROM erp_items i JOIN erp_warehouses w ON w.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.type=$5 AND w.id=$3), updated AS(INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity) SELECT $1,$2,$3,GREATEST($4,0) FROM available WHERE $4>=0 OR EXISTS(SELECT 1 FROM erp_stock WHERE workspace_id=$1 AND item_id=$2 AND warehouse_id=$3) ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+$4 WHERE erp_stock.quantity+$4>=0 AND ($7::numeric IS NULL OR erp_stock.quantity=$7) RETURNING quantity), event AS(INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason) SELECT $1,$2,$3,$4,$6 FROM updated RETURNING id) SELECT updated.quantity,event.id FROM updated,event';
+  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,delta,'stock',x.unit_id?x.reason+' ('+converted.unit_code+')':x.reason,x.expected_quantity??null]);
   return rows.length?c.json({ok:true,data:rows[0]},201):fail(c,409,'Insufficient stock or item/warehouse unavailable');
+ });
+ app.post('/api/admin/erp/w/:workspace/core/transfers',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const v=transferSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid stock transfer');
+  const x=v.data;
+  let qty;try{qty=(await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:x.item_id,unitId:x.unit_id,quantity:x.quantity})).baseQuantity}
+  catch(e){return fail(c,400,e.message)}
+  if(!Number.isFinite(qty)||qty<=0)return fail(c,400,'Invalid transfer quantity');
+  // All effects are in ONE PostgreSQL statement. A missing/insufficient source does not
+  // debit, credit, or write movements. Destination and movement failures roll back source.
+  const statement=`WITH allowed AS(
+   SELECT i.id FROM erp_items i
+   JOIN erp_warehouses src ON src.workspace_id=i.workspace_id AND src.id=$3
+   JOIN erp_warehouses dst ON dst.workspace_id=i.workspace_id AND dst.id=$4
+   WHERE i.workspace_id=$1 AND i.id=$2 AND i.type='stock' AND src.id<>dst.id
+  ), withdrawn AS(
+   UPDATE erp_stock s SET quantity=s.quantity-$5::numeric FROM allowed
+   WHERE s.workspace_id=$1 AND s.item_id=$2 AND s.warehouse_id=$3 AND s.quantity>=$5::numeric
+   RETURNING s.item_id
+  ), deposited AS(
+   INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity)
+   SELECT $1,item_id,$4,$5::numeric FROM withdrawn
+   ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+EXCLUDED.quantity
+   RETURNING item_id
+  ), movements AS(
+   INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason)
+   SELECT $1,$2,$3,-$5::numeric,$6::text||' (OUT)' FROM deposited
+   UNION ALL
+   SELECT $1,$2,$4,$5::numeric,$6::text||' (IN)' FROM deposited
+   RETURNING id
+  ) SELECT (SELECT COUNT(*)::int FROM deposited) moved,
+     (SELECT COUNT(*)::int FROM movements) movement_count`;
+  const data=await query(g.sql,statement,[g.workspace,x.item_id,x.source_warehouse_id,x.target_warehouse_id,qty,x.reference]);
+  if(data[0]?.moved!==1||data[0]?.movement_count!==2)return fail(c,409,'Insufficient source stock, unavailable item or invalid warehouses');
+  return c.json({ok:true,moved_quantity:qty,reference:x.reference},201);
  });
  app.post('/api/admin/erp/w/:workspace/core/documents',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;const v=docSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid sales/purchase document');
