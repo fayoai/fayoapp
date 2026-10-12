@@ -45,8 +45,9 @@ export default function RawiGeneratedWorkspace({onNewChat=()=>{},onOpenThread=()
  const updateField=(key,value)=>setDraft(x=>({...x,values:{...x.values,[key]:value}}));
  const save=async e=>{e.preventDefault();if(!selected||!draft||saving)return;setSaving(true);setError('');try{
   const values={};for(const field of selected.fields){const v=draft.values[field.key];if(v===undefined||v===null||v==='')continue;values[field.key]=field.type==='number'?Number(v):v}
-  await api(base+'/dynamic/'+selected.key+'/records'+(draft.edit_id?'/'+draft.edit_id:''),{method:draft.edit_id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage,...(!draft.edit_id&&draft.source_thread_id?{source_thread_id:draft.source_thread_id}:{})})});
-  setDraft(null);setThreadForImport('');await loadRecords();
+  const result=await api(base+'/dynamic/'+selected.key+'/records'+(draft.edit_id?'/'+draft.edit_id:''),{method:draft.edit_id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage,...(!draft.edit_id&&draft.source_thread_id?{source_thread_id:draft.source_thread_id}:{})})});
+  if(!result?.data?.id)throw new Error(L('لم يؤكد الخادم حفظ السجل','Server did not confirm saving the record'));
+  await loadRecords();setDraft(null);setThreadForImport('');
  }catch(e){setError(e.message)}finally{setSaving(false)}};
  const propose=async id=>{if(!selected)return;setSaving(true);setError('');try{
   const r=await api(base+'/dynamic/'+selected.key+'/propose',{method:'POST',body:JSON.stringify({thread_id:id})});
