@@ -172,13 +172,28 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    history=await query(sql,'SELECT role,content FROM mif_chat_messages WHERE thread_id=$1 ORDER BY created_at DESC,id DESC LIMIT 12',[id]);
    history.reverse();
   }
-  // Every billable request reserves tenant quota atomically, even under concurrency.
-  const claim=await query(sql,`WITH target AS (SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id WHERE m.admin_id=$1 AND w.id=$2 ORDER BY w.created_at LIMIT 1) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
+  // Designing a company program is mandatory onboarding, so quota exhaustion must
+  // never deadlock an unapproved workspace. Still enforce the 12-message/minute limit above.
+  const central=centralDb(c);
+  let discoveryPending=false;
+  if(env(c).MIF_APP_SURFACE==='enterprise'&&rawiDiscovery&&central){
+   const rows=await query(central,`SELECT 1 FROM rawi_company_profiles p
+    JOIN erp_memberships m ON m.workspace_id=p.workspace_id
+    WHERE p.workspace_id=$1 AND m.admin_id=$2 AND m.role='owner'
+    AND p.completed_at IS NOT NULL AND p.setup_inputs->>'discovery' IS DISTINCT FROM 'true' LIMIT 1`,
+    [workspace,user]);
+   discoveryPending=rows.length>0;
+  }
+  // Only ordinary chat consumes a trial/paid message; company discovery is not billable.
+  const claim=discoveryPending?[{workspace_id:workspace}]:await query(sql,`WITH target AS (
+    SELECT w.id FROM erp_workspaces w JOIN erp_memberships m ON m.workspace_id=w.id
+    WHERE m.admin_id=$1 AND w.id=$2 ORDER BY w.created_at LIMIT 1
+   ) UPDATE mif_tenant_subscriptions s SET messages_used=s.messages_used+1,updated_at=now()
    FROM target,mif_subscription_plans p WHERE target.id=s.workspace_id
    AND p.id=s.plan_id AND p.active=true AND p.application=COALESCE((SELECT account_type FROM rawi_account_profiles WHERE admin_id=$1),'enterprise')
    AND s.status IN ('trial','active') AND s.period_ends_at>now()
    AND s.messages_used<p.message_limit RETURNING s.workspace_id`,[user,workspace]);
-  if(!claim.length)return fail(c,402,'Activate an active RAWI subscription to use AI conversations');
+  if(!claim.length)return fail(c,402,'Your conversation allowance has been used. View your current plan and renewal details under Account > Subscriptions.');
   let result;try{
    if(rawiDiscovery&&env(c).MIF_APP_SURFACE==='enterprise'&&!v.data.documents?.length){
     result=await rawiDiscovery.respond({c,workspace,user,message:v.data.question,language:c.req.header('accept-language')?.toLowerCase().startsWith('en')?'en':'ar'});
@@ -219,7 +234,7 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
    }
    }
   }catch(e){
-   await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
+   if(!discoveryPending)await query(sql,'UPDATE mif_tenant_subscriptions SET messages_used=GREATEST(0,messages_used-1) WHERE workspace_id=$1',[claim[0].workspace_id]).catch(()=>{});
    return fail(c,e.status||502,e.message);
   }
   const answer=result.answer;
