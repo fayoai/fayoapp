@@ -12,7 +12,7 @@ const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
 const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:''};
 const documentMimeByExtension=Object.freeze({pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',rtf:'application/rtf'});
 const maxDocumentSize=1572864,maxDocumentTotal=2621440,maxDocuments=2;
-const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
+const welcomeText={ar:'أنا راوي من MIF Smart، اتطورت وبتدار بواسطة ميف سمارت. إزاي أقدر أساعدك؟',en:'I am Rawi by MIF Smart, developed and managed by MIF Smart. How can I help?'};
 function RawiGreeting({lang,customText=''}){
  const text=customText||welcomeText[lang==='en'?'en':'ar'];
  const [visible,setVisible]=useState('');
