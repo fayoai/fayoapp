@@ -298,13 +298,25 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   const kind=c.req.param('kind');
   const repo=STANDARD_REPOSITORIES.find(x=>x.kind===kind&&x.read_only);
   if(!repo)return fail(c,404,'Report not found');
-  if(kind==='cash_flow')return c.json({ok:true,data:[],columns:[],notice:'لا يمكن إعداد تدفقات نقدية معتمدة قبل تصنيف النقد وما يعادله وربط حركات السداد الفعلية.'});
+  if(kind==='cash_flow'){
+   const data=await query(g.sql,`SELECT to_char(p.recorded_at,'YYYY-MM') period,
+    COUNT(*)::int transactions,
+    COALESCE(SUM(p.amount_halalas) FILTER(WHERE p.direction='incoming'),0)::bigint receipts_halalas,
+    COALESCE(SUM(p.amount_halalas) FILTER(WHERE p.direction='outgoing'),0)::bigint payments_halalas,
+    (COALESCE(SUM(p.amount_halalas) FILTER(WHERE p.direction='incoming'),0)-
+     COALESCE(SUM(p.amount_halalas) FILTER(WHERE p.direction='outgoing'),0))::bigint net_halalas
+    FROM rawi_payments p JOIN erp_journal_entries j ON j.workspace_id=p.workspace_id
+     AND j.reference='RAWI-PAY-'||p.id::text
+    WHERE p.workspace_id=$1 GROUP BY to_char(p.recorded_at,'YYYY-MM') ORDER BY period DESC`,[g.workspace]);
+   return c.json({ok:true,data,columns:['period','transactions','receipts_halalas','payments_halalas','net_halalas'],
+    notice:'تقرير حركة السيولة من سندات القبض والصرف المرحّلة محاسبيًا فقط؛ ليس قائمة تدفقات نقدية معتمدة وفق المعايير المحاسبية.'});
+  }
   if(kind==='tax_report'){
    const summary=await query(g.sql,"SELECT COUNT(*)::int invoices,COALESCE(SUM(subtotal_halalas),0)::bigint taxable_sales_halalas,COALESCE(SUM(vat_halalas),0)::bigint output_vat_halalas FROM erp_invoices WHERE workspace_id=$1 AND status IN('issued','paid')",[g.workspace]);
    return c.json({ok:true,data:summary,columns:['invoices','taxable_sales_halalas','output_vat_halalas'],
     notice:'إجمالي ضريبة المخرجات من الفواتير الصادرة فقط. لا يشمل ضريبة المدخلات أو إقرارات ضريبية معتمدة.'});
   }
-  const ledger=await query(g.sql,"SELECT a.code,a.name,a.type,COALESCE(SUM(l.debit_halalas),0)::bigint debit_halalas,COALESCE(SUM(l.credit_halalas),0)::bigint credit_halalas FROM erp_accounts a LEFT JOIN erp_journal_entries j ON j.workspace_id=a.workspace_id LEFT JOIN LATERAL jsonb_to_recordset(COALESCE(j.lines,'[]'::jsonb)) AS l(account_id uuid,debit_halalas bigint,credit_halalas bigint) ON l.account_id=a.id WHERE a.workspace_id=$1 GROUP BY a.id,a.code,a.name,a.type ORDER BY a.code",[g.workspace]);
+  const ledger=await query(g.sql,"WITH totals AS (SELECT l.account_id,COALESCE(SUM(l.debit_halalas),0)::bigint debit_halalas,COALESCE(SUM(l.credit_halalas),0)::bigint credit_halalas FROM erp_journal_entries j CROSS JOIN LATERAL jsonb_to_recordset(COALESCE(j.lines,'[]'::jsonb)) AS l(account_id uuid,debit_halalas bigint,credit_halalas bigint) WHERE j.workspace_id=$1 GROUP BY l.account_id) SELECT a.code,a.name,a.type,COALESCE(totals.debit_halalas,0)::bigint debit_halalas,COALESCE(totals.credit_halalas,0)::bigint credit_halalas FROM erp_accounts a LEFT JOIN totals ON totals.account_id=a.id WHERE a.workspace_id=$1 ORDER BY a.code",[g.workspace]);
   let selected=ledger;
   if(kind==='income_statement')selected=ledger.filter(x=>['income','expense'].includes(x.type));
   if(kind==='balance_sheet')selected=ledger.filter(x=>['asset','liability','equity'].includes(x.type));
