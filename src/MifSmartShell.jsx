@@ -303,7 +303,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
     </div>
    </section>}
    {!checking&&!authed&&protectedTabs.includes(tab)&&<div className="mif-protected-auth">{authPanel}</div>}
-   {tab==='operations'&&!checking&&authed&&<RawiStandardRepositories/>}
+   {tab==='operations'&&!checking&&authed&&<RawiStandardRepositories onOpenThread={openThread}/>}
    {tab==='integrations'&&!checking&&authed&&<AiErpWorkspace mode="integrations" notify={setNotice}/>}
    {tab==='schedule'&&!checking&&authed&&<MifSchedule notify={setNotice}/>}
    {tab==='team'&&!checking&&authed&&<RawiTeamPanel workspaceId={workspaceId} workspace={workspaces.find(w=>w.id===workspaceId)} notify={setNotice}/>}
