@@ -16,7 +16,7 @@
 .rawi-live :is(input,select,textarea){min-width:0;width:100%;padding:10px;background:#fff;border:1px solid #cad9ed;border-radius:8px;font-size:14px;color:#263e60}
 .rawi-live-wide{grid-column:1/-1}
 .rawi-live-line-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
-.rawi-live-line,.rawi-live-journal-line{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;align-items:end;gap:9px}
+.rawi-live-line,.rawi-live-journal-line{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,1fr) auto;align-items:end;gap:9px}
 .rawi-live-journal-line{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto}
 .rawi-live-totals{display:flex;flex-wrap:wrap;gap:10px;padding:12px;border-radius:9px;background:#edf4ff;color:#2a5594;font-size:13px;font-variant-numeric:tabular-nums}
 .rawi-live-totals strong{margin-inline-start:auto}
