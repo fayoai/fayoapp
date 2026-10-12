@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {providerCodes,getAIProviders,routeAI} from './ai-router.js';
+import {rawiVerifiedIdentityAnswer,providerCodes,getAIProviders,routeAI} from './ai-router.js';
 test('Supported AI providers are explicitly allowlisted',()=>assert.deepEqual(providerCodes,['openai','anthropic','gemini','groq','openrouter','workers_ai']));
 test('No configured model rejects without exposing credentials',async()=>{await assert.rejects(routeAI('Hello',[]),/not configured/)});
 test('Operator environment credentials remain server side',async()=>{const p=await getAIProviders(null,{OPENAI_API_KEY:'private-test-secret',OPENAI_MODEL:'custom-model'},async()=>[]);assert.deepEqual(p.map(x=>({code:x.code,model:x.model})),[{code:'openai',model:'custom-model'}])});
@@ -100,4 +100,13 @@ test('Operator-disabled AI provider is not silently reenabled',async()=>{
  const ai={run:async()=>({response:'Reply'})};
  const providers=await getAIProviders({}, {AI:ai},async()=>[{code:'workers_ai',enabled:false,model:'@cf/zai-org/glm-4.7-flash',priority:1}]);
  assert.equal(providers.length,0);
+});
+
+test('RAIW identifies its real product and operator with no fabricated vendor identity',()=>{
+ const ar=rawiVerifiedIdentityAnswer('مين اللي عملك؟','enterprise');
+ assert.match(ar,/راوي/);assert.match(ar,/ميف سمارت/);
+ assert.match(rawiVerifiedIdentityAnswer('What is your name?','enterprise'),/Rawi ERP/);
+ assert.match(rawiVerifiedIdentityAnswer('مين بيديرك','enterprise'),/MIF Smart/);
+ assert.match(rawiVerifiedIdentityAnswer('مين عملك','mif-public'),/ميف سمارت/);
+ assert.equal(rawiVerifiedIdentityAnswer('كيف أقدر أجهز عرض سعر؟','enterprise'),null);
 });
