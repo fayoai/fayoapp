@@ -103,7 +103,8 @@ export async function generateWorkspaceBlueprint({name,activity,description='',l
   }catch{return {raw:null}}
  }
  const first=await ask(compactInstruction,640);
- let blueprint=compactToBlueprint(first.raw,{name,activity,description});
+ // Preserve richer AI-defined relations when a complete validated schema fits.
+ let blueprint=validateGeneratedBlueprint(first.raw)||compactToBlueprint(first.raw,{name,activity,description});
  if(blueprint)return {ready:true,blueprint,provider:first.provider};
  // Small independent prompts let inexpensive, token-limited models build a valid
  // workspace gradually instead of truncating one giant JSON schema response.
