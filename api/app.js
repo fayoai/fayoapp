@@ -21,6 +21,7 @@ import {createSixDigitCode,hashVerificationCode,deliverVerificationCode,mailRead
 import {installRawiCompany} from './rawi-company.js';
 import {installRawiDiscovery} from './rawi-discovery.js';
 import {installRawiDynamicWorkspace} from './rawi-dynamic-workspace.js';
+import {installRawiStandardRepositories} from './rawi-standard-repositories.js';
 import {passwordHash,PASSWORD_HASH_ITERATIONS} from './auth-password.js';
 const app=new Hono(),encoder=new TextEncoder();
 const env=c=>c.env||{};
@@ -307,6 +308,7 @@ app.get('/api/admin/me',async c=>{const sql=db(c);if(!sql)return fail(c,503,'Dat
 installRawiCompany(app,{centralDb,env,query});
 const rawiDiscovery=installRawiDiscovery(app,{centralDb,env,query});
 installRawiDynamicWorkspace(app,{db,centralDb,env,query});
+installRawiStandardRepositories(app,{db,centralDb,env,query});
 installAiErp(app,{db,env,query});
 installRawiTeam(app,{db,query});
 installErpCore(app,{db,env,query});
