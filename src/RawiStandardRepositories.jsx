@@ -13,6 +13,7 @@ export default function RawiStandardRepositories(){
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
  const [lookups,setLookups]=useState({}),[units,setUnits]=useState([]),[productEditor,setProductEditor]=useState(null);
+ const [documentUnitOptions,setDocumentUnitOptions]=useState({});
  const [productUnitDraft,setProductUnitDraft]=useState({unit_id:'',factor:1,barcode:'',sale_price:'',purchase_price:''});
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
@@ -79,7 +80,25 @@ export default function RawiStandardRepositories(){
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const selectGroup=key=>{setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
- const startDraft=row=>{setError('');setNotice('');setDraft(row?{id:row.id,stage:row.stage||'',values:{...row.values_json}}:{stage:selected?.stages?.[0]||'',values:selected?.kind==='products'?{field_3:units.find(u=>u.code==='unit')?.code||'unit'}:{}})};
+ const lineKinds=new Set(['quotations','sales_orders','sales_invoices','purchase_quotes','purchase_orders']);
+ const loadLineUnits=async itemId=>{
+  if(!itemId||documentUnitOptions[itemId])return;
+  try{const result=await api(prefix+'/system/items/'+encodeURIComponent(itemId)+'/units');
+   setDocumentUnitOptions(old=>({...old,[itemId]:result.data||[]}));
+  }catch(e){setError(e.message)}
+ };
+ const startDraft=row=>{
+  setError('');setNotice('');
+  const lines=(row?.values_json?.document_lines||[]).map(x=>({item_id:x.item_id,unit_id:x.unit_id||'',quantity:Number(x.quantity)}));
+  setDraft(row?{id:row.id,stage:row.stage||'',values:{...row.values_json},lines}:
+   {stage:selected?.stages?.[0]||'',values:selected?.kind==='products'?{field_3:units.find(u=>u.code==='unit')?.code||'unit'}:{},lines:[]});
+  lines.forEach(x=>loadLineUnits(x.item_id));
+ };
+ const changeLine=(index,key,value)=>{
+  setDraft(old=>({...old,lines:old.lines.map((line,i)=>i===index?{...line,[key]:value,...(key==='item_id'?{unit_id:''}:{})}:line)}));
+  if(key==='item_id')loadLineUnits(value);
+ };
+
  const fieldChange=(key,value)=>setDraft(old=>({...old,values:{...old.values,[key]:value}}));
  const save=async event=>{
   event.preventDefault();if(!selected||!draft||saving)return;
@@ -92,7 +111,8 @@ export default function RawiStandardRepositories(){
     values[f.key]=f.type==='number'?Number(raw):raw;
    }
    const target=prefix+'/standard/'+selected.key+'/records'+(draft.id?'/'+encodeURIComponent(draft.id):'');
-   const response=await api(target,{method:draft.id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage||''})});
+   const documentLines=lineKinds.has(selected.kind)?{lines:(draft.lines||[]).map(x=>({item_id:x.item_id,quantity:Number(x.quantity),...(x.unit_id?{unit_id:x.unit_id}:{})}))}:{};
+   const response=await api(target,{method:draft.id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage||'',...documentLines})});
    if(!response?.data?.id)throw Error(L('لم يؤكد النظام حفظ البيانات','The server did not confirm saving'));
    setDraft(null);await loadRecords();await refreshLookups();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
@@ -187,6 +207,24 @@ export default function RawiStandardRepositories(){
          f.type==='long_text'?<textarea rows={3} value={draft.values[f.key]??''} required={f.required} onChange={e=>fieldChange(f.key,e.target.value)}/>:
          <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} step={f.type==='number'?'any':undefined} min={f.type==='number'?0:undefined} required={f.required} value={draft.values[f.key]??''} onChange={e=>fieldChange(f.key,e.target.value)}/>}
         </label>)}</div>
+
+        {lineKinds.has(selected.kind)&&<section className="rawi-std-document-lines">
+         <div className="rawi-std-form-top"><strong>{L('أصناف المستند','Document products')}</strong>
+          <button type="button" onClick={()=>setDraft(old=>({...old,lines:[...(old.lines||[]),{item_id:'',unit_id:'',quantity:1}]}))}>{L('إضافة صنف +','Add product +')}</button>
+         </div>
+         {(draft.lines||[]).map((line,index)=><div className="rawi-std-document-line" key={index}>
+          <label>{L('الصنف','Product')}<select required value={line.item_id} onChange={e=>changeLine(index,'item_id',e.target.value)}>
+           <option value="">{L('اختر صنفًا','Choose a product')}</option>{(lookups.products||[]).map(x=><option value={x.id} key={x.id}>{x.sku} — {x.name}</option>)}
+          </select></label>
+          <label>{L('الوحدة','Unit')}<select value={line.unit_id||''} onChange={e=>changeLine(index,'unit_id',e.target.value)}>
+           <option value="">{L('وحدة الأساس','Base unit')}</option>{(documentUnitOptions[line.item_id]||[]).filter(x=>!x.is_base).map(x=><option value={x.unit_id} key={x.unit_id}>{x.name} (×{Number(x.factor)})</option>)}
+          </select></label>
+          <label>{L('الكمية','Quantity')}<input required type="number" min="0.001" step="any" value={line.quantity} onChange={e=>changeLine(index,'quantity',e.target.value)}/></label>
+          <button type="button" onClick={()=>setDraft(old=>({...old,lines:old.lines.filter((_,i)=>i!==index)}))}>{L('حذف','Remove')}</button>
+         </div>)}
+         {!draft.lines?.length&&<p className="rawi-std-info">{L('أضف صنفًا واحدًا على الأقل؛ الأسعار والكميات الأساسية تُحسب من ملف الصنف ووحداته.','Add at least one item; prices and base quantities come from product records and their units.')}</p>}
+        </section>}
+
         {!!selected.stages.length&&<label className="rawi-std-status">{L('الحالة','Status')}<select value={draft.stage||selected.stages[0]} onChange={e=>setDraft(x=>({...x,stage:e.target.value}))}>{selected.stages.map(x=><option key={x} value={x}>{x}</option>)}</select></label>}
         <button type="submit" className="primary" disabled={saving}><Save size={16}/>{saving?L('جاري الحفظ','Saving'):L('حفظ البيانات','Save')}</button>
        </form>}
