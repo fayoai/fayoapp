@@ -8,7 +8,7 @@ export default function RawiInventoryTransactions({prefix,kind,lookups={},source
  const [stock,setStock]=useState([]),[movements,setMovements]=useState([]),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false);
  const [itemId,setItemId]=useState(''),[warehouseId,setWarehouseId]=useState(''),[destination,setDestination]=useState(''),[quantity,setQuantity]=useState(''),[reference,setReference]=useState('');
- const [units,setUnits]=useState([]),[unitId,setUnitId]=useState('');
+ const [units,setUnits]=useState([]),[unitId,setUnitId]=useState(''),[transferRequestId,setTransferRequestId]=useState(()=>crypto.randomUUID());
  const active=kind==='stock_count'||kind==='internal_transfer';
  const load=async()=>{if(!prefix||!active)return;setLoading(true);setError('');
   try{const [current,history]=await Promise.all([api(prefix+'/core/stock'),api(prefix+'/core/movements')]);setStock(current.data||[]);setMovements(history.data||[])}
@@ -47,10 +47,10 @@ export default function RawiInventoryTransactions({prefix,kind,lookups={},source
     await api(prefix+'/core/movements',{method:'POST',body:JSON.stringify({item_id:itemId,warehouse_id:warehouseId,delta,expected_quantity:current,reason:reference.trim()||'جرد فعلي معتمد'})});
     setNotice(L('تم حفظ فرق الجرد وحركة المخزون','Stock count difference and movement recorded'));
    }else{
-    const result=await api(prefix+'/core/transfers',{method:'POST',body:JSON.stringify({item_id:itemId,source_warehouse_id:warehouseId,target_warehouse_id:destination,quantity:counted,...(unitId?{unit_id:unitId}:{}),reference:reference.trim()||'تحويل مخزني'})});
+    const result=await api(prefix+'/core/transfers',{method:'POST',body:JSON.stringify({item_id:itemId,source_warehouse_id:warehouseId,target_warehouse_id:destination,quantity:counted,...(unitId?{unit_id:unitId}:{}),request_id:transferRequestId,reference:reference.trim()||'تحويل مخزني'})});
     setNotice(L('تم نقل ','Transferred ')+result.moved_quantity+L(' من وحدات الأساس وحفظ الحركتين',' base units and recorded both movements'));
    }
-   setQuantity('');setReference('');await load();onSaved();
+   setQuantity('');setReference('');if(kind==='internal_transfer')setTransferRequestId(crypto.randomUUID());await load();onSaved();
   }catch(e){setError(e.message)}finally{setBusy(false)}
  };
  if(!active)return null;
