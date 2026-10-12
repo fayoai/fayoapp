@@ -15,7 +15,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
  const [lookups,setLookups]=useState({}),[units,setUnits]=useState([]),[productEditor,setProductEditor]=useState(null);
- const [documentUnitOptions,setDocumentUnitOptions]=useState({});
+ const [documentUnitOptions,setDocumentUnitOptions]=useState({}),[businessDraft,setBusinessDraft]=useState(null);
  const [productUnitDraft,setProductUnitDraft]=useState({unit_id:'',factor:1,barcode:'',sale_price:'',purchase_price:''});
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
@@ -84,6 +84,14 @@ export default function RawiStandardRepositories({onOpenThread}={}){
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const selectGroup=key=>{setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
+ const prepareBusinessDraft=row=>{
+  if(!['std_sales_orders','std_purchase_orders'].includes(row.repository_key))return;
+  const target=groups.flatMap(group=>group.repositories).find(repo=>repo.key===row.repository_key);
+  if(!target)return;
+  setGroupKey(target.group);setRepoKey(target.key);setDraft(null);
+  setBusinessDraft({token:Date.now(),id:row.id,kind:target.kind,partner_id:row.values_json?.field_1||'',
+   lines:row.values_json?.document_lines||[],document_number:row.values_json?.document_number||''});
+ };
  const lineKinds=new Set(['quotations','sales_orders','sales_invoices','purchase_quotes','purchase_orders']);
  const loadLineUnits=async itemId=>{
   if(!itemId||documentUnitOptions[itemId])return;
@@ -149,7 +157,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
      <button type="button" className="rawi-std-draft-open" onClick={()=>{setGroupKey(row.group);setRepoKey(row.repository_key);setFocusDraftId(row.id)}}>
       <strong>{row.repository_name}</strong><span>{String(row.values_json?.document_number||row.values_json?.field_1||row.id).slice(0,85)}</span><small>{L('مسودة','Draft')}</small>
      </button>
-     {row.source_thread_id&&onOpenThread&&<button type="button" className="rawi-std-source-link" onClick={()=>onOpenThread(row.source_thread_id)}>{L('المصدر','Source')}</button>}
+     {['std_sales_orders','std_purchase_orders'].includes(row.repository_key)&&<button type="button" className="rawi-std-source-link" onClick={()=>prepareBusinessDraft(row)}>{L('تجهيز أمر فعلي','Create order')}</button>}{row.source_thread_id&&onOpenThread&&<button type="button" className="rawi-std-source-link" onClick={()=>onOpenThread(row.source_thread_id)}>{L('المصدر','Source')}</button>}
     </div>)}</div>:<p className="rawi-std-drafts-empty">{L('لا توجد مسودات محفوظة بعد. ستظهر هنا العمليات التي ينشئها راوي أو المستخدم.','No saved drafts yet. Rawi and user-created drafts will appear here.')}</p>}
    </section>
    <nav className="rawi-std-groups" aria-label={L('الإدارات','Departments')}>
@@ -165,7 +173,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
        <div className="rawi-std-header-actions"><button type="button" onClick={loadRecords} disabled={recordsLoading}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>
        {!selected.read_only&&selected.kind!=='document_sequences'&&<button type="button" className="primary" onClick={()=>startDraft()}><FilePlus2 size={16}/>{L('سجل جديد','New record')}</button>}</div>
       </header>
-      <RawiBusinessTransactions prefix={prefix} kind={selected.kind} lookups={lookups} onSaved={()=>{loadRecords();refreshLookups();loadDrafts()}}/>
+      <RawiBusinessTransactions prefix={prefix} kind={selected.kind} lookups={lookups} sourceDraft={businessDraft} onSaved={()=>{setBusinessDraft(null);loadRecords();refreshLookups();loadDrafts()}}/>
       {genericDraft&&<p className="rawi-std-info">{L('السجلات الجديدة هنا مسودات إدارية محفوظة، وليست فواتير صادرة أو قيودًا مرحّلة أو حركات مخزون منفذة. الاعتماد والترحيل يتطلبان العمليات المحاسبية والمخزنية المخصصة.','These are stored operational drafts, not issued invoices, posted journal entries or executed inventory movements.')}</p>}
       {selected.read_only&&<p className="rawi-std-info">{L('يُحسب التقرير من السجلات التشغيلية الفعلية، ولا ينشئ قيودًا أو إقرارات معتمدة.','This report reads operational data and does not issue certified statements.')}</p>}
       
