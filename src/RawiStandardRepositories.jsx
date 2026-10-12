@@ -131,6 +131,14 @@ export default function RawiStandardRepositories({onOpenThread}={}){
    setDraft(null);await loadRecords();await refreshLookups();await loadDrafts();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
+ const seedAccounts=async()=>{
+  if(saving||!window.confirm(L('تجهيز دليل حسابات أساسي مبدئي؟ لن تُعدّل الحسابات الموجودة، ويمكنك إعادة تسمية الحسابات بعد الإنشاء.','Install a non-destructive starter chart of accounts? Existing accounts will remain unchanged.')))return;
+  setSaving(true);setError('');setNotice('');
+  try{const r=await api(prefix+'/core/accounts/seed',{method:'POST',body:'{}'});
+   await loadRecords();await refreshLookups();
+   setNotice(L('تمت إضافة ','Added ')+r.inserted+L(' حسابات أساسية جديدة دون تغيير الحسابات الموجودة',' starter accounts without modifying existing entries'));
+  }catch(e){setError(e.message)}finally{setSaving(false)}
+ };
  const saveSequence=async e=>{e.preventDefault();setSaving(true);setError('');
   try{
    await api(prefix+'/system/sequences/'+encodeURIComponent(sequenceKind),{method:'PUT',body:JSON.stringify({next_number:Number(sequenceValue)})});
@@ -173,7 +181,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
     <div className="rawi-std-main">
      {selected&&<>
       <header className="rawi-std-repo-header"><div><h2>{selected.name}</h2><small>{activeGroup?.title}</small></div>
-       <div className="rawi-std-header-actions"><button type="button" onClick={loadRecords} disabled={recordsLoading}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>
+       <div className="rawi-std-header-actions"><button type="button" onClick={loadRecords} disabled={recordsLoading}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>{selected.kind==='chart_accounts'&&<button type="button" disabled={saving} onClick={seedAccounts}>{L('تهيئة دليل حسابات أساسي','Starter chart')}</button>}
        {!liveSelected&&!selected.read_only&&selected.kind!=='document_sequences'&&<button type="button" className="primary" onClick={()=>startDraft()}><FilePlus2 size={16}/>{L('سجل جديد','New record')}</button>}</div>
       </header>
       <RawiBusinessTransactions prefix={prefix} kind={selected.kind} lookups={lookups} sourceDraft={businessDraft} onSaved={()=>{setBusinessDraft(null);loadRecords();refreshLookups();loadDrafts()}}/>
