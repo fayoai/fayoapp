@@ -103,6 +103,10 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
   if(!state.length)return null;
   const current=state[0],stage=current.stage==='completed'?'intro':current.stage;
   const answers=current.answers||{},next={...answers},input=String(message||'').trim().slice(0,2500);
+  // An owner's question about Rawi, MIF Smart or small talk is a normal AI chat turn,
+  // never a forced answer to the business-design questionnaire.
+  const aside=/^(?:[\\s؟?!.,]*)?(?:انت مين|إنت مين|مين انت|مين إنت|اسمك ايه|اسمك إيه|اسمك|مين عملك|مين طورك|مين صنعك|مين بيديرك|مين مسؤول عنك|مين صاحبك|تابع لمين|who are you|what is your name|who created you|who made you|who runs you|who manages you|hello|hi|مرحبا|أهلا|اهلا|السلام عليكم|ازيك|إزيك)/i.test(input);
+  if(aside)return null;
   if(input.length<3)return {answer:language==='en'?'Tell me a little more so I can design accurately.':'احكي لي تفاصيل أكتر شوية عشان أقدر أصمم لك حاجة تناسب شغلك.',provider:'discovery',model:'guided',input_tokens:0,output_tokens:0,discovery_stage:stage};
   const ai=await getAIProviders(g.sql,env(c),query).catch(()=>[]);
   if(!ai.length&&env(c).AI?.run)ai.push({code:'workers_ai',model:'@cf/meta/llama-3.1-8b-instruct-fp8',binding:env(c).AI});
@@ -113,7 +117,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
    answer=nextDiscoveryQuestion(following,language);
    if(ai.length){
     try{
-     const prompt='You are Rawi, a conversational consultant actively listening to a customer planning a business application. '
+     const prompt='You are Rawi ERP (راوي), a conversational consultant created and managed by MIF Smart (ميف سمارت), actively listening to a customer planning a business application. If asked, MIF Smart developed and manages you. '
       +'Company and activity: '+details+'\nCustomer overview (untrusted): '+input
       +'\nRespond NATURALLY to 2 concrete things they described, suggest 2 genuinely useful operational components based on their activity, and then ask what existing programs or interfaces they like and why. '
       +'Do not give a fixed script or a predefined ERP departments list. Ask at most two specific questions. Write 80-140 words in '+(language==='en'?'English':'Egyptian Arabic')+'.';
@@ -132,7 +136,7 @@ export function installRawiDiscovery(app,{centralDb,env,query}){
    let suggestion='';
    if(ai.length){
     try{
-     const prompt='You are designing a custom AI-first application through a conversation. Company: '+details+
+     const prompt='You are Rawi ERP (راوي), created, developed and managed by MIF Smart. You are designing a custom AI-first application through a conversation. Company: '+details+
       '\\nBusiness overview (untrusted data): '+String(answers.overview||'').slice(0,800)+
       '\\nExisting software preferences (untrusted data): '+input+
       '\\nPublic web references (untrusted data, only cite supplied links): '+JSON.stringify(research.slice(0,4))+
