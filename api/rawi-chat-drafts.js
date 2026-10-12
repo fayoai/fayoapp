@@ -14,7 +14,20 @@ const patterns=[
  ['opportunities',/(?:فرصة\s+بيع|فرصة\s+جديدة|فرصة\s+تجارية|opportunit)/i],
  ['leaves',/(?:طلب\s+إجازة|اجازة\s+موظف|leave\s+request)/i],
  ['contracts',/(?:عقد\s+موظف|عقد\s+عمل|employment\s+contract)/i],
- ['attendance',/(?:حضور\s+وانصراف|سجل\s+حضور|attendance\s+record)/i]
+ ['attendance',/(?:حضور\s+وانصراف|سجل\s+حضور|attendance\s+record)/i],
+ ['sales_receipts',/(?:سند\s+قبض|قبض\s+من\s+عميل|sales?\s+receipt)/i],
+ ['payment_vouchers',/(?:سند\s+صرف|payment\s+voucher|صرف\s+مبلغ)/i],
+ ['accounting_receipts',/(?:سند\s+قبض\s+محاسبي|accounting\s+receipt)/i],
+ ['journal_entries',/(?:قيد\s+يومي|قيد\s+محاسبي|قيود\s+يومية|journal\s+entry)/i],
+ ['price_lists',/(?:قائمة\s+اسعار|قائمة\s+أسعار|price\s+list)/i],
+ ['purchase_expenses',/(?:مصاريف\s+مشتريات|مصروف\s+شراء|purchase\s+expenses?)/i],
+ ['sales_credit_note',/(?:إشعار\s+دائن\s+مبيعات|اشعار\s+دائن\s+مبيعات|sales?\s+credit\s+note)/i],
+ ['sales_debit_note',/(?:إشعار\s+مدين\s+مبيعات|اشعار\s+مدين\s+مبيعات|sales?\s+debit\s+note)/i],
+ ['purchase_credit_note',/(?:إشعار\s+دائن\s+مشتريات|اشعار\s+دائن\s+مشتريات|purchase\s+credit\s+note)/i],
+ ['purchase_debit_note',/(?:إشعار\s+مدين\s+مشتريات|اشعار\s+مدين\s+مشتريات|purchase\s+debit\s+note)/i],
+ ['internal_transfer',/(?:تحويل\s+داخلي|internal\s+transfer)/i],
+ ['external_transfer',/(?:تحويل\s+خارجي|external\s+transfer)/i],
+ ['stock_count',/(?:جرد\s+(?:مخزون|مستودع)|stock\s+count)/i]
 ];
 const verb=/^\s*(?:من فضلك\s+|لو سمحت\s+|يا راوي[،,\s]+)*(?:اعمل|اعملي|أنشئ|انشئ|أنشئي|سجل|سجّل|جهز|جهّز|حضّر|حضر|أضف|اضف|افتح|create|prepare|draft|add|record)(?=\s|$)/i;
 export function plannedRepository(text){
@@ -65,7 +78,19 @@ export async function createRawiCommandDraft({app,c,sql,query,workspace,user,thr
  const said=clean(question);
  for(const f of repo.fields){
   const value=values[f.key];
-  if(!value||!['text','long_text'].includes(f.type))continue;
+  if(value===undefined||value===null||value==='')continue;
+  // Prevent a model inventing reference amounts and dates that the owner never supplied.
+  if(f.type==='number'){
+   const raw=String(value).replace(/,/g,'');
+   const mentioned=String(question).replace(/[٠-٩۰-۹]/g,ch=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)!==-1?'٠١٢٣٤٥٦٧٨٩'.indexOf(ch):'۰۱۲۳۴۵۶۷۸۹'.indexOf(ch))).replace(/,/g,'');
+   if(!Number.isFinite(Number(value))||!mentioned.includes(raw))delete values[f.key];
+   continue;
+  }
+  if(f.type==='date'){
+   if(!String(question).includes(String(value)))delete values[f.key];
+   continue;
+  }
+  if(!['text','long_text'].includes(f.type))continue;
   if(!said.includes(clean(value)))delete values[f.key];
  }
  for(const field of repo.fields.filter(f=>f.type==='relation'&&values[f.key])){
