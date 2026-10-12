@@ -22,3 +22,12 @@ if(!research.ok||!found.ok||typeof found.answer!=='string'||!Array.isArray(found
  throw Error('RAWI guest research test failed with HTTP '+research.status+': '+String(found.error||'no live source citations from public research').slice(0,220));
 }
 console.log('RAWI guest live public research returned '+found.sources.length+' verified source(s) via '+found.provider);
+
+const identity=await fetch(endpoints[0].url,{method:'POST',
+ headers:{'Content-Type':'application/json','Accept-Language':'ar','Cache-Control':'no-store'},
+ body:JSON.stringify({question:'إنت مين ومين اللي طورك وبيديرك؟'}),signal:AbortSignal.timeout(60000)});
+const identityData=await identity.json().catch(()=>({}));
+if(!identity.ok||!identityData.ok||!/(?:MIF|ميف)/i.test(String(identityData.answer||''))||!/(?:راوي|RAWI)/i.test(String(identityData.answer||''))){
+ throw Error('RAWI guest identity model test failed: '+String(identityData.error||identityData.answer||'unavailable').slice(0,180));
+}
+console.log('RAWI correctly identifies itself and MIF Smart in a real inference reply.');
