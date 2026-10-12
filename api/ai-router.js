@@ -82,7 +82,7 @@ export async function routeAI(question,providers,history=[],context='',mode='ent
   const safeContext=mode==='mif-public'?context:(!freeTrialCodes.includes(providers[i].code)?context:'');
   const instruction=(mode==='mif-public'?mifPublicPolicy:mode==='enterprise-public'?enterpriseVisitorPolicy:policy)+(mode==='developer'?'\nDeveloper focus: Act as an Odoo development and implementation assistant for Odoo 17–20. Offer precise addon structures, security ACLs, views, migration plans, safe diagnostics and troubleshooting. Distinguish JSON-2 for Odoo 19+ from legacy JSON-RPC for older databases. Never assert an installation, deploy or database change has happened without verified tool results. For generated code, explain required staging tests.':'')+(safeContext?'\n'+(mode==='mif-public'?'Published MIF Smart website catalogue (public read-only data): ':'Read-only authorized tenant context: ')+String(safeContext).slice(0,3000):'');
   // Trial providers receive only the message explicitly being sent now, never old conversations.
-  const requestMessages=freeTrialCodes.includes(providers[i].code)?[{role:'user',content:question}]:messages;
+  const requestMessages=providers[i].code==='workers_ai'?messages:freeTrialCodes.includes(providers[i].code)?[{role:'user',content:question}]:messages;
   try{return await requestProvider(providers[i],requestMessages,instruction,maxTokens)}
   catch(e){if(documents.length||i===providers.length-1)throw Object.assign(new Error(e.status===429?'AI service is busy; try again later':'RAWI could not answer at this time'),{status:e.status===429?429:502});}
  }
