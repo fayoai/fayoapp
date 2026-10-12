@@ -61,6 +61,13 @@ export async function createRawiCommandDraft({app,c,sql,query,workspace,user,thr
  }
  const values=extractValues(repo,generated);
  if(!values)return result('not_saved','الأمر لا يحتوي على بيانات كافية لإنشاء مسودة. لم يتم حفظ شيء.');
+ // Do not allow a free-form model to invent names or descriptions absent from the instruction.
+ const said=clean(question);
+ for(const f of repo.fields){
+  const value=values[f.key];
+  if(!value||!['text','long_text'].includes(f.type))continue;
+  if(!said.includes(clean(value)))delete values[f.key];
+ }
  for(const field of repo.fields.filter(f=>f.type==='relation'&&values[f.key])){
   const reference=await matchReference(sql,query,workspace,field.target,values[field.key]);
   if(!reference)return result('not_saved','لم أجد مرجعًا وحيدًا مطابقًا لـ «'+field.label+'» في بيانات الشركة. أضف السجل أو حدده بدقة.');
@@ -79,6 +86,7 @@ export async function createRawiCommandDraft({app,c,sql,query,workspace,user,thr
   const products=await query(sql,"SELECT id,name,sku FROM erp_items WHERE workspace_id=$1 AND active=true ORDER BY name LIMIT 1000",[workspace]);
   const lines=[];
   for(const line of generated.lines){
+   if(!said.includes(clean(line.product)))return result('not_saved','اذكر اسم الصنف كما هو في طلبك لتجنب إدخال صنف غير مطلوب.');
    const item=products.filter(p=>clean(p.name)===clean(line.product)||clean(p.sku)===clean(line.product));
    if(item.length!==1)return result('not_saved','الصنف «'+String(line.product||'').slice(0,100)+'» غير موجود بصورة فريدة في منتجات الشركة.');
    const quantity=Number(line.quantity);
