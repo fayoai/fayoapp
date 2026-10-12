@@ -103,3 +103,5 @@
 .rawi-std-table-wrap tbody tr:hover{background:#f7faff}
 .rawi-std-table-wrap td .rawi-std-record-actions{flex-wrap:nowrap}
 @media(max-width:620px){.rawi-std-tools{flex-wrap:wrap}.rawi-std-view-mode{margin-inline-start:auto}.rawi-std-table-wrap{overscroll-behavior-x:contain}.rawi-std-table-wrap :is(td,th){padding:12px}}
+
+.rawi-std-legacy-heading{margin:10px 0 0;font-size:13px;font-weight:750;color:#58708f;padding:0 3px}
