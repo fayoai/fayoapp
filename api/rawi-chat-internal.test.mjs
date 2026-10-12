@@ -31,8 +31,8 @@ test('Authenticated Enterprise chat works with existing trial subscription and f
  const response=await app.request('http://localhost/api/admin/chat/send',{method:'POST',
   headers:{'Content-Type':'application/json','Accept-Language':'ar'},
   body:JSON.stringify({question:'انت مين ومين عملك؟',workspace_id:workspace,thread_id:null})});
- assert.equal(response.status,200,await response.text().catch(()=>'')); // response may already be consumed only on failure
- const body=await response.json();assert.equal(body.ok,true);
+ const body=await response.json();
+ assert.equal(response.status,200,body.error||'Private chat unexpectedly failed');assert.equal(body.ok,true);
  assert.match(body.answer,/راوي/);assert.match(body.answer,/MIF Smart/);
  assert.equal(body.provider,'workers_ai');assert.equal(body.thread_id,thread);
  assert.ok(writes.some(x=>x.sql.startsWith('WITH target AS')));
