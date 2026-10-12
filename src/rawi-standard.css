@@ -59,3 +59,19 @@
 .rawi-std-invoices button,.rawi-std-qr button{background:#f2f7ff;border:1px solid #cfddf1;border-radius:8px;color:#275cab;padding:7px 11px;font-size:12px}
 .rawi-std-qr{display:flex;flex-direction:column;align-items:center;gap:9px;max-width:300px;border:1px solid #dce7f7;border-radius:12px;padding:14px;background:#fff}
 .rawi-std-qr img{width:220px;height:220px;max-width:100%}.rawi-std-qr small{font-size:11px;text-align:center;color:#677f9f}
+
+
+/* Company units, product conversions and linked business document lines */
+.rawi-std-uom-editor,.rawi-std-document-lines{display:flex;flex-direction:column;gap:12px;border:1px solid #cbdaf0;background:#fff;border-radius:12px;padding:14px;min-width:0}
+.rawi-std-uom-links{display:flex;gap:7px;flex-wrap:wrap}
+.rawi-std-uom-links>div{display:flex;flex-direction:column;gap:5px;padding:9px 11px;background:#f6f9ff;border:1px solid #dde8f7;border-radius:9px;font-size:12px}
+.rawi-std-uom-links span,.rawi-std-uom-links small{color:#5d7596}
+.rawi-std-uom-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:10px}
+.rawi-std-uom-form label,.rawi-std-document-line label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:700}
+.rawi-std-uom-form :is(input,select),.rawi-std-document-line :is(input,select){width:100%;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid #d5e3f5;background:white;color:#294b77}
+.rawi-std-uom-form>button,.rawi-std-document-line>button,.rawi-std-document-lines .rawi-std-form-top button{border:1px solid #a5c0ee;background:#eaf2ff;color:#2760ae;border-radius:8px;padding:9px 12px;font-size:12px}
+.rawi-std-uom-form>button{align-self:end}
+.rawi-std-record-actions{display:flex;flex-wrap:wrap;gap:8px}
+.rawi-std-record-actions button{border:1px solid #cfdcf4;border-radius:8px;padding:8px 10px;background:#f7faff;color:#2865b3;font-size:12px}
+.rawi-std-document-line{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:end}
+@media(max-width:720px){.rawi-std-uom-form{grid-template-columns:minmax(0,1fr)}.rawi-std-document-line{grid-template-columns:minmax(0,1fr)}.rawi-std-uom-form :is(input,select),.rawi-std-document-line :is(input,select){min-height:44px;font-size:16px}}
