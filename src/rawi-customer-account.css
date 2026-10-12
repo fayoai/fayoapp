@@ -1,0 +1,43 @@
+.rawi-customer-account{max-width:860px;width:100%;margin:12px auto;display:flex;flex-direction:column;gap:13px;color:#294566;min-width:0}
+.rawi-customer-account-title{display:flex;align-items:center;gap:12px;padding:12px 2px}
+.rawi-customer-account-title>svg{color:#2166e8}.rawi-customer-account-title h1{font-size:22px;margin:0 0 5px}.rawi-customer-account-title p{font-size:12px;color:#778ba6;margin:0}
+.rawi-customer-account-card{border:1px solid #e1e9f6;background:#fff;border-radius:14px;padding:17px;min-width:0}
+.rawi-customer-account-card h2{display:flex;align-items:center;gap:8px;margin:0 0 15px;font-size:15px;color:#315b92}
+.rawi-customer-account-card h2 svg{color:#2166e8}
+.rawi-customer-display-form{display:flex;align-items:flex-end;gap:9px}
+.rawi-customer-display-form>label,.rawi-customer-password-form>label,.rawi-customer-company-form>label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:#647b99;min-width:0;flex:1}
+.rawi-customer-display-form input,.rawi-customer-password-form input,.rawi-customer-company-form input{width:100%;max-width:100%;min-height:37px;padding:8px 10px;border:1px solid #dce6f3;border-radius:9px;background:#fbfdff;color:#294566;font-size:12px}
+.rawi-customer-display-form button,.rawi-customer-password-form button,.rawi-customer-company-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 12px;background:#2166e8;color:#fff;border:0;border-radius:9px;font-size:11px;font-weight:750;white-space:nowrap}
+.rawi-customer-display-form button:disabled,.rawi-customer-password-form button:disabled{opacity:.5}
+.rawi-customer-account-pair{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px;border-bottom:1px solid #eef2f8;font-size:12px}
+.rawi-customer-account-pair>span{color:#7d8da4}
+.rawi-customer-account-pair strong{font-size:12px;font-weight:750;overflow-wrap:anywhere;display:flex;align-items:center;gap:9px}
+.rawi-customer-account-pair button,.rawi-customer-company-heading button{display:inline-flex;align-items:center;gap:5px;border:1px solid #dce8fa;background:#f6f9ff;color:#285db5;border-radius:9px;padding:7px 10px;font-size:11px}
+.rawi-customer-password-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;border:1px solid #dce6f8;border-radius:11px;padding:13px;background:#f9fbff}
+.rawi-customer-password-form button{align-self:end}
+.rawi-customer-subscription{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:12px 0;border-bottom:1px solid #edf2f9;font-size:12px}
+.rawi-customer-subscription strong{font-size:13px}
+.rawi-customer-subscription span{justify-self:end;color:#285db5;font-weight:700}
+.rawi-customer-subscription div,.rawi-customer-subscription small{font-size:11px;color:#738aa4}
+.rawi-customer-company{border:1px solid #e3eafa;border-radius:11px;padding:13px;margin-bottom:10px}
+.rawi-customer-company-heading{display:flex;align-items:center;gap:10px}
+.rawi-customer-company-heading>img{width:38px;height:38px;object-fit:contain;border-radius:7px}
+.rawi-customer-company-heading>svg{color:#2166e8}
+.rawi-customer-company-heading>div{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.rawi-customer-company-heading strong{font-size:14px}
+.rawi-customer-company-heading small{font-size:11px;color:#8090a6}
+.rawi-customer-company-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px 0 1px}
+.rawi-customer-company-info>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rawi-customer-company-info span{font-size:10px;color:#8a9aaf}
+.rawi-customer-company-info strong{font-size:12px;line-height:1.7;overflow-wrap:anywhere;font-weight:700}
+.rawi-customer-company-form{margin-top:15px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rawi-customer-company-form .rawi-customer-logo-input{grid-column:1/-1}
+.rawi-customer-company-actions{grid-column:1/-1;display:flex;gap:8px}
+.rawi-customer-company-actions button+button{background:#edf4ff;color:#3467a3}
+.rawi-customer-account-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px}
+.rawi-customer-account-actions button{border:1px solid #dae6f7;border-radius:10px;background:white;color:#3466a9;min-height:38px;padding:8px 12px;display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700}
+.rawi-customer-account-actions .rawi-customer-logout{color:#a63434;border-color:#f2d6d6}
+.rawi-customer-account-error,.rawi-customer-account-notice{padding:10px 12px;border-radius:9px;font-size:12px;margin:0;display:flex;align-items:center;gap:8px}
+.rawi-customer-account-error{background:#fff3f3;color:#a82f2f}.rawi-customer-account-notice{background:#f0f8f1;color:#267440}
+.rawi-customer-account-loading{display:flex;gap:10px;align-items:center;justify-content:center;min-height:170px;color:#8195ac;font-size:12px}
+@media(max-width:640px){.rawi-customer-account{padding:0 6px}.rawi-customer-account-card{padding:14px}.rawi-customer-company-info,.rawi-customer-password-form,.rawi-customer-company-form{grid-template-columns:1fr}.rawi-customer-account-pair{align-items:flex-start;flex-direction:column}.rawi-customer-account-title h1{font-size:19px}}
