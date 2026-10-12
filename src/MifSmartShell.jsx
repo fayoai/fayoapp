@@ -139,7 +139,7 @@ export default function MifSmartShell(){
   const pendingDocs=documents.map(({name,mime_type,data})=>({name,mime_type,data}));
   const privateChat=authed&&!!workspaceId;
   if(tab!=='new'&&tab!=='thread')return;
-  if(authed&&tenantSetup){setChatError(L('راوي بيجهز قاعدة الشركة. رسالتك هتفضل مكانها؛ جرّب بمجرد اكتمال التهيئة.','Rawi is preparing the company database. Please send once it is ready.'));return}
+  // Server validates tenant readiness; stale progress indicators must not block chat.
   if(authed&&!workspaceId){setChatError(L('مساحة الشركة قيد التجهيز. انتظر اكتمال قاعدة البيانات في أعلى الشاشة.','Your company workspace is being prepared. Wait for database setup at the top.'));return}
   setQuestion('');setDocuments([]);if(questionRef.current)questionRef.current.style.height='auto';setChatError('');setAsking(true);setMessages(m=>[...m,{role:'user',content:text+(pendingDocs.length?'\n📎 '+pendingDocs.map(d=>d.name).join('، '):''),at:new Date().toISOString()}]);
   const ctl=new AbortController();requestRef.current=ctl;
