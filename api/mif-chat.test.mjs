@@ -69,3 +69,43 @@ test('Microphone fallback transcribes a bounded audio recording without a signed
   assert.equal(transcription.get('model'),'gpt-4o-mini-transcribe');
  }finally{globalThis.fetch=original}
 });
+
+test('Unapproved customer can finish conversational business design even after ordinary trial quota is exhausted',async()=>{
+ const ws='22222222-2222-4222-8222-222222222222',thread='33333333-3333-4333-8333-333333333333';
+ const calls=[],app=new Hono();
+ app.use('/api/admin/*',async(c,next)=>{c.set('adminId',user);await next()});
+ const discovery={respond:async({message})=>({answer:'راوي: فهمت نشاطك. بتحب تتعامل مع أي برامج؟ '+message,provider:'workers_ai',model:'llama-fast',input_tokens:0,output_tokens:0,discovery_stage:'references'})};
+ installMifChat(app,{db:()=>({}),centralDb:()=>({}),env:c=>c.env||{},rawiDiscovery:discovery,
+  query:async(_sql,sql,args=[])=>{
+   calls.push({sql,args});
+   if(sql.includes('SELECT COUNT(*)::int n FROM mif_chat_messages'))return [{n:0}];
+   if(sql.includes('SELECT w.id FROM erp_workspaces w JOIN erp_memberships'))return [{id:ws}];
+   if(sql.includes('FROM rawi_company_profiles p')&&sql.includes("p.setup_inputs->>'discovery' IS DISTINCT FROM 'true'"))return [{exists:1}];
+   if(sql.includes('INSERT INTO mif_chat_threads'))return [{id:thread}];
+   return [];
+  }});
+ const r=await app.request('http://localhost/api/admin/chat/send',
+  {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workspace_id:ws,question:'نركب ملاعب ومحتاجين محاسبة مشاريع'})},
+  {MIF_APP_SURFACE:'enterprise'});
+ assert.equal(r.status,200,await r.text().catch(()=>''));
+ const result=await r.json().catch(()=>({}));
+ assert.equal(result.provider,'workers_ai');
+ assert.equal(result.discovery_stage,'references');
+ assert.equal(calls.some(x=>x.sql.includes('UPDATE mif_tenant_subscriptions s SET messages_used')),false);
+});
+test('Ordinary signed-in AI remains quota protected and explains where to review subscription',async()=>{
+ const ws='22222222-2222-4222-8222-222222222222',app=new Hono();
+ app.use('/api/admin/*',async(c,next)=>{c.set('adminId',user);await next()});
+ installMifChat(app,{db:()=>({}),centralDb:()=>({}),env:c=>c.env||{},rawiDiscovery:{respond:async()=>null},
+  query:async(_sql,sql,args=[])=>{
+   if(sql.includes('SELECT COUNT(*)::int n FROM mif_chat_messages'))return [{n:0}];
+   if(sql.includes('SELECT w.id FROM erp_workspaces w JOIN erp_memberships'))return [{id:ws}];
+   return [];
+  }});
+ const r=await app.request('http://localhost/api/admin/chat/send',
+  {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workspace_id:ws,question:'من انت؟'})},
+  {MIF_APP_SURFACE:'enterprise'});
+ assert.equal(r.status,402);
+ const body=await r.json();
+ assert.match(body.error,/Account > Subscriptions/);
+});
