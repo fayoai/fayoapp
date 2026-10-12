@@ -32,6 +32,7 @@ function harness({member=true,role='owner'}={}){
   if(q.includes('INSERT INTO rawi_dynamic_records')||q.includes('FROM inserted'))return [{id:'33333333-3333-4333-8333-333333333333',values_json:JSON.parse(params[3]||params[2]),stage:'مسودة'}];
   if(q.includes('FROM erp_warehouses'))return [{id:'33333333-3333-4333-8333-333333333333',name:'المركزي',location:'الرياض'}];
   if(q.includes('INSERT INTO erp_warehouses'))return [{id:'33333333-3333-4333-8333-333333333333',name:params[1],location:params[2]}];
+  if(q.includes('INSERT INTO erp_units'))return [{id:'33333333-3333-4333-8333-333333333333',code:params[1],name:params[2],category:params[3],precision_digits:params[4],active:true}];
   if(q.includes('FROM erp_document_sequences'))return [];
   if(q.includes('FROM erp_invoice_sequences'))return [];
   if(q.includes('FROM rawi_company_profiles'))return [{setup_inputs:{},name:'اختبار',tax_number:'300000000000003',currency:'SAR'}];
@@ -59,4 +60,15 @@ test('Warehouse records use existing ERP warehouse table, never a fake browser l
 test('Viewer cannot change company records',async()=>{
  const r=await harness({role:'viewer'}).req('/api/admin/erp/w/'+workspace+'/standard/std_warehouses/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:{field_1:'غير مصرح'}})});
  assert.equal(r.status,403);
+});
+
+test('Units of measure save to the canonical ERP units table, not a disconnected draft',async()=>{
+ const h=harness(),path='/api/admin/erp/w/'+workspace+'/standard/std_units/records';
+ const response=await h.req(path,{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({values:{field_1:'carton',field_2:'كرتون',field_3:'count',field_4:0}})});
+ assert.equal(response.status,201,await response.clone().text());
+ const payload=await response.json();
+ assert.equal(payload.data.values_json.field_1,'carton');
+ assert.ok(h.queries.some(x=>x.q.includes('INSERT INTO erp_units')));
+ assert.equal(h.queries.some(x=>x.q.includes('INSERT INTO rawi_dynamic_records')),false);
 });
