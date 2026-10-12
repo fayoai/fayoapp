@@ -4,6 +4,7 @@ import {CheckCircle2,FileText,Loader2,Plus,RefreshCw,Save,ShieldCheck} from 'luc
 import './rawi-business-transactions.css';
 
 const emptyLine=()=>({item_id:'',unit_id:'',quantity:1});
+const emptyInvoiceLine=()=>({item_id:'',description:'',quantity:1,unit_price:''});
 const emptyJournalLine=()=>({account_id:'',debit:'',credit:''});
 const emptyPayment=()=>({request_id:crypto.randomUUID(),reference:'',amount:'',method:'bank',invoice_id:'',cash_account_id:'',counterpart_account_id:'',details:'',recorded_at:new Date().toISOString().slice(0,10)});
 const currency=n=>(Number(n||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -21,6 +22,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  const {lang}=useSite(),L=(a,e)=>tr(lang,a,e),config=kinds[kind];
  const [rows,setRows]=useState([]),[invoices,setInvoices]=useState([]),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[open,setOpen]=useState(false);
  const [partner,setPartner]=useState(''),[lines,setLines]=useState([emptyLine()]),[notes,setNotes]=useState(''),[unitOptions,setUnitOptions]=useState({});
+ const [invoiceLines,setInvoiceLines]=useState([emptyInvoiceLine()]),[invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10)),[dueDate,setDueDate]=useState('');
  const [reference,setReference]=useState(''),[memo,setMemo]=useState(''),[postedOn,setPostedOn]=useState(new Date().toISOString().slice(0,10)),[journalLines,setJournalLines]=useState([emptyJournalLine(),emptyJournalLine()]);
  const [payment,setPayment]=useState(emptyPayment),[priceItem,setPriceItem]=useState(''),[salePrice,setSalePrice]=useState('');
  const [issueFor,setIssueFor]=useState(null),[issueAccounts,setIssueAccounts]=useState({receivable_account_id:'',revenue_account_id:'',vat_account_id:''});
@@ -36,7 +38,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    else {const d=await api(prefix+'/advanced/payments');setRows(d.payments||[]);setInvoices(d.invoices||[]);}
   }catch(e){setError(e.message)}finally{setLoading(false)}
  };
- useEffect(()=>{setRows([]);setOpen(false);setIssueFor(null);setReceiveFor(null);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
+ useEffect(()=>{setRows([]);setOpen(false);setIssueFor(null);setReceiveFor(null);setPartner('');setInvoiceLines([emptyInvoiceLine()]);setMessage('');if(prefix&&config)refresh()},[prefix,kind]);
  useEffect(()=>{if(!sourceDraft||sourceDraft.kind!==kind)return;
   const values=sourceDraft.values||{};
   if(config?.section==='documents'){
@@ -62,6 +64,8 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  if(!config)return null;
  const updateLine=(index,key,value)=>{setLines(old=>old.map((line,i)=>i===index?{...line,[key]:value,...(key==='item_id'?{unit_id:''}:{})}:line));if(key==='item_id')loadUnits(value)};
  const updateJournal=(index,key,value)=>setJournalLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
+ const updateInvoiceLine=(index,key,value)=>setInvoiceLines(old=>old.map((line,i)=>i===index?{...line,[key]:value}:line));
+ const pickInvoiceProduct=(index,id)=>{const product=(lookups.products||[]).find(x=>x.id===id);setInvoiceLines(old=>old.map((line,i)=>i===index?{...line,item_id:id,description:product?.name||line.description,unit_price:product?String(Number(product.sale_price_halalas||0)/100):line.unit_price}:line))};
  const totals=journalLines.reduce((acc,x)=>({debit:acc.debit+Number(x.debit||0),credit:acc.credit+Number(x.credit||0)}),{debit:0,credit:0});
  const request=async(fn)=>{if(busy)return;setBusy(true);setError('');setMessage('');
   try{const msg=await fn();setMessage(msg||L('تم حفظ العملية بنجاح','Transaction saved'));setOpen(false);await refresh();onSaved()}
@@ -76,6 +80,15 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
     const result=await api(prefix+'/core/documents',{method:'POST',body:JSON.stringify({kind:config.type,partner_id:partner,lines:lines.map(x=>({item_id:x.item_id,quantity:Number(x.quantity),...(x.unit_id?{unit_id:x.unit_id}:{})})),notes})});
     setPartner('');setLines([emptyLine()]);setNotes('');
     return L('تم إنشاء مستند '+result.data.doc_no+' كمسودة تشغيلية','Saved '+result.data.doc_no+' as a draft');
+   }
+   if(config.section==='invoices'){
+    const result=await api(prefix+'/invoices',{method:'POST',body:JSON.stringify({
+     customer_id:partner,issued_on:invoiceDate,due_on:dueDate||null,notes,
+     lines:invoiceLines.map(x=>({description:x.description,quantity:Number(x.quantity),unit_price:Number(x.unit_price)}))
+    })});
+    if(!result.data?.id||!result.data?.invoice_no)throw Error(L('لم يؤكد الخادم إنشاء مسودة الفاتورة','Invoice draft was not confirmed'));
+    setPartner('');setInvoiceLines([emptyInvoiceLine()]);setNotes('');setDueDate('');
+    return L('تم حفظ الفاتورة ','Invoice ')+result.data.invoice_no+L(' كمسودة. راجعها قبل إصدارها وترحيل القيد.',' saved as draft. Review it before ledger posting.');
    }
    if(config.section==='journal'){
     const converted=journalLines.map(x=>({account_id:x.account_id,debit:Number(x.debit||0),credit:Number(x.credit||0)}));
@@ -129,7 +142,7 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
   if(mode==='invoice'){const r=await api(prefix+'/core/documents/'+encodeURIComponent(id)+'/invoice',{method:'POST',body:'{}'});return L('تم إنشاء الفاتورة المرتبطة: ','Linked invoice created: ')+(r.data?.invoice_no||'')}
  });
  const available=kind==='purchase_orders'?lookups.vendors||[]:lookups.customers||[];
- const canCreate=config.section!=='invoices';
+ const canCreate=true;
  return <section className="rawi-live" aria-label={L('العمليات المالية والتجارية الفعلية','Live business transactions')}>
   <header className="rawi-live-head"><div><strong><ShieldCheck size={17}/>{L('السجلات التشغيلية الفعلية','Validated business transactions')}</strong>
    <small>{config.section==='payments'?L('كل سند جديد مرتبط بقيد يومية متوازن؛ يلزم اختيار حساب النقدية والحساب المقابل','Every new voucher posts a balanced journal entry after selecting two accounts'):config.section==='invoices'?L('فواتير منشأة من أوامر بيع مؤكدة','Invoices linked to confirmed sales orders'):L('البيانات محفوظة في جداول التشغيل الرئيسية للشركة','Stored in company operational tables')}</small></div>
@@ -161,6 +174,23 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
      <label>{L('وحدة القياس','Unit')}<select value={line.unit_id||''} onChange={e=>updateLine(i,'unit_id',e.target.value)}><option value="">{L('وحدة الأساس','Base unit')}</option>{(unitOptions[line.item_id]||[]).filter(x=>!x.is_base).map(u=><option value={u.unit_id} key={u.unit_id}>{u.name} (×{Number(u.factor)})</option>)}</select></label>
      <label>{L('الكمية','Quantity')}<input type="number" required min="0.001" max="100000" step="0.001" value={line.quantity} onChange={e=>updateLine(i,'quantity',e.target.value)}/></label>
      <button type="button" disabled={lines.length===1} onClick={()=>setLines(a=>a.filter((_,j)=>j!==i))}>{L('حذف','Remove')}</button></div>)}
+   </>}
+   {config.section==='invoices'&&<>
+    <div className="rawi-live-fields">
+     <label>{L('العميل','Customer')}<select required value={partner} onChange={e=>setPartner(e.target.value)}><option value="">{L('اختر العميل','Choose customer')}</option>{(lookups.customers||[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+     <label>{L('تاريخ الفاتورة','Invoice date')}<input type="date" required value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)}/></label>
+     <label>{L('تاريخ الاستحقاق (اختياري)','Due date (optional)')}<input type="date" min={invoiceDate} value={dueDate} onChange={e=>setDueDate(e.target.value)}/></label>
+     <label>{L('البيان','Notes')}<input maxLength="2000" value={notes} onChange={e=>setNotes(e.target.value)}/></label>
+    </div>
+    <div className="rawi-live-line-label"><strong>{L('بنود فاتورة المبيعات','Sales invoice line items')}</strong><button type="button" onClick={()=>setInvoiceLines(a=>[...a,emptyInvoiceLine()])}>{L('إضافة بند','Add line')}</button></div>
+    {invoiceLines.map((line,i)=><div className="rawi-live-invoice-line" key={i}>
+     <label>{L('الصنف (اختياري)','Product (optional)')}<select value={line.item_id} onChange={e=>pickInvoiceProduct(i,e.target.value)}><option value="">{L('خدمة أو وصف حر','Free-text service')}</option>{(lookups.products||[]).map(p=><option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}</select></label>
+     <label>{L('الوصف','Description')}<input required maxLength="500" value={line.description} onChange={e=>updateInvoiceLine(i,'description',e.target.value)}/></label>
+     <label>{L('الكمية','Quantity')}<input required type="number" min="0.001" max="100000" step="any" value={line.quantity} onChange={e=>updateInvoiceLine(i,'quantity',e.target.value)}/></label>
+     <label>{L('سعر الوحدة (ر.س)','Unit price (SAR)')}<input required type="number" min="0" max="10000000" step="0.01" value={line.unit_price} onChange={e=>updateInvoiceLine(i,'unit_price',e.target.value)}/></label>
+     <button type="button" disabled={invoiceLines.length===1} onClick={()=>setInvoiceLines(a=>a.filter((_,j)=>j!==i))}>{L('حذف','Remove')}</button>
+    </div>)}
+    <div className="rawi-live-totals"><span>{L('الإجمالي قبل الضريبة - تقديري','Estimated subtotal before tax')}: {invoiceLines.reduce((sum,line)=>sum+Number(line.quantity||0)*Number(line.unit_price||0),0).toFixed(2)} {L('ر.س','SAR')}</span><small>{L('الضريبة والإجمالي النهائي يحسبهما الخادم من إعدادات الشركة','Tax and final total are calculated by the server')}</small></div>
    </>}
    {config.section==='journal'&&<>
     <div className="rawi-live-fields"><label>{L('مرجع القيد','Journal reference')}<input value={reference} required minLength={2} onChange={e=>setReference(e.target.value)}/></label><label>{L('تاريخ القيد','Posting date')}<input type="date" required value={postedOn} onChange={e=>setPostedOn(e.target.value)}/></label><label className="rawi-live-wide">{L('البيان','Memo')}<input value={memo} onChange={e=>setMemo(e.target.value)}/></label></div>
