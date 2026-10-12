@@ -196,7 +196,13 @@ export function installMifChat(app,{db,env,query,centralDb=db,rawiDiscovery=null
   if(!claim.length)return fail(c,402,'Your conversation allowance has been used. View your current plan and renewal details under Account > Subscriptions.');
   let result;try{
    if(rawiDiscovery&&env(c).MIF_APP_SURFACE==='enterprise'&&!v.data.documents?.length){
-    result=await rawiDiscovery.respond({c,workspace,user,message:v.data.question,language:c.req.header('accept-language')?.toLowerCase().startsWith('en')?'en':'ar'});
+    try{
+     result=await rawiDiscovery.respond({c,workspace,user,message:v.data.question,language:c.req.header('accept-language')?.toLowerCase().startsWith('en')?'en':'ar'});
+    }catch(discoveryError){
+     // Temporary onboarding failures must not disable the member's AI conversation.
+     console.error('RAWI discovery response failed',String(discoveryError?.message||discoveryError).slice(0,180));
+     result=null;
+    }
    }
    if(!result){
    // Company-scoped ERP aggregates: RAWI never claims unverified account actions.
