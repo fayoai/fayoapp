@@ -50,11 +50,11 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    setPayment({request_id:sourceDraft.id,reference:String(ref||sourceDraft.document_number||'سند راوي').slice(0,180),
     amount:values.field_2==null?'':String(values.field_2),method:/نقد|cash/.test(method)?'cash':'bank',
     invoice_id:'',cash_account_id:'',counterpart_account_id:'',details:'مسودة راوي: '+sourceDraft.id,
-    recorded_at:/^\\d{4}-\\d{2}-\\d{2}$/.test(String(values.field_3||''))?values.field_3:new Date().toISOString().slice(0,10)});
+    recorded_at:/^\d{4}-\d{2}-\d{2}$/.test(String(values.field_3||''))?values.field_3:new Date().toISOString().slice(0,10)});
   }else if(config?.section==='journal'){
    setReference(String(values.field_1||sourceDraft.document_number||'قيد راوي').slice(0,120));
    setMemo(String(values.field_3||'مسودة راوي: '+sourceDraft.id).slice(0,800));
-   if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(values.field_2||'')))setPostedOn(values.field_2);
+   if(/^\d{4}-\d{2}-\d{2}$/.test(String(values.field_2||'')))setPostedOn(values.field_2);
    setJournalLines([{account_id:'',debit:String(values.field_4||''),credit:''},{account_id:'',debit:'',credit:String(values.field_5||'')}]);
   }else return;
   setOpen(true);setError('');setMessage(L('المسودة جاهزة للمراجعة. اختر الحسابات أو البيانات الناقصة واعتمد العملية بنفسك.','Review the imported draft, select any missing accounts and confirm the actual transaction.'));
