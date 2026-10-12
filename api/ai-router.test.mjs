@@ -89,10 +89,10 @@ test('Workers AI runs the current available free model with no OpenAI or operato
  const providers=await getAIProviders({}, {AI:ai},async()=>[]);
  assert.equal(providers.length,1);
  assert.equal(providers[0].code,'workers_ai');
- assert.equal(providers[0].model,'@cf/zai-org/glm-4.7-flash');
+ assert.equal(providers[0].model,'@cf/meta/llama-3.1-8b-instruct-fast');
  const output=await routeAI('عايز برنامج مخصص',[...providers],[{role:'user',content:'أنا عندي مصنع'},{role:'assistant',content:'ما هي مراحل التصنيع؟'}],'HIDDEN_PRIVATE_ERP_DATA','enterprise');
  assert.match(output.answer,/طبيعة عمل/);
- assert.equal(call.payload.max_completion_tokens,800);
+ assert.equal(call.payload.max_tokens,650);
  assert.equal(call.payload.messages.length,4);
  assert.ok(!JSON.stringify(call).includes('HIDDEN_PRIVATE_ERP_DATA'));
 });
