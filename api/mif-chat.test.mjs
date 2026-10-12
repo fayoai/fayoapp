@@ -87,7 +87,7 @@ test('Unapproved customer can finish conversational business design even after o
  const r=await app.request('http://localhost/api/admin/chat/send',
   {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workspace_id:ws,question:'نركب ملاعب ومحتاجين محاسبة مشاريع'})},
   {MIF_APP_SURFACE:'enterprise'});
- assert.equal(r.status,200,await r.text().catch(()=>''));
+ assert.equal(r.status,200,await r.clone().text());
  const result=await r.json().catch(()=>({}));
  assert.equal(result.provider,'workers_ai');
  assert.equal(result.discovery_stage,'references');
