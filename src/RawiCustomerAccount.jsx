@@ -3,6 +3,7 @@ import {UserRound,Building2,ShieldCheck,KeyRound,Save,Loader2,LogOut,Download,Ca
 import {api,useSite,tr} from './App.jsx';
 import './rawi-customer-account.css';
 const emptyPasswords={current_password:'',new_password:'',confirm:''};
+const emptyFinance={country:'',currency:'SAR',sales_tax_rate:15,purchases_tax_rate:15,zatca_mode:'none',environment:'simulation',egs_unit_id:''};
 const editFields=[
  ['name','اسم الشركة','Company name'],['address','العنوان','Address'],
  ['commercial_registration','السجل التجاري','Commercial registration'],['tax_number','الرقم الضريبي','Tax number'],
@@ -12,8 +13,8 @@ const editFields=[
 export default function RawiCustomerAccount({onLogout=()=>{},onInstall=()=>{},installed=false}){
  const {lang,setLang}=useSite(),L=(ar,en)=>tr(lang,ar,en);
  const [profile,setProfile]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
- const [password,setPassword]=useState(emptyPasswords),[changing,setChanging]=useState(false),[editing,setEditing]=useState(''),[companyDraft,setCompanyDraft]=useState(null),[displayName,setDisplayName]=useState('');
- const refresh=async()=>{setLoading(true);setError('');try{const r=await api('/api/admin/account/profile');setProfile(r);setDisplayName(r.account?.display_name||'')}catch(e){setError(e.message)}finally{setLoading(false)}};
+ const [password,setPassword]=useState(emptyPasswords),[changing,setChanging]=useState(false),[editing,setEditing]=useState(''),[companyDraft,setCompanyDraft]=useState(null),[financeDraft,setFinanceDraft]=useState(emptyFinance),[displayName,setDisplayName]=useState('');
+ const refresh=async()=>{setLoading(true);setError('');try{const r=await api('/api/admin/account/profile');const companies=await Promise.all((r.companies||[]).map(async company=>{try{const settings=await api('/api/admin/erp/w/'+encodeURIComponent(company.workspace_id)+'/system/settings');return {...company,business_settings:settings.data}}catch{return company}}));setProfile({...r,companies});setDisplayName(r.account?.display_name||'')}catch(e){setError(e.message)}finally{setLoading(false)}};
  useEffect(()=>{refresh()},[]);
  const date=t=>t?new Date(t).toLocaleDateString(lang==='ar'?'ar-SA':'en-GB',{day:'numeric',month:'long',year:'numeric'}):'—';
  const changePassword=async e=>{e.preventDefault();setError('');setNotice('');
@@ -24,10 +25,11 @@ export default function RawiCustomerAccount({onLogout=()=>{},onInstall=()=>{},in
   await api('/api/admin/account/profile',{method:'PATCH',body:JSON.stringify({display_name:displayName})});
   setNotice(L('تم تحديث اسم الحساب','Account name updated'));await refresh()
  }catch(e){setError(e.message)}finally{setBusy(false)}};
- const startEdit=company=>{setEditing(company.workspace_id);setCompanyDraft({...company});setError('')};
+ const startEdit=company=>{setEditing(company.workspace_id);setCompanyDraft({...company});setFinanceDraft({...emptyFinance,...company.business_settings});setError('')};
  const saveCompany=async e=>{e.preventDefault();setBusy(true);setError('');try{
   const id=companyDraft.workspace_id,fields=Object.fromEntries(['name','address','commercial_registration','tax_number','phone','mobile','website','emails','logo_data'].map(k=>[k,companyDraft[k]||'']));
   await api('/api/admin/account/company/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(fields)});
+  await api('/api/admin/erp/w/'+encodeURIComponent(id)+'/system/settings',{method:'PUT',body:JSON.stringify({country:financeDraft.country,currency:financeDraft.currency.toUpperCase(),sales_tax_rate:Number(financeDraft.sales_tax_rate),purchases_tax_rate:Number(financeDraft.purchases_tax_rate),zatca_mode:financeDraft.country==='SA'?financeDraft.zatca_mode:'none',environment:financeDraft.environment,egs_unit_id:financeDraft.egs_unit_id})});
   setEditing('');setCompanyDraft(null);setNotice(L('تم حفظ بيانات الشركة','Company details saved'));await refresh()
  }catch(e){setError(e.message)}finally{setBusy(false)}};
  const updateLogo=e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;
@@ -54,6 +56,20 @@ export default function RawiCustomerAccount({onLogout=()=>{},onInstall=()=>{},in
       {editing===company.workspace_id&&companyDraft?<form className="rawi-customer-company-form" onSubmit={saveCompany}>
        <label className="rawi-customer-logo-input">{L('شعار الشركة','Company logo')}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={updateLogo}/></label>
        {editFields.map(([key,ar,en])=><label key={key}>{L(ar,en)}<input required={key==='name'||key==='address'} type={key==='website'?'url':'text'} value={companyDraft[key]||''} onChange={e=>setCompanyDraft(v=>({...v,[key]:e.target.value}))}/></label>)}
+
+       <fieldset className="rawi-finance-settings"><legend>{L('الإعدادات المالية والضريبية','Finance & tax settings')}</legend>
+        <label>{L('الدولة (رمز ISO من حرفين)','Country (2-letter ISO code)')}<input type="text" maxLength={2} pattern="[A-Za-z]{2}" required placeholder="SA" value={financeDraft.country} onChange={e=>setFinanceDraft(x=>({...x,country:e.target.value.toUpperCase(),zatca_mode:e.target.value.toUpperCase()==='SA'?x.zatca_mode:'none'}))}/></label>
+        <label>{L('العملة الأساسية','Base currency')}<input type="text" maxLength={3} pattern="[A-Za-z]{3}" required value={financeDraft.currency} onChange={e=>setFinanceDraft(x=>({...x,currency:e.target.value.toUpperCase()}))}/></label>
+        <label>{L('نسبة ضريبة المبيعات %','Sales tax %')}<input type="number" min={0} max={100} step="0.01" required value={financeDraft.sales_tax_rate} onChange={e=>setFinanceDraft(x=>({...x,sales_tax_rate:e.target.value}))}/></label>
+        <label>{L('نسبة ضريبة المشتريات %','Purchase tax %')}<input type="number" min={0} max={100} step="0.01" required value={financeDraft.purchases_tax_rate} onChange={e=>setFinanceDraft(x=>({...x,purchases_tax_rate:e.target.value}))}/></label>
+        {financeDraft.country==='SA'&&<label>{L('الفوترة الإلكترونية السعودية','Saudi electronic invoicing')}<select value={financeDraft.zatca_mode} onChange={e=>setFinanceDraft(x=>({...x,zatca_mode:e.target.value}))}><option value="none">{L('غير مفعّل','Not enabled')}</option><option value="qr">{L('رمز QR الأساسي','Basic QR code')}</option><option value="phase2">{L('المرحلة الثانية — إعداد الربط','Phase 2 — Integration settings')}</option></select></label>}
+        {financeDraft.country==='SA'&&financeDraft.zatca_mode==='phase2'&&<div className="rawi-zatca-config">
+         <strong>{L('إعدادات الربط مع هيئة الزكاة والضريبة والجمارك','ZATCA connection settings')}</strong>
+         <label>{L('بيئة الربط','Environment')}<select value={financeDraft.environment} onChange={e=>setFinanceDraft(x=>({...x,environment:e.target.value}))}><option value="sandbox">Sandbox</option><option value="simulation">Simulation</option><option value="production">Production</option></select></label>
+         <label>{L('معرّف وحدة إصدار الفواتير EGS','EGS device/unit identifier')}<input value={financeDraft.egs_unit_id} maxLength={80} onChange={e=>setFinanceDraft(x=>({...x,egs_unit_id:e.target.value}))}/></label>
+         <p>{L('حالة الربط: غير متصل. هذه إعدادات تمهيدية فقط؛ لا يتم استخراج CSID أو إرسال الفواتير للهيئة قبل تنفيذ الاعتماد التقني والربط الآمن.', 'Connection: Not connected. These are configuration fields only; no CSID or invoice submission is performed.')}</p>
+        </div>}
+       </fieldset>
        <div className="rawi-customer-company-actions"><button type="submit" disabled={busy}><Save size={16}/>{L('حفظ الشركة','Save company')}</button><button type="button" onClick={()=>{setEditing('');setCompanyDraft(null)}}>{L('إلغاء','Cancel')}</button></div>
        </form>:<div className="rawi-customer-company-info">
         <div><span>{L('العنوان','Address')}</span><strong>{company.address||'—'}</strong></div>
@@ -61,6 +77,9 @@ export default function RawiCustomerAccount({onLogout=()=>{},onInstall=()=>{},in
         <div><span>{L('الرقم الضريبي','Tax number')}</span><strong>{company.tax_number||'—'}</strong></div>
         <div><span>{L('التواصل','Contact')}</span><strong>{[company.phone,company.mobile].filter(Boolean).join(' · ')||'—'}</strong></div>
         <div><span>{L('الموقع والبريد','Website and emails')}</span><strong>{[company.website,company.emails].filter(Boolean).join(' · ')||'—'}</strong></div>
+        <div><span>{L('العملة الأساسية','Base currency')}</span><strong>{company.business_settings?.currency||'—'}</strong></div>
+        <div><span>{L('ضريبة المبيعات / المشتريات','Sales / purchase tax')}</span><strong>{company.business_settings?.sales_tax_rate??'—'}% / {company.business_settings?.purchases_tax_rate??'—'}%</strong></div>
+        <div><span>{L('نظام الفوترة السعودية','Saudi invoicing')}</span><strong>{company.business_settings?.country==='SA'?company.business_settings?.zatca_mode||'none':'—'}</strong></div>
        </div>}
     </article>)}
    </section>
