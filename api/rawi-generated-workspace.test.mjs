@@ -19,6 +19,7 @@ function harness({role='owner',owner=true}={}){
   if(q.includes('SELECT p.setup_plan,p.setup_inputs,p.name,p.activity'))return owner?[{setup_plan:plan,setup_inputs:{discovery:true},name:'Airfield Ops',activity:'Aviation inspection'}]:[];
   if(q.includes('SELECT id FROM mif_chat_threads'))return [{id:thread}];
   if(q.includes('INSERT INTO rawi_dynamic_records'))return [{id:thread,values_json:JSON.parse(params[2]),stage:params[3]}];
+  if(q.includes('UPDATE rawi_dynamic_records'))return [{id:thread,values_json:{code:'12L'},stage:params[4]}];
   if(q.includes('SELECT id,repository_key,values_json,stage,source_thread_id'))return [];
   return [];
  };
@@ -54,4 +55,15 @@ test('Valid custom record is tenant-isolated and source chat ownership is checke
  const bad=await h.request(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:{code:'12L'},stage:'Not a valid stage'})});
  assert.equal(bad.status,400);
  assert.equal((await harness({role:'viewer'}).request(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:{code:'12L'}})})).status,403);
+});
+
+test('Changing only the repository record stage persists without resending field values',async()=>{
+ const h=harness(),path='/api/admin/erp/w/'+workspace+'/dynamic/runways/records/'+thread;
+ const response=await h.request(path,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage:'Needs repair'})});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).data.stage,'Needs repair');
+ const update=h.sqlLog.find(x=>x.q.includes('UPDATE rawi_dynamic_records'));
+ assert.ok(update);
+ assert.equal(update.params[3],'{}');
+ assert.equal(update.params[4],'Needs repair');
 });
