@@ -12,9 +12,9 @@ const employeeSchema=z.object({name:safeName,employee_number:z.string().trim().m
 const projectSchema=z.object({name:safeName,customer_id:uid.nullable().default(null),owner:z.string().max(150).default(''),budget:cash.default(0),start_on:z.iso.date().nullable().default(null),due_on:z.iso.date().nullable().default(null)});
 const expenseSchema=z.object({description:safeName,amount:z.number().positive().max(100000000),category:z.string().min(2).max(80).default('general'),employee_id:uid.nullable().default(null),occurred_on:z.iso.date().optional()});
 const accountSchema=z.object({code:z.string().trim().min(2).max(30),name:safeName,type:z.enum(['asset','liability','equity','income','expense'])});
-const docSchema=z.object({kind:z.enum(['sale','purchase']),partner_id:uid,lines:z.array(z.object({item_id:uid,quantity:z.number().positive().max(100000)})).min(1).max(80),notes:z.string().max(2000).default('')});
+const docSchema=z.object({kind:z.enum(['sale','purchase']),partner_id:uid,lines:z.array(z.object({item_id:uid,unit_id:uid.optional(),quantity:z.number().positive().max(100000)})).min(1).max(80),notes:z.string().max(2000).default('')});
 const journalSchema=z.object({reference:z.string().trim().min(2).max(120),memo:z.string().max(800).default(''),posted_on:z.iso.date().optional(),lines:z.array(z.object({account_id:uid,debit:cash.default(0),credit:cash.default(0)})).min(2).max(100)});
-const stockSchema=z.object({item_id:uid,warehouse_id:uid,delta:z.number().min(-1000000).max(1000000).refine(n=>n!==0&&Number.isInteger(n*1000)),reason:z.string().trim().min(2).max(250)});
+const stockSchema=z.object({item_id:uid,warehouse_id:uid,unit_id:uid.optional(),delta:z.number().min(-1000000).max(1000000).refine(n=>n!==0&&Number.isInteger(n*1000)),reason:z.string().trim().min(2).max(250)});
 const tables={items:'erp_items',warehouses:'erp_warehouses',stock:'erp_stock',movements:'erp_stock_movements',documents:'erp_documents',accounts:'erp_accounts',journal:'erp_journal_entries',employees:'erp_employees',projects:'erp_projects',expenses:'erp_expenses'};
 export function journalTotals(lines){
  let debit=0,credit=0;
@@ -62,8 +62,10 @@ export function installErpCore(app,{db,centralDb,query}){
  app.post('/api/admin/erp/w/:workspace/core/movements',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;const v=stockSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid stock adjustment');
   const x=v.data;
+  let converted;try{converted=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:x.item_id,unitId:x.unit_id,quantity:Math.abs(x.delta)})}catch(e){return fail(c,400,e.message)}
+  const delta=Math.sign(x.delta)*converted.baseQuantity;
   const sql='WITH available AS(SELECT i.id FROM erp_items i JOIN erp_warehouses w ON w.workspace_id=i.workspace_id WHERE i.workspace_id=$1 AND i.id=$2 AND i.type=$5 AND w.id=$3), updated AS(INSERT INTO erp_stock(workspace_id,item_id,warehouse_id,quantity) SELECT $1,$2,$3,GREATEST($4,0) FROM available WHERE $4>=0 OR EXISTS(SELECT 1 FROM erp_stock WHERE workspace_id=$1 AND item_id=$2 AND warehouse_id=$3) ON CONFLICT(workspace_id,item_id,warehouse_id) DO UPDATE SET quantity=erp_stock.quantity+$4 WHERE erp_stock.quantity+$4>=0 RETURNING quantity), event AS(INSERT INTO erp_stock_movements(workspace_id,item_id,warehouse_id,delta,reason) SELECT $1,$2,$3,$4,$6 FROM updated RETURNING id) SELECT updated.quantity,event.id FROM updated,event';
-  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,x.delta,'stock',x.reason]);
+  const rows=await query(g.sql,sql,[g.workspace,x.item_id,x.warehouse_id,delta,'stock',x.reason+' ('+(x.unit_id?converted.unit_code:'base')+')']);
   return rows.length?c.json({ok:true,data:rows[0]},201):fail(c,409,'Insufficient stock or item/warehouse unavailable');
  });
  app.post('/api/admin/erp/w/:workspace/core/documents',async c=>{
@@ -75,7 +77,14 @@ export function installErpCore(app,{db,centralDb,query}){
   if(ids.length!==x.lines.length)return fail(c,400,'Duplicate document items');
   const products=await query(g.sql,'SELECT id,sku,name,sale_price_halalas,cost_halalas FROM erp_items WHERE workspace_id=$1 AND id=ANY($2::uuid[]) AND active=true',[g.workspace,ids]);
   if(products.length!==ids.length)return fail(c,400,'Some items are unavailable');
-  let sub=0;const lines=x.lines.map(l=>{const p=products.find(i=>i.id===l.item_id),unit=Number(x.kind==='sale'?p.sale_price_halalas:p.cost_halalas),amount=Math.round(l.quantity*unit);sub+=amount;return {item_id:p.id,sku:p.sku,name:p.name,quantity:l.quantity,unit_halalas:unit,total_halalas:amount}});
+  let sub=0,lines=[];
+  try{for(const l of x.lines){
+   const p=products.find(i=>i.id===l.item_id);
+   const conversion=await resolveItemUnit({sql:g.sql,query,workspace:g.workspace,itemId:l.item_id,unitId:l.unit_id,quantity:l.quantity});
+   const price=x.kind==='sale'?conversion.sale_price_halalas:conversion.purchase_price_halalas;
+   const amount=Math.round(l.quantity*price);sub+=amount;
+   lines.push({item_id:p.id,sku:p.sku,name:p.name,quantity:l.quantity,base_quantity:conversion.baseQuantity,unit_id:l.unit_id||null,unit_code:conversion.unit_code,unit_halalas:price,total_halalas:amount});
+  }}catch(e){return fail(c,400,e.message)}
   const settings=await query(g.sql,'SELECT vat_rate FROM erp_workspaces WHERE id=$1',[g.workspace]);
   const finance=x.kind==='purchase'&&centralDb?await query(centralDb(c),'SELECT setup_inputs FROM rawi_company_profiles WHERE workspace_id=$1',[g.workspace]):[];
   const rate=x.kind==='purchase'?Number(finance[0]?.setup_inputs?.finance?.purchases_tax_rate??15)/100:Number(settings[0]?.vat_rate??.15);
