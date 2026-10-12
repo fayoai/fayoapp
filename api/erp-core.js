@@ -184,6 +184,24 @@ export function installErpCore(app,{db,centralDb,query}){
   if(!rows.length){const existing=await query(g.sql,'SELECT id,invoice_no FROM erp_invoices WHERE workspace_id=$1 AND source_document_id=$2',[g.workspace,id]);return existing.length?c.json({ok:true,data:existing[0],existing:true}):fail(c,409,'Invoice could not be created')}
   return c.json({ok:true,data:rows[0]},201);
  });
+ // Optional starter chart; the owner explicitly chooses to install it.
+ // Preserve user-maintained accounts and account types under conflicting codes.
+ app.post('/api/admin/erp/w/:workspace/core/accounts/seed',async c=>{
+  const g=await gate(c,true);if(g.err)return g.err;
+  const owner=await query(g.sql,'SELECT role FROM erp_memberships WHERE workspace_id=$1 AND admin_id=$2',[g.workspace,c.get('adminId')]);
+  if(owner[0]?.role!=='owner')return fail(c,403,'Only a company owner may install starter accounts');
+  const rows=await query(g.sql,`INSERT INTO erp_accounts(workspace_id,code,name,type)
+   SELECT $1,v.code,v.name,v.type FROM (VALUES
+    ('1000','الصندوق','asset'),('1010','البنوك','asset'),
+    ('1100','الذمم المدينة - العملاء','asset'),('1150','ضريبة المدخلات','asset'),
+    ('1300','المخزون','asset'),('2000','الذمم الدائنة - الموردون','liability'),
+    ('2100','ضريبة المخرجات','liability'),('3000','رأس المال','equity'),
+    ('4000','إيرادات المبيعات','income'),('5000','تكلفة المبيعات','expense')
+   ) AS v(code,name,type) ON CONFLICT(workspace_id,code) DO NOTHING
+   RETURNING id,code,name,type`,[g.workspace]);
+  return c.json({ok:true,inserted:rows.length,data:rows,
+   note:'Optional starter chart only; pre-existing accounts and account types were preserved'});
+ });
  app.post('/api/admin/erp/w/:workspace/core/accounts',async c=>{
   const g=await gate(c,true);if(g.err)return g.err;const v=accountSchema.safeParse(await body(c));if(!v.success)return fail(c,400,'Invalid account');
   const x=v.data;const rows=await query(g.sql,'INSERT INTO erp_accounts(workspace_id,code,name,type) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id,code) DO UPDATE SET name=EXCLUDED.name,type=EXCLUDED.type RETURNING *',[g.workspace,x.code,x.name,x.type]);
