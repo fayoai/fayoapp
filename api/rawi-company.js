@@ -59,7 +59,7 @@ export function installRawiCompany(app,{centralDb,env,query}){
    'setup_inputs=jsonb_build_object(\'name\',$3::text,\'activity\',$12::text),setup_updated_at=now() '+
    'FROM changed x WHERE p.workspace_id=x.id RETURNING p.workspace_id ) SELECT workspace_id FROM saved';
   const rows=await query(sql,stmt,[d.workspace_id,user,d.name,d.address,d.logo_data,d.tax_number,
-   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,'',JSON.stringify({})]);
+   d.phone||d.mobile,d.commercial_registration,d.mobile,d.website,d.emails,d.activity,d.description,JSON.stringify({})]);
   return rows.length?c.json({ok:true,workspace_id:rows[0].workspace_id}):fail(c,404,'Pending company profile was not found');
  });
 }
