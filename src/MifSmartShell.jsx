@@ -2,18 +2,19 @@ import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {api,useSite,tr} from './App.jsx';
 import AiErpWorkspace from './AiErpWorkspace.jsx';
 import RawiGeneratedWorkspace from './RawiGeneratedWorkspace.jsx';
+import RawiCustomerAccount from './RawiCustomerAccount.jsx';
 import MifSchedule from './MifSchedule.jsx';
 import {RawiTeamPanel,RawiNotificationsPanel} from './RawiPanels.jsx';
 
 import {MessageCircle,Grid2X2,Plus,CalendarDays,UsersRound,Bell,UserRound,ArrowUp,Paperclip,Mic,Square,FileText,BrainCircuit,Download,PlugZap,LogOut,ChevronLeft,ChevronRight,Menu,X,Check,Smartphone,Monitor,Loader2,ArrowRight,Trash2,Building2} from 'lucide-react';
 import './mif-smart-shell.css';
 const initialLogin={name:'',email:'',password:'',account_type:'enterprise'};
-const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:'',description:''};
+const blankCompany={workspace_id:'',logo_data:'',name:'',address:'',commercial_registration:'',tax_number:'',phone:'',mobile:'',website:'',emails:'',activity:''};
 const documentMimeByExtension=Object.freeze({pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json',rtf:'application/rtf'});
 const maxDocumentSize=1572864,maxDocumentTotal=2621440,maxDocuments=2;
 const welcomeText={ar:'كيف أقدر أساعدك اليوم؟',en:'How can I help you today?'};
-function RawiGreeting({lang}){
- const text=welcomeText[lang==='en'?'en':'ar'];
+function RawiGreeting({lang,customText=''}){
+ const text=customText||welcomeText[lang==='en'?'en':'ar'];
  const [visible,setVisible]=useState('');
  useEffect(()=>{
   if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setVisible(text);return}
@@ -39,7 +40,7 @@ const nav=[['chats','المحادثات','Chats',MessageCircle],['operations','�
 const isInstalled=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||window.localStorage.getItem('rawi-erp-installed')==='1'}catch{return false}};
 export default function MifSmartShell(){
  const {lang,setLang}=useSite(),L=(a,e)=>tr(lang,a,e);
- const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false),[signupStep,setSignupStep]=useState('auth'),[verificationCode,setVerificationCode]=useState(''),[company,setCompany]=useState(blankCompany),[companyBusy,setCompanyBusy]=useState(false),[companyError,setCompanyError]=useState(''),[companyPlan,setCompanyPlan]=useState(null),[companyPlanBusy,setCompanyPlanBusy]=useState(false),[companyPlanError,setCompanyPlanError]=useState('');
+ const [session,setSession]=useState(null),[checking,setChecking]=useState(true),[tab,setTab]=useState('new'),[signup,setSignup]=useState(false),[form,setForm]=useState(initialLogin),[authError,setAuthError]=useState(''),[authBusy,setAuthBusy]=useState(false),[signupStep,setSignupStep]=useState('auth'),[verificationCode,setVerificationCode]=useState(''),[company,setCompany]=useState(blankCompany),[companyBusy,setCompanyBusy]=useState(false),[companyError,setCompanyError]=useState(''),[discovery,setDiscovery]=useState(null);
  const [workspaces,setWorkspaces]=useState([]),[workspaceId,setWorkspaceId]=useState('');
  const [registrationEnabled,setRegistrationEnabled]=useState(null),[subscriptions,setSubscriptions]=useState([]);
  const [tenantSetup,setTenantSetup]=useState(null),[tenantGeneration,setTenantGeneration]=useState(0);
@@ -53,26 +54,15 @@ export default function MifSmartShell(){
   api('/api/admin/company/setup').then(r=>{if(r.data)setCompany(old=>({...old,...r.data,workspace_id:r.data.workspace_id,name:r.data.name||''}))}).catch(()=>setCompanyError(L('تعذر تحميل بيانات الشركة','Could not load company details')))
  },[signupStep,authed]);
  
+ // A company is registered first. Rawi learns the business from the first private chat.
  useEffect(()=>{
-  if(!authed||signupStep!=='company'||!company.workspace_id||company.name.trim().length<2||company.activity.trim().length<2){
-   setCompanyPlan(null);setCompanyPlanBusy(false);return;
-  }
-  let alive=true,timer;
-  const name=company.name.trim(),activity=company.activity.trim(),workspace_id=company.workspace_id;
-  setCompanyPlanBusy(true);setCompanyPlanError('');
-  const analyze=async()=>{
-   try{
-    const result=await api('/api/admin/company/plan',{method:'POST',body:JSON.stringify({workspace_id,name,activity,language:lang})});
-    if(!alive)return;
-    if(result.pending){timer=setTimeout(analyze,Math.min(10000,Math.max(1200,result.retry_after_ms||1500)));return}
-    setCompanyPlan(result.ready&&result.plan?{...result.plan,name,activity}:null);
-    if(!result.ready)setCompanyPlanError(L('النموذج لم يستطع تصميم المساحة الآن. سيتم إعادة التوليد بعد إعداد الشركة؛ لن نعرض إدارات جاهزة بدلًا منه.','The AI model could not generate your workspace yet. Rawi will retry after setup instead of showing fixed departments.'));
-    setCompanyPlanBusy(false);
-   }catch(e){if(!alive)return;setCompanyPlanBusy(false);setCompanyPlanError(L('تعذر تصميم مساحة الشركة الآن. يمكنك حفظ بيانات الشركة وإعادة توليد المستودعات من مساحة العمل.','Workspace generation is unavailable. Save your company details and retry generating repositories from the workspace.'))}
-  };
-  timer=setTimeout(analyze,1100);
-  return()=>{alive=false;clearTimeout(timer)};
- },[company.workspace_id,company.name,company.activity,signupStep,authed,lang]);
+  if(!authed||!workspaceId||session?.company_setup_required){setDiscovery(null);return}
+  let active=true;
+  api('/api/admin/company/discovery/'+encodeURIComponent(workspaceId)+'?language='+lang)
+   .then(r=>{if(active)setDiscovery(r.completed?null:{...r,workspace_id:workspaceId})})
+   .catch(()=>{if(active)setDiscovery(null)});
+  return()=>{active=false};
+ },[authed,workspaceId,session?.company_setup_required,lang]);
  useEffect(()=>{api('/api/public/rawi/status').then(x=>setRegistrationEnabled(!!x.registration_enabled)).catch(()=>setRegistrationEnabled(false))},[]);
  useEffect(()=>{if(!authed){setSubscriptions([]);return}api('/api/admin/my-subscription').then(x=>setSubscriptions(x.data||[])).catch(()=>setSubscriptions([]))},[authed,session?.email]);
  useEffect(()=>{refreshSession();const before=e=>{e.preventDefault();setInstallPrompt(e);setInstalled(false)};const onInstalled=()=>{setInstallPrompt(null);setInstallOpen(false);setInstalled(true);try{window.localStorage.setItem('rawi-erp-installed','1')}catch{}};const display=window.matchMedia('(display-mode: standalone)');const onDisplay=()=>{if(display.matches)setInstalled(true)};display.addEventListener?.('change',onDisplay);window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',onInstalled);return()=>{display.removeEventListener?.('change',onDisplay);window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',onInstalled)}},[refreshSession]);
@@ -156,6 +146,7 @@ export default function MifSmartShell(){
    const r=await api(endpoint,{method:'POST',signal:ctl.signal,body:JSON.stringify(privateChat?{thread_id:active||null,workspace_id:workspaceId,question:text,documents:pendingDocs}:{question:text,history,documents:pendingDocs})});
    if(ctl.signal.aborted)return;
    if(privateChat&&r.thread_id){setActive(r.thread_id);api('/api/admin/chat/threads?workspace_id='+encodeURIComponent(workspaceId)).then(t=>setThreads(t.data||[])).catch(()=>{})}
+   if(r.discovery_stage){setDiscovery(previous=>r.discovery_stage==='completed'?null:{...(previous||{}),workspace_id:workspaceId,stage:r.discovery_stage})}
    setMessages(m=>[...m,{role:'assistant',content:r.answer,at:new Date().toISOString()}]);
   }catch(err){if(ctl.signal.aborted)return;setMessages(m=>m.slice(0,-1));setQuestion(question.trim());setDocuments(pendingDocs);setChatError(err.message)}finally{setAsking(false);requestRef.current=null}
  };
@@ -259,7 +250,7 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
      {!installed&&<button type="button" className="rawi-install-in-account rawi-install-mini" onClick={install} aria-label={L('تنزيل التطبيق','Install app')}><Download size={13}/>{L('تنزيل','Install')}</button>}
     </div>
     <div className={'mif-chat-scroll'+(!messages.length?' is-empty':'')} ref={areaRef} aria-live="polite">
-     {!messages.length?<RawiGreeting lang={lang}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
+     {!messages.length?<RawiGreeting lang={lang} customText={authed&&discovery?.workspace_id===workspaceId?discovery.greeting:''}/>:<div className="mif-chat-messages">{messages.map((m,i)=><article className={'mif-bubble '+m.role} key={i}>{m.role==='assistant'&&<img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/>}<div><p>{m.content}</p></div></article>)}{asking&&<div className="mif-typing"><img src="/rawi-erp-mark.svg" alt={L('نظام راوي','Rawi ERP')}/><Loader2 className="mif-spinner" size={17}/></div>}</div>}
      {chatError&&<div className="mif-chat-error" role="alert">{chatError}</div>}
     </div>
     <form className="mif-composer" onSubmit={ask}>
@@ -292,18 +283,8 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
       <label>{L('رقم الجوال','Mobile number')}<input type="tel" maxLength={35} value={company.mobile} onChange={e=>setCompany(v=>({...v,mobile:e.target.value}))}/></label>
       <label>{L('الموقع الإلكتروني','Website')}<input type="url" placeholder="https://" value={company.website} onChange={e=>setCompany(v=>({...v,website:e.target.value}))}/></label>
       <label>{L('إيميلات التواصل','Contact emails')}<input maxLength={450} placeholder={L('افصل بينها بفاصلة','Separate with commas')} value={company.emails} onChange={e=>setCompany(v=>({...v,emails:e.target.value}))}/></label>
-      <label className="rawi-company-wide">{L('نبذة عن النشاط','About the business')}<textarea rows={3} maxLength={2000} value={company.description} onChange={e=>setCompany(v=>({...v,description:e.target.value}))}/></label>
+      
      </div>
-     {company.name.trim().length>=2&&company.activity.trim().length>=2&&<aside className="rawi-business-plan" aria-live="polite">
-      <div className="rawi-business-plan-head"><BrainCircuit size={19}/><strong>{L('تهيئة مساحة العمل حسب النشاط','Activity-based workspace setup')}</strong>
-       {companyPlanBusy&&<Loader2 size={15} className="mif-spinner"/>}
-      </div>
-      {companyPlan&&companyPlan.name===company.name.trim()&&companyPlan.activity===company.activity.trim()?<>
-       <p>{companyPlan.summary}</p>
-       <div className="rawi-business-departments">{(companyPlan.repositories||[]).map(item=><span key={item.key}>{item.name}</span>)}</div>
-       <small>{L('راوي صمم هذه المستودعات وحقولها ومراحلها خصيصًا لنشاط شركتك.','Rawi designed these repositories, fields and workflows specifically for your company.')}</small>
-      </>:<p>{companyPlanBusy?L('راوي يقرأ اسم الشركة والنشاط ويجهز الإدارات المناسبة...','Rawi is analyzing the company and preparing relevant departments...'):companyPlanError||L('جاري تجهيز مساحة العمل...','Preparing workspace...')}</p>}
-     </aside>}
      {companyError&&<p role="alert" className="mif-form-error">{companyError}</p>}
      <button type="submit" disabled={companyBusy||!company.workspace_id}>{companyBusy?<Loader2 className="mif-spinner" size={17}/>:<Check size={18}/>} {L('حفظ وبدء استخدام النظام','Save and start using Rawi ERP')}</button>
     </form>
@@ -321,7 +302,8 @@ const authPanel=<section className="mif-login-page rawi-login-compact" aria-labe
    {tab==='schedule'&&!checking&&authed&&<MifSchedule notify={setNotice}/>}
    {tab==='team'&&!checking&&authed&&<RawiTeamPanel workspaceId={workspaceId} workspace={workspaces.find(w=>w.id===workspaceId)} notify={setNotice}/>}
    {tab==='alerts'&&!checking&&authed&&<RawiNotificationsPanel workspaceId={workspaceId} onSchedule={()=>navigate('schedule')}/>}
-   {tab==='account'&&(checking?null:authed?<section className="mif-account"><div className="mif-account-avatar"><UserRound size={32}/></div><h2>{L('حسابي','My account')}</h2><div className="mif-account-detail"><span>{L('البريد الإلكتروني','Email')}</span><strong>{session.email||'—'}</strong></div><div className="mif-account-detail"><span>{L('نوع الحساب','Account type')}</span><strong>{L('نظام راوي','Rawi ERP')}</strong></div>{subscriptions.map(sub=><div className="mif-account-detail" key={sub.workspace_id}><span>{sub.workspace_name} — {L('الاشتراك / الرسائل المتبقية','Subscription / remaining messages')}</span><strong>{sub.plan_name||L('غير مفعّل','Not activated')} · {Number(sub.messages_remaining||0).toLocaleString()} / {Number(sub.message_limit||0).toLocaleString()} · {sub.status||'—'}</strong></div>)}<div className="mif-account-detail"><span>{L('اللغة','Language')}</span><button onClick={()=>setLang(lang==='ar'?'en':'ar')}>{lang==='ar'?'العربية':'English'}</button></div>{!installed&&<button type="button" className="rawi-install-in-account" onClick={install}><Download size={15}/>{L('تنزيل التطبيق','Install app')}</button>}<button className="mif-logout" onClick={logout}><LogOut size={18}/>{L('تسجيل الخروج','Sign out')}</button></section>:null)}
+   {tab==='account'&&!checking&&authed&&<RawiCustomerAccount installed={installed} onLogout={logout} onInstall={install}/>}
+
 
 
   </main>
