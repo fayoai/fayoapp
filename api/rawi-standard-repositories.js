@@ -80,7 +80,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    query(g.sql,"SELECT id,name,sku,unit FROM erp_items WHERE workspace_id=$1 AND active=true ORDER BY name LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,name FROM erp_warehouses WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,name FROM erp_employees WHERE workspace_id=$1 ORDER BY name LIMIT 600",[g.workspace]),
-   query(g.sql,"SELECT id,name,code FROM erp_accounts WHERE workspace_id=$1 ORDER BY code LIMIT 600",[g.workspace]),
+   query(g.sql,"SELECT id,name,code,type FROM erp_accounts WHERE workspace_id=$1 ORDER BY code LIMIT 600",[g.workspace]),
    query(g.sql,"SELECT id,values_json FROM rawi_dynamic_records WHERE workspace_id=$1 AND repository_key='std_purchase_orders' ORDER BY created_at DESC LIMIT 300",[g.workspace])
   ]);
   return c.json({ok:true,data:{
@@ -89,7 +89,7 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    products:items.map(x=>({id:x.id,name:x.name,sku:x.sku,unit:x.unit})),
    warehouses:warehouses.map(x=>({id:x.id,name:x.name})),
    employees:employees.map(x=>({id:x.id,name:x.name})),
-   accounts:accounts.map(x=>({id:x.id,name:x.code+' — '+x.name})),
+   accounts:accounts.map(x=>({id:x.id,name:x.code+' — '+x.name,type:x.type})),
    purchase_orders:purchaseOrders.map(x=>({id:x.id,name:x.values_json?.document_number||x.values_json?.field_1||x.id}))
   }});
  });
