@@ -1,4 +1,4 @@
-import {tenantDbUrl} from './tenant-runtime.js';
+import {tenantConnectionUrl} from './tenant-runtime.js';
 import {tenantMigrationSteps,tenantMigrationCount} from './tenant-schema.generated.js';
 import {neon} from '@neondatabase/serverless';
 const maxBatch=20;
@@ -58,13 +58,16 @@ export async function migrateTenantBatch({central,query,settings,workspaceId,lim
  RETURNING workspace_id,application,database_name,migration_version,neon_project_id,neon_branch_id`,[workspaceId,tenantMigrationCount]);
  if(!reserved.length)return {status:'busy'};
  const row=reserved[0];
- if(row.neon_project_id!==settings.NEON_PROJECT_ID||row.neon_branch_id!==settings.NEON_BRANCH_ID)throw Error('Neon project or branch changed; refusing cross-project migration');
- if(row.application!=='enterprise')throw Error('This product is not active');
- const expected='rawi_e_'+workspaceId.replaceAll('-','');
- if(row.database_name!==expected)throw Error('Tenant database registry mismatch');
- const tenant=connector(tenantDbUrl(settings.DATABASE_URL,row.database_name));
  let pos=Number(row.migration_version||0);
  try{
+  if(row.application!=='enterprise')throw Error('This product is not active');
+  const expected='rawi_e_'+workspaceId.replaceAll('-','');
+  if(row.database_name!==expected)throw Error('Tenant database registry mismatch');
+  // The historical schema generator includes MIF control-plane tables.
+  // Stop migrations into the new RAWI project until a tenant-only schema is approved.
+  if(row.neon_project_id===settings.NEON_PROJECT_ID&&row.neon_branch_id===settings.NEON_BRANCH_ID)
+   throw Error('RAWI isolated-schema migrations have not been approved for this deployment');
+  const tenant=connector(tenantConnectionUrl(settings,row));
   const end=Math.min(pos+limit,tenantMigrationCount);
   while(pos<end){
    await query(tenant,tenantMigrationSteps[pos]);
