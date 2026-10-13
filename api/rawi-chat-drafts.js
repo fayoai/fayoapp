@@ -124,17 +124,14 @@ export async function createRawiCommandDraft({app,c,sql,query,workspace,user,thr
  if(!validateRepositoryRecord(repo,values))return result('not_saved','بيانات المستند ناقصة أو غير صالحة. لم يتم حفظ مسودة.');
  const duplicateKey=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(user+'|'+threadId+'|'+question));
  const fingerprint=Array.from(new Uint8Array(duplicateKey),x=>x.toString(16).padStart(2,'0')).join('');
- const previous=await query(sql,"SELECT id,repository_key FROM rawi_dynamic_records WHERE workspace_id=$1 AND values_json->>'rawi_command_fingerprint'=$2 LIMIT 1",[workspace,fingerprint]);
- if(previous.length)return result('saved','المسودة محفوظة بالفعل؛ لم يتم إنشاء نسخة مكررة.',{repository_key:previous[0].repository_key,record_id:previous[0].id});
- const url='/api/admin/erp/w/'+encodeURIComponent(workspace)+'/standard/'+encodeURIComponent(repo.key)+'/records';
- let response,body;
- try{
-  response=await app.request(url,{method:'POST',headers:{'Content-Type':'application/json',Cookie:c.req.header('cookie')||''},body:JSON.stringify(request)},c.env);
-  body=await response.json();
- }catch{return result('not_saved','تعذر الوصول إلى خدمة حفظ المستندات. لم يتم تأكيد إنشاء المسودة.');}
- if(!response.ok||!body?.ok||!body.data?.id)return result('not_saved',String(body?.error||'رفض النظام حفظ المسودة')+'. لم يُؤكد إنشاء المسودة.');
- try{
-  await query(sql,"UPDATE rawi_dynamic_records SET values_json=values_json||jsonb_build_object('rawi_source_thread_id',$3::text,'rawi_command_fingerprint',$4::text) WHERE workspace_id=$1 AND id=$2",[workspace,body.data.id,threadId,fingerprint]);
- }catch(e){console.error('RAWI draft source provenance update failed',String(e?.message||e).slice(0,150));}
- return result('saved','أنشأت مسودة «'+repo.name+'» وحفظتها في العمليات للمراجعة. لم يتم اعتمادها أو ترحيلها.',{repository_key:repo.key,record_id:body.data.id,document_number:body.data.values_json?.document_number||null});
+ // Stage AI work in a private company approval queue, not the destination repository.
+ // A deterministic UUID makes repeated chat submissions idempotent.
+ const pendingId=[fingerprint.slice(0,8),fingerprint.slice(8,12),'4'+fingerprint.slice(13,16),'a'+fingerprint.slice(17,20),fingerprint.slice(20,32)].join('-');
+ const approval={target_repository_key:repo.key,request,rawi_command_fingerprint:fingerprint,source_thread_id:threadId,original_instruction:question.slice(0,600)};
+ const staged=await query(sql,"INSERT INTO rawi_dynamic_records(id,workspace_id,repository_key,values_json,stage,source_thread_id,created_by,updated_by) VALUES($1,$2,'rawi_ai_approvals',$3::jsonb,'بانتظار الموافقة',$4,$5,$5) ON CONFLICT(id) DO NOTHING RETURNING id,stage",[pendingId,workspace,JSON.stringify(approval),threadId,user]);
+ const existing=staged.length?staged[0]:(await query(sql,"SELECT id,stage,repository_key FROM rawi_dynamic_records WHERE id=$1 AND workspace_id=$2",[pendingId,workspace]))[0];
+ if(!existing)return result('not_saved','تعذر حفظ طلب الموافقة.');
+ if(existing.repository_key&&existing.repository_key!=='rawi_ai_approvals')return result('approved','هذه العملية معتمدة بالفعل وموجودة في مستودعها.',{repository_key:existing.repository_key,record_id:existing.id});
+ if(existing.stage==='مرفوض')return result('rejected','سبق رفض هذا الطلب. أرسل طلبًا جديدًا لإعادة إنشائه.');
+ return result('pending','تم تجهيز «'+repo.name+'» وأُضيفت إلى العمليات بانتظار موافقتك. لا توجد عملية معتمدة بعد.',{repository_key:repo.key,approval_id:pendingId,requires_approval:true});
 }
