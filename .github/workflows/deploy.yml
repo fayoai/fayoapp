@@ -37,6 +37,14 @@ jobs:
             exit 1
           fi
           node scripts/reconcile-enterprise-tenants.mjs
+      - name: Verify independent RAWI database secret
+        env:
+          MIF_RAWI_DATABASE_URL: ${{ secrets.MIF_RAWI_DATABASE_URL }}
+        run: |
+          if [[ -z "$MIF_RAWI_DATABASE_URL" ]]; then
+            echo "::error::MIF_RAWI_DATABASE_URL must be configured before deploying the isolated RAWI Worker."
+            exit 1
+          fi
       - name: Verify Cloudflare deployment credentials
         shell: bash
         env:
@@ -93,6 +101,8 @@ jobs:
           if(Object.keys(values).length)writeFileSync(process.env.SECRET_FILE,JSON.stringify(values),{mode:0o600});
           // The RAWI database credential is only deployed to RAWI, never to MIF.
           const enterprise={...values};
+          delete enterprise.ADMIN_BOOTSTRAP_TOKEN;
+          delete enterprise.PLATFORM_OWNER_EMAIL;
           if(process.env.MIF_RAWI_DATABASE_URL)enterprise.RAWI_DATABASE_URL=process.env.MIF_RAWI_DATABASE_URL;
           if(Object.keys(enterprise).length)writeFileSync(process.env.ENTERPRISE_SECRET_FILE,JSON.stringify(enterprise),{mode:0o600});
           console.log('MIF Worker bindings: '+Object.keys(values).join(', '));
