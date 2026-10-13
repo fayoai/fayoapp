@@ -128,17 +128,6 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
    ],read_only:true});
   }
 
-  // Referential validation prevents cross-company IDs being stored as opaque text.
-  const referenced=repo.fields.filter(f=>f.type==='relation'&&values[f.key]);
-  if(referenced.length){
-   const targets={customers:['erp_contacts',"kind IN('customer','person')"],vendors:['erp_contacts',"kind IN('vendor','person')"],products:['erp_items','active=true'],warehouses:['erp_warehouses','TRUE'],employees:['erp_employees','TRUE'],accounts:['erp_accounts','TRUE'],purchase_orders:['rawi_dynamic_records',"repository_key='std_purchase_orders'"]};
-   for(const field of referenced){
-    const dest=targets[field.target];if(!dest)return fail(c,400,'Invalid linked record type');
-    const rows=await query(g.sql,'SELECT id FROM '+dest[0]+' WHERE workspace_id=$1 AND id=$2 AND '+dest[1],[g.workspace,values[field.key]]);
-    if(!rows.length)return fail(c,400,'Linked record belongs to another company or does not exist');
-   }
-  }
-
   const master=masterSpec(repo.kind);
   if(master){
    const args=repo.kind==='customers'||repo.kind==='vendors'?[g.workspace,master.kind]:[g.workspace];
@@ -158,6 +147,16 @@ export function installRawiStandardRepositories(app,{db,centralDb,query,env}){
   if(!values)return fail(c,400,'Check required fields and data types');
   const stage=req.data.stage??repo.stages[0]??'';
   if(stage&&!repo.stages.includes(stage))return fail(c,400,'Invalid status');
+  // Referential validation prevents cross-company IDs being stored as opaque text.
+  const referenced=repo.fields.filter(f=>f.type==='relation'&&values[f.key]);
+  if(referenced.length){
+   const targets={customers:['erp_contacts',"kind IN('customer','person')"],vendors:['erp_contacts',"kind IN('vendor','person')"],products:['erp_items','active=true'],warehouses:['erp_warehouses','TRUE'],employees:['erp_employees','TRUE'],accounts:['erp_accounts','TRUE'],purchase_orders:['rawi_dynamic_records',"repository_key='std_purchase_orders'"]};
+   for(const field of referenced){
+    const dest=targets[field.target];if(!dest)return fail(c,400,'Invalid linked record type');
+    const rows=await query(g.sql,'SELECT id FROM '+dest[0]+' WHERE workspace_id=$1 AND id=$2 AND '+dest[1],[g.workspace,values[field.key]]);
+    if(!rows.length)return fail(c,400,'Linked record belongs to another company or does not exist');
+   }
+  }
   if(repo.kind==='units'){
    const fields=values;
    const form={code:String(fields.field_1||'').toLowerCase(),name:fields.field_2,category:fields.field_3||'count',precision_digits:Number(fields.field_4??3)};
