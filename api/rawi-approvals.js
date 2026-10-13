@@ -42,7 +42,7 @@ export function installRawiApprovals(app,{db,env,query,centralDb}){
     source_thread_id:r.source_thread_id||payload.source_thread_id||payload.rawi_source_thread_id||null,
     values:queued?payload.request?.values||{}:payload,
     lines:queued?payload.request?.lines||[]:payload.document_lines||[],
-    instruction:queued?payload.original_instruction||'':'',
+    instruction:queued?payload.original_instruction||'':payload.rawi_original_instruction||'',
     document_number:payload.document_number||null
    };
   }).filter(Boolean);
