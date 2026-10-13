@@ -56,7 +56,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
   setRepoKey(old=>(r.groups||[]).some(g=>g.repositories.some(x=>x.key===old))?old:'std_opportunities');
  }).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[workspace]);
  const loadRecords=async()=>{
-  if(!prefix||!selected)return;
+  if(!prefix||!selected||section!=='repository')return;
   const seq=++request.current;setRecordsLoading(true);setRows([]);setReport(null);setError('');
   try{
    const r=await api(prefix+(selected.read_only?'/system/report/'+selected.kind:'/standard/'+selected.key+'/records'));
@@ -66,12 +66,12 @@ export default function RawiStandardRepositories({onOpenThread}={}){
   }catch(e){if(seq===request.current)setError(e.message)}
   finally{if(seq===request.current)setRecordsLoading(false)}
  };
- useEffect(()=>{request.current++;setDraft(null);setRows([]);setReport(null);setSearch('');if(selected&&workspace)loadRecords()},[workspace,repoKey,groups]);
+ useEffect(()=>{request.current++;setDraft(null);setRows([]);setReport(null);setSearch('');if(selected&&workspace&&section==='repository')loadRecords()},[workspace,repoKey,groups,section]);
 
- useEffect(()=>{setQrImage(null);setRealInvoices([]);if(selected?.kind!=='sales_invoices'||!prefix)return;let alive=true;
+ useEffect(()=>{setQrImage(null);setRealInvoices([]);if(section!=='repository'||selected?.kind!=='sales_invoices'||!prefix)return;let alive=true;
   api(prefix+'/invoices').then(r=>{if(alive)setRealInvoices(r.data||[])}).catch(e=>{if(alive)setError(e.message)});
   return()=>{alive=false}
- },[workspace,repoKey,groups]);
+ },[workspace,repoKey,groups,section]);
  const showInvoiceQr=async invoice=>{
   setError('');setQrImage(null);
   try{
