@@ -12,6 +12,7 @@ const input=z.object({values:z.record(z.string(),z.unknown()),stage:z.string().m
 const lineDocumentKinds=new Set(['quotations','sales_orders','sales_invoices','purchase_quotes','purchase_orders']);
 const docKinds=new Set(['quotations','sales_orders','sales_invoices','sales_credit_note','sales_debit_note','sales_receipts','purchase_quotes','purchase_orders','purchase_expenses','purchase_credit_note','purchase_debit_note','internal_transfer','external_transfer','stock_count','journal_entries','accounting_receipts','payment_vouchers','contracts','leaves','payroll','custody','attendance']);
 const prefixes={quotations:'QT',sales_orders:'SO',sales_invoices:'INV',sales_credit_note:'SCN',sales_debit_note:'SDN',sales_receipts:'SR',purchase_quotes:'RFQ',purchase_orders:'PO',purchase_expenses:'PE',purchase_credit_note:'PCN',purchase_debit_note:'PDN',internal_transfer:'IT',external_transfer:'ET',stock_count:'SC',journal_entries:'JE',accounting_receipts:'AR',payment_vouchers:'PV',contracts:'CON',leaves:'LV',payroll:'PAY',custody:'CUS',attendance:'ATT'};
+export const standardDocumentPrefix=kind=>docKinds.has(kind)?(prefixes[kind]||'DOC'):null;
 const minor=value=>Math.round(Number(value||0)*100);
 const common=(row,values)=>({id:row.id,stage:row.stage||'',values_json:values,created_at:row.created_at,updated_at:row.updated_at||row.created_at,document_number:row.values_json?.document_number||null});
 function masterSpec(kind){
