@@ -156,19 +156,19 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
  const canCreate=true;
  return <section className="rawi-live" aria-label={L('العمليات المالية والتجارية الفعلية','Live business transactions')}>
   <header className="rawi-live-head"><div><strong><ShieldCheck size={17}/>{L('السجلات التشغيلية الفعلية','Validated business transactions')}</strong>
-   <small>{config.section==='payments'?L('كل سند جديد مرتبط بقيد يومية متوازن؛ يلزم اختيار حساب النقدية والحساب المقابل','Every new voucher posts a balanced journal entry after selecting two accounts'):config.section==='invoices'?L('فواتير منشأة من أوامر بيع مؤكدة','Invoices linked to confirmed sales orders'):L('البيانات محفوظة في جداول التشغيل الرئيسية للشركة','Stored in company operational tables')}</small></div>
+</div>
    <div className="rawi-live-actions"><button type="button" onClick={refresh} disabled={loading||busy}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>{canCreate&&<button type="button" className="rawi-live-primary" onClick={()=>setOpen(x=>!x)}><Plus size={16}/>{L('إنشاء عملية فعلية','New transaction')}</button>}</div>
   </header>
   {error&&<p role="alert" className="rawi-live-error">{error}</p>}{message&&<p role="status" className="rawi-live-notice">{message}</p>}
   {receiveFor&&kind==='purchase_orders'&&<form className="rawi-live-editor" onSubmit={receivePurchase}>
    <strong>{L('استلام أمر شراء كامل: ','Receive entire purchase order: ')}{receiveFor.doc_no}</strong>
-   <p className="rawi-live-hint">{L('سيضيف الاستلام جميع الأصناف المخزنية بالكميات الأساسية إلى المستودع، ويسجل الحركات، ويحوّل الأمر إلى مكتمل. لا يتم إنشاء فاتورة مورد أو قيد محاسبي تلقائيًا.','Receives all stock items into the warehouse and completes the purchase order. Supplier invoice and payable journal are not created automatically.')}</p>
+
    <label>{L('مستودع الاستلام','Receiving warehouse')}<select required value={receiveWarehouse} onChange={e=>setReceiveWarehouse(e.target.value)}><option value="">{L('اختر المستودع','Select warehouse')}</option>{(lookups.warehouses||[]).map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
    <div className="rawi-live-actions"><button type="button" onClick={()=>setReceiveFor(null)}>{L('إلغاء','Cancel')}</button><button className="rawi-live-primary" type="submit" disabled={busy}><Save size={16}/>{L('تأكيد الاستلام','Post receipt')}</button></div>
   </form>}
   {issueFor&&config.section==='invoices'&&<form className="rawi-live-editor" onSubmit={issueInvoice}>
    <strong>{L('إصدار وترحيل الفاتورة: ','Issue and post invoice: ')}{issueFor.invoice_no}</strong>
-   <p className="rawi-live-hint">{L('قيد تلقائي: مدين الذمم المدينة بإجمالي الفاتورة، دائن الإيرادات قبل الضريبة، ودائن ضريبة المخرجات. اختر الحسابات المطابقة من دليل الشركة.','Balanced GL: debit receivables for gross total; credit revenue for subtotal and output VAT. Choose matching GL accounts.')}</p>
+
    <div className="rawi-live-fields">
     <label>{L('حساب الذمم المدينة (أصول)','Accounts receivable (asset)')}<select required value={issueAccounts.receivable_account_id} onChange={e=>setIssueAccounts(x=>({...x,receivable_account_id:e.target.value}))}><option value="">{L('اختر حساب الذمم','Select receivables')}</option>{(lookups.accounts||[]).filter(a=>a.type==='asset').map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
     <label>{L('حساب إيرادات المبيعات','Sales revenue (income)')}<select required value={issueAccounts.revenue_account_id} onChange={e=>setIssueAccounts(x=>({...x,revenue_account_id:e.target.value}))}><option value="">{L('اختر الإيرادات','Select revenue')}</option>{(lookups.accounts||[]).filter(a=>a.type==='income').map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
@@ -235,6 +235,6 @@ export default function RawiBusinessTransactions({prefix,kind,lookups={},sourceD
    {config.section==='invoices'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>{setIssueFor(row);setOpen(false)}}><CheckCircle2 size={14}/>{L('مراجعة وإصدار','Review and issue')}</button>}{row.status==='issued'&&row.journal_entry_id&&Number(row.received_halalas||0)>=Number(row.total_halalas)&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(L('تأكيد أن سندات القبض المرحّلة تغطي كامل الفاتورة؟','Mark paid after verifying posted receipts cover the full amount?')))action(row.id,'paid')}}>{L('تسوية مدفوعة','Mark paid')}</button>}</td>}
    {config.section==='documents'&&<td className="rawi-live-row-actions">{row.status==='draft'&&<button type="button" disabled={busy} onClick={()=>action(row.id,'confirm')}><CheckCircle2 size={14}/>{L('تأكيد الأمر','Confirm')}</button>}{row.kind==='purchase'&&row.status==='confirmed'&&<button type="button" disabled={busy} onClick={()=>setReceiveFor(row)}><CheckCircle2 size={14}/>{L('استلام للمستودع','Receive stock')}</button>}{row.kind==='sale'&&['confirmed','completed'].includes(row.status)&&<button type="button" disabled={busy||invoices.some(i=>i.source_document_id===row.id)} onClick={()=>action(row.id,'invoice')}><FileText size={14}/>{invoices.some(i=>i.source_document_id===row.id)?L('تمت الفوترة','Invoiced'):L('إنشاء فاتورة','Invoice')}</button>}</td>}
    </tr>)}</tbody></table></div>:<div className="rawi-live-empty">{L('لا توجد معاملات فعلية في هذا المستودع حتى الآن','No operational transactions yet')}</div>}
-  {kind==='sales_invoices'&&<p className="rawi-live-hint">{L('لإنشاء فاتورة فعلية: أنشئ أمر بيع، أكّد الأمر، ثم اضغط إنشاء فاتورة. المسودة وحدها لا تُصدر فاتورة.','To create an invoice: create a sales order, confirm it, then issue the invoice. Drafts are not issued invoices.')}</p>}
+
  </section>;
 }
