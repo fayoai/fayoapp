@@ -53,6 +53,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MIF_DATABASE_URL: ${{ secrets.MIF_DATABASE_URL }}
+          MIF_RAWI_DATABASE_URL: ${{ secrets.MIF_RAWI_DATABASE_URL }}
           MIF_SESSION_SECRET: ${{ secrets.MIF_SESSION_SECRET }}
           MIF_ADMIN_BOOTSTRAP_TOKEN: ${{ secrets.MIF_ADMIN_BOOTSTRAP_TOKEN }}
           MIF_CONNECTOR_ENCRYPTION_KEY: ${{ secrets.MIF_CONNECTOR_ENCRYPTION_KEY }}
@@ -67,8 +68,9 @@ jobs:
         run: |
           set -euo pipefail
           SECRET_FILE="${RUNNER_TEMP}/mif-worker-secrets.json"
-          export SECRET_FILE
-          trap 'rm -f "$SECRET_FILE"' EXIT
+          ENTERPRISE_SECRET_FILE="${RUNNER_TEMP}/rawi-worker-secrets.json"
+          export SECRET_FILE ENTERPRISE_SECRET_FILE
+          trap 'rm -f "$SECRET_FILE" "$ENTERPRISE_SECRET_FILE"' EXIT
           node --input-type=module <<'NODE'
           import {writeFileSync} from 'node:fs';
           const names={
@@ -89,12 +91,21 @@ jobs:
             Object.entries(names).filter(([source])=>!!process.env[source]).map(([source,target])=>[target,process.env[source]])
           );
           if(Object.keys(values).length)writeFileSync(process.env.SECRET_FILE,JSON.stringify(values),{mode:0o600});
-          console.log('Configured Worker runtime binding names: '+(Object.keys(values).join(', ')||'none; existing Worker secrets will be retained'));
+          // The RAWI database credential is only deployed to RAWI, never to MIF.
+          const enterprise={...values};
+          if(process.env.MIF_RAWI_DATABASE_URL)enterprise.RAWI_DATABASE_URL=process.env.MIF_RAWI_DATABASE_URL;
+          if(Object.keys(enterprise).length)writeFileSync(process.env.ENTERPRISE_SECRET_FILE,JSON.stringify(enterprise),{mode:0o600});
+          console.log('MIF Worker bindings: '+Object.keys(values).join(', '));
+          console.log('RAWI Worker bindings: '+Object.keys(enterprise).join(', '));
           NODE
           for config in wrangler.enterprise.jsonc wrangler.jsonc; do
             echo "Deploying independently configured Worker: $config"
-            if [[ -f "$SECRET_FILE" ]]; then
-              npx wrangler deploy --config "$config" --secrets-file "$SECRET_FILE"
+            TARGET_SECRET_FILE="$SECRET_FILE"
+            if [[ "$config" == "wrangler.enterprise.jsonc" ]]; then
+              TARGET_SECRET_FILE="$ENTERPRISE_SECRET_FILE"
+            fi
+            if [[ -f "$TARGET_SECRET_FILE" ]]; then
+              npx wrangler deploy --config "$config" --secrets-file "$TARGET_SECRET_FILE"
             else
               npx wrangler deploy --config "$config"
             fi
