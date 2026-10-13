@@ -12,7 +12,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const [groupKey,setGroupKey]=useState('sales'),[repoKey,setRepoKey]=useState('std_opportunities');
  const [rows,setRows]=useState([]),[report,setReport]=useState(null),[draft,setDraft]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [drafts,setDrafts]=useState([]),[focusDraftId,setFocusDraftId]=useState(null);
- const [section,setSection]=useState('approvals'),[approvalRows,setApprovalRows]=useState([]),[approvalFilter,setApprovalFilter]=useState('pending'),[reviewId,setReviewId]=useState(''),[approvalBusy,setApprovalBusy]=useState('');
+ const [section,setSection]=useState('approvals'),[approvalRows,setApprovalRows]=useState([]),[approvalFilter,setApprovalFilter]=useState('pending'),[reviewId,setReviewId]=useState(''),[approvalBusy,setApprovalBusy]=useState(''),[mobileMenuOpen,setMobileMenuOpen]=useState(false);
  const [loading,setLoading]=useState(true),[recordsLoading,setRecordsLoading]=useState(false),[saving,setSaving]=useState(false),[search,setSearch]=useState(''),[viewMode,setViewMode]=useState('table');
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
@@ -33,7 +33,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
    setNotice(action==='approve'?L('تم الاعتماد وحفظ المستند في مستودعه','Approved and saved in the repository'):L('تم رفض العملية','Operation rejected'));
   }catch(e){setError(e.message)}finally{setApprovalBusy('')}
  };
- const openRepository=(key)=>{const repo=groups.flatMap(g=>g.repositories).find(r=>r.key===key);if(!repo)return;setSection('repository');setGroupKey(repo.group);setRepoKey(key);setDraft(null)};
+ const openRepository=(key)=>{const repo=groups.flatMap(g=>g.repositories).find(r=>r.key===key);if(!repo)return;setSection('repository');setGroupKey(repo.group);setRepoKey(key);setMobileMenuOpen(false);setDraft(null)};
  const approvalCounts=status=>approvalRows.filter(x=>x.status===status).length;
  useEffect(()=>{if(workspace){loadDrafts();loadApprovals()}else{setDrafts([]);setApprovalRows([])}setSection('approvals');setReviewId('');setApprovalFilter('pending')},[workspace]);
  const activeGroup=groups.find(g=>g.key===groupKey)||groups[0];
@@ -98,7 +98,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
    setProductEditor({product:r.product,links:r.data||[]});setNotice(L('تم حفظ وحدات الصنف ومعامل التحويل','Saved product units and conversions'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
- const selectGroup=key=>{setSection('repository');setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
+ const selectGroup=key=>{setSection('repository');setMobileMenuOpen(false);setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
  const draftToLive=new Set(['sales_orders','purchase_orders','sales_invoices','sales_receipts','accounting_receipts','payment_vouchers','journal_entries','stock_count','internal_transfer']);
  const prepareBusinessDraft=row=>{
   const target=groups.flatMap(group=>group.repositories).find(repo=>repo.key===row.repository_key);
@@ -171,15 +171,16 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const liveSelected=!!selected&&liveKinds.has(selected.kind);
  const genericDraft=selected&&!liveSelected&&!selected.read_only&&selected.storage!=='erp'&&selected.kind!=='system_designs'&&selected.kind!=='document_sequences';
  return <section className="rawi-std" dir={lang==='ar'?'rtl':'ltr'}>
-  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('العمليات','Operations')}</h1></div>
+  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('العمليات','Operations')}</h1></div><button type="button" className="rawi-std-menu-button" onClick={()=>setMobileMenuOpen(x=>!x)}>{L('القائمة','Menu')}</button>
    {workspaces.length>1&&<select aria-label={L('الشركة','Company')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}
   </div>
   {error&&<p role="alert" className="rawi-std-error">{error}</p>}
   {notice&&<p role="status" className="rawi-std-notice">{notice}</p>}
   {loading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/>{L('جاري تحميل المستودعات','Loading repositories')}</div>:!workspace?<div className="rawi-std-empty">{L('لا توجد شركة متاحة','No company workspace is available')}</div>:<>
+   {mobileMenuOpen&&<button type="button" className="rawi-std-nav-backdrop" onClick={()=>setMobileMenuOpen(false)} aria-label={L('إغلاق القائمة','Close menu')}/>}
    <div className="rawi-std-layout rawi-std-operations-layout">
-    <aside className="rawi-std-navigation" aria-label={L('قائمة العمليات','Operations menu')}>
-     <button type="button" className={'rawi-std-nav-landing'+(section==='approvals'?' active':'')} onClick={()=>{setSection('approvals');setReviewId('');loadApprovals()}}>
+    <aside className={'rawi-std-navigation'+(mobileMenuOpen?' is-open':'')} aria-label={L('قائمة العمليات','Operations menu')}>
+     <button type="button" className={'rawi-std-nav-landing'+(section==='approvals'?' active':'')} onClick={()=>{setSection('approvals');setReviewId('');setMobileMenuOpen(false);loadApprovals()}}>
       <span>{L('عمليات راوي','Rawi operations')}</span><strong>{approvalCounts('pending')}</strong>
      </button>
      <div className="rawi-std-nav-divider"/>
@@ -188,7 +189,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
        <span>{group.title}</span><small>{group.repositories.length}</small>
       </button>
       {section==='repository'&&groupKey===group.key&&<nav className="rawi-std-nav-repositories" aria-label={group.title}>
-       {group.repositories.map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>{setProductEditor(null);setRepoKey(r.key)}}>{r.name}</button>)}
+       {group.repositories.map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>{setProductEditor(null);setRepoKey(r.key);setMobileMenuOpen(false)}}>{r.name}</button>)}
       </nav>}
      </div>)}
     </aside>
