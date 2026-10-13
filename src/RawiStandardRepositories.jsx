@@ -234,11 +234,11 @@ export default function RawiStandardRepositories({onOpenThread}={}){
       </header>
       <RawiBusinessTransactions prefix={prefix} kind={selected.kind} lookups={lookups} sourceDraft={businessDraft} onSaved={()=>{setBusinessDraft(null);loadRecords();refreshLookups();loadDrafts()}}/>
       <RawiInventoryTransactions prefix={prefix} kind={selected.kind} lookups={lookups} sourceDraft={businessDraft} onSaved={()=>{setBusinessDraft(null);loadRecords();refreshLookups()}}/>
-      {genericDraft&&<p className="rawi-std-info">{L('السجلات الجديدة هنا مسودات إدارية محفوظة، وليست فواتير صادرة أو قيودًا مرحّلة أو حركات مخزون منفذة. الاعتماد والترحيل يتطلبان العمليات المحاسبية والمخزنية المخصصة.','These are stored operational drafts, not issued invoices, posted journal entries or executed inventory movements.')}</p>}
-      {selected.read_only&&<p className="rawi-std-info">{L('يُحسب التقرير من السجلات التشغيلية الفعلية، ولا ينشئ قيودًا أو إقرارات معتمدة.','This report reads operational data and does not issue certified statements.')}</p>}
+
+
       
       {selected.kind==='sales_invoices'&&<section className="rawi-std-issued"><h3>{L('الفواتير الفعلية الصادرة','Actual ERP invoices')}</h3>
-       <p className="rawi-std-info">{L('رمز QR يظهر للفواتير الصادرة بعد اكتمال اسم الشركة والرقم الضريبي وتفعيل QR في ملف الشركة. لا يمثل هذا الرمز وحده تكامل المرحلة الثانية.','QR is available for issued invoices with a registered Saudi tax profile. Basic QR alone is not Phase 2 integration.')}</p>
+
        {realInvoices.length?<div className="rawi-std-invoices">{realInvoices.map(invoice=><div key={invoice.id}>
         <strong>{invoice.invoice_no}</strong><span>{invoice.customer_name||'—'} · {invoice.status} · {(Number(invoice.total_halalas||0)/100).toFixed(2)}</span>
         {['issued','paid'].includes(invoice.status)&&<button type="button" onClick={()=>showInvoiceQr(invoice)}>{L('عرض QR','Show QR')}</button>}
@@ -250,7 +250,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
        {selected.kind==='products'&&productEditor&&<section className="rawi-std-uom-editor">
         <div className="rawi-std-form-top"><strong>{L('وحدات الصنف: ','Product units: ')}{productEditor.product.name}</strong>
          <button type="button" onClick={()=>setProductEditor(null)} aria-label={L('إغلاق','Close')}><X size={17}/></button></div>
-        <p className="rawi-std-info">{L('وحدة الأساس: ','Base unit: ')}{productEditor.product.unit} — {L('كل وحدة بديلة تساوي عددًا محددًا من وحدات الأساس','Each alternative represents a quantity of base units')}</p>
+
         <div className="rawi-std-uom-links">{productEditor.links.map(link=><div key={link.unit_id}><strong>{link.name}{link.is_base?' — الأساس':''}</strong><span>{'1 '+link.name+' = '+Number(link.factor)+' '+productEditor.product.unit}</span><small>{link.barcode||''}</small></div>)}</div>
         <form onSubmit={saveProductUnit} className="rawi-std-uom-form">
          <label>{L('وحدة إضافية','Alternative unit')}<select required value={productUnitDraft.unit_id} onChange={e=>setProductUnitDraft(x=>({...x,unit_id:e.target.value}))}>
@@ -305,13 +305,13 @@ export default function RawiStandardRepositories({onOpenThread}={}){
           <label>{L('الكمية','Quantity')}<input required type="number" min="0.001" step="any" value={line.quantity} onChange={e=>changeLine(index,'quantity',e.target.value)}/></label>
           <button type="button" onClick={()=>setDraft(old=>({...old,lines:old.lines.filter((_,i)=>i!==index)}))}>{L('حذف','Remove')}</button>
          </div>)}
-         {!draft.lines?.length&&<p className="rawi-std-info">{L('أضف صنفًا واحدًا على الأقل؛ الأسعار والكميات الأساسية تُحسب من ملف الصنف ووحداته.','Add at least one item; prices and base quantities come from product records and their units.')}</p>}
+
         </section>}
 
         {!!selected.stages.length&&<label className="rawi-std-status">{L('الحالة','Status')}<select value={draft.stage||selected.stages[0]} onChange={e=>setDraft(x=>({...x,stage:e.target.value}))}>{selected.stages.map(x=><option key={x} value={x}>{x}</option>)}</select></label>}
         <button type="submit" className="primary" disabled={saving}><Save size={16}/>{saving?L('جاري الحفظ','Saving'):L('حفظ البيانات','Save')}</button>
        </form>}
-       {liveSelected&&<h3 className="rawi-std-legacy-heading">{L('مسودات محفوظة لم تُنفذ','Saved unposted drafts')}</h3>}
+}
        <div className="rawi-std-tools"><label><Search size={16}/><input placeholder={L('بحث في سجلات المستودع','Search records')} value={search} onChange={e=>setSearch(e.target.value)}/></label><span>{visible.length} {L('سجل','records')}</span><div className="rawi-std-view-mode"><button type="button" className={viewMode==='table'?'active':''} onClick={()=>setViewMode('table')}>{L('جدول','Table')}</button><button type="button" className={viewMode==='cards'?'active':''} onClick={()=>setViewMode('cards')}>{L('بطاقات','Cards')}</button></div></div>
        {recordsLoading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/>{L('جاري جلب البيانات','Loading data')}</div>:visible.length?viewMode==='table'?<div className="rawi-std-table-wrap"><table><thead><tr><th>{L('المستند / المرجع','Record / Reference')}</th>{selected.fields.slice(0,4).map(f=><th key={f.key}>{f.label}</th>)}<th>{L('الحالة','Status')}</th><th>{L('الإجراء','Action')}</th></tr></thead><tbody>{visible.map(row=><tr key={row.id}><td><strong>{row.document_number||row.values_json?.document_number||String(row.values_json?.field_1||'—')}</strong></td>{selected.fields.slice(0,4).map(f=><td key={f.key}>{show(f,row.values_json?.[f.key])}</td>)}<td>{row.stage||'—'}</td><td><div className="rawi-std-record-actions">{!liveSelected&&selected.kind!=='document_sequences'&&<button type="button" onClick={()=>startDraft(row)}>{L('فتح','Open')}</button>}{draftToLive.has(selected.kind)&&<button type="button" onClick={()=>prepareBusinessDraft({...row,repository_key:selected.key})}>{L('تجهيز عملية فعلية','Prepare transaction')}</button>}{selected.kind==='products'&&<button type="button" onClick={()=>openProductUnits(row)}>{L('الوحدات','Units')}</button>}{row.values_json?.rawi_source_thread_id&&onOpenThread&&<button type="button" onClick={()=>onOpenThread(row.values_json.rawi_source_thread_id)}>{L('المصدر','Source')}</button>}</div></td></tr>)}</tbody></table></div>:<div className="rawi-std-records">{visible.map(row=><article key={row.id}>
         <div className="rawi-std-record-title"><strong>{row.document_number||row.values_json?.document_number||String(row.values_json?.field_1||selected.name)}</strong>{row.stage&&<small>{row.stage}</small>}</div>
