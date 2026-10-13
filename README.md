@@ -33,3 +33,25 @@ Run `npm install && npm run check` for CI; the GitHub workflow deploys only thes
 **Production gating:** Cloudflare HTML/route success is not sufficient. Real Neon, JWT session, AI providers, tenant schema and authorized read/write must be verified. Registration remains closed unless the owner enables it with verified secrets and invitations. Never commit secrets.
 
 For exact product and UI rules consult [RAWI_ERP_APPROVED_DESIGN_AR.md](RAWI_ERP_APPROVED_DESIGN_AR.md) and [MIF_SMART_PRODUCTS_DESIGN_LOCK_AR.md](MIF_SMART_PRODUCTS_DESIGN_LOCK_AR.md).
+
+## Rawi database isolation rollout (pending activation)
+
+The same repository deploys `mif-smart-platform` and `rawi-enterprise` as **separate Cloudflare Workers**.
+MIF continues using the `mif_smart` Neon control database. RAWI's target Neon project is
+`withered-night-28458135` with the `rawi_control` database and one database per customer.
+
+Before merging the isolation PR, configure the **GitHub Actions secret**
+`MIF_RAWI_DATABASE_URL` with the new project's `rawi_control` connection URL.
+The deployment sends this secret **only** to the RAWI Worker as `RAWI_DATABASE_URL`;
+it must never appear in source files or the MIF Worker.
+
+Tenant routing requires the registry's project and branch to match those configured
+for the RAWI Worker, and switches to RAWI database credentials only for migrated tenants.
+Legacy tenants stay on their existing databases until their entries are explicitly
+cut over. Existing MIF subscription and login services remain central.
+
+**Not production-ready:** the historical company schema generator still includes
+some MIF tables; its migration path into the new RAWI project is blocked. Before
+switching tenant registry rows, implement RAWI-only migrations and test account access,
+company profiles, read/write, chat drafts, approvals, schedules and rollback.
+Do not delete the old tenant databases before data and rollback validation.
