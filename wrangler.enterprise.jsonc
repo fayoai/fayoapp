@@ -10,9 +10,11 @@
   "vars": {
     "MIF_APP_SURFACE": "enterprise",
     "PUBLIC_CHAT_ENABLED": "true",
-    "NEON_PROJECT_ID": "blue-wave-63999494",
-    "NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
-    "NEON_DB_ROLE_NAME": "mif_smart_owner"
+    "NEON_PROJECT_ID": "withered-night-28458135",
+    "LEGACY_NEON_PROJECT_ID": "blue-wave-63999494",
+    "LEGACY_NEON_BRANCH_ID": "br-still-recipe-b9xl70wg",
+    "NEON_BRANCH_ID": "br-bitter-dust-b99el76s",
+    "NEON_DB_ROLE_NAME": "rawi_control_owner"
   },
   "assets": {
     "directory": "./dist/enterprise",
