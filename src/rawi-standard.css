@@ -105,3 +105,68 @@
 @media(max-width:620px){.rawi-std-tools{flex-wrap:wrap}.rawi-std-view-mode{margin-inline-start:auto}.rawi-std-table-wrap{overscroll-behavior-x:contain}.rawi-std-table-wrap :is(td,th){padding:12px}}
 
 .rawi-std-legacy-heading{margin:10px 0 0;font-size:13px;font-weight:750;color:#58708f;padding:0 3px}
+
+
+/* Production operations: sidebar navigation and human approval inbox. */
+.rawi-std-operations-layout{display:grid;grid-template-columns:minmax(218px,254px) minmax(0,1fr);align-items:start;gap:14px;min-width:0}
+.rawi-std-navigation{display:flex;flex-direction:column;gap:5px;min-width:0;max-height:calc(100dvh - 220px);overflow-y:auto;overscroll-behavior:contain;position:sticky;top:8px;background:#fff;border:1px solid #dce7f7;border-radius:13px;padding:10px;scrollbar-width:thin}
+.rawi-std-navigation button{font:inherit;border:0;cursor:pointer;text-align:start}
+.rawi-std-nav-landing,.rawi-std-nav-group-label{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:42px;padding:10px 12px;border-radius:9px;background:transparent;color:#35577f;font-size:13px;font-weight:700}
+.rawi-std-nav-landing.active,.rawi-std-nav-group-label.active{background:#e9f1ff;color:#205ed3}
+.rawi-std-nav-landing strong{min-width:24px;text-align:center;padding:2px 6px;border-radius:7px;background:#fff;color:#205ed3;font-size:12px}
+.rawi-std-nav-group-label small{color:#8193a9;font-size:11px}
+.rawi-std-nav-divider{height:1px;background:#e5edf8;margin:7px 4px}
+.rawi-std-nav-repositories{display:flex;flex-direction:column;gap:2px;margin:3px 7px 7px;padding-inline-start:10px;border-inline-start:2px solid #e5eef9}
+.rawi-std-nav-repositories button{display:block;padding:9px 10px;border-radius:8px;background:transparent;color:#597290;font-size:12px;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.rawi-std-nav-repositories button:hover,.rawi-std-nav-repositories button.active{background:#eff5ff;color:#1558ba}
+.rawi-std-approval-screen{display:flex;flex-direction:column;gap:13px;min-width:0}
+.rawi-std-approval-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;background:#fff;border:1px solid #dce7f7;border-radius:13px}
+.rawi-std-approval-heading h2{font-size:19px;margin:0 0 4px;color:#244365}
+.rawi-std-approval-heading span{font-size:12px;color:#7c8fa9}
+.rawi-std-approval-heading button{display:flex;align-items:center;gap:7px;color:#315fa2;background:#fff;border:1px solid #d5e1ef;border-radius:9px;padding:8px 12px;font-size:12px}
+.rawi-std-approval-filters{display:flex;gap:8px;flex-wrap:wrap}
+.rawi-std-approval-filters button{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #dce7f7;border-radius:9px;padding:9px 13px;color:#526d90;font-size:12px;font-weight:700}
+.rawi-std-approval-filters button.active{color:#1658c4;border-color:#a9c9fb;background:#eef5ff}
+.rawi-std-approval-filters span{border-radius:7px;background:#edf1f7;padding:1px 7px;font-size:11px}
+.rawi-std-approval-list{display:flex;flex-direction:column;gap:10px;min-width:0}
+.rawi-std-approval-item{background:#fff;border:1px solid #dce7f7;border-radius:12px;padding:15px;min-width:0}
+.rawi-std-approval-top,.rawi-std-approval-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rawi-std-approval-top>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rawi-std-approval-top strong{font-size:15px;color:#273f65}
+.rawi-std-approval-top span{font-size:12px;color:#778caa}
+.rawi-std-approval-status{border-radius:7px;padding:4px 9px;font-size:11px;background:#eff4fb;color:#57718e}
+.rawi-std-approval-status.status-pending{color:#8f6120;background:#fff5df}
+.rawi-std-approval-status.status-approved{color:#227449;background:#e9f7ef}
+.rawi-std-approval-status.status-rejected{color:#a44747;background:#fff0f0}
+.rawi-std-approval-command{font-size:13px;line-height:1.8;color:#3d5473;margin:10px 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rawi-std-approval-actions{justify-content:flex-start;border-top:1px solid #edf2f8;padding-top:11px}
+.rawi-std-approval-actions button{background:#fff;border:1px solid #d0ddec;border-radius:8px;color:#375e8d;font-size:12px;font-weight:700;min-height:34px;padding:7px 12px}
+.rawi-std-approval-actions button.primary{color:#fff;border-color:#2166e8;background:#2166e8}
+.rawi-std-approval-actions button.danger{color:#ae404c;border-color:#ead0d3;background:#fff}
+.rawi-std-approval-actions button:disabled{opacity:.5;cursor:wait}
+.rawi-std-approval-empty{padding:45px 15px;text-align:center;border-radius:12px;border:1px dashed #cbd9ed;color:#687d99;background:#fff;font-size:13px}
+.rawi-std-approval-detail{margin-top:12px;padding:13px;border:1px solid #dfe8f5;border-radius:9px;background:#fbfcff}
+.rawi-std-approval-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.rawi-std-approval-data>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rawi-std-approval-data small{color:#7c8fa9;font-size:11px}
+.rawi-std-approval-data strong{color:#244365;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.rawi-std-approval-lines{margin-top:12px;padding-top:10px;border-top:1px solid #e2eafa}
+.rawi-std-approval-lines h3{font-size:13px;margin:0 0 8px}
+.rawi-std-approval-lines>div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;padding:7px 0;border-bottom:1px solid #edf1f8}
+.rawi-std-menu-button{display:none}
+@media(max-width:900px){
+ .rawi-std-operations-layout{grid-template-columns:190px minmax(0,1fr)}
+ .rawi-std-navigation{max-height:70dvh}
+}
+@media(max-width:700px){
+ .rawi-std-operations-layout{grid-template-columns:minmax(0,1fr)}
+ .rawi-std-navigation{display:none;position:fixed;z-index:61;inset-block-start:12px;inset-block-end:calc(74px + env(safe-area-inset-bottom));inset-inline-start:10px;width:min(83vw,310px);max-height:none;overflow-y:auto;box-shadow:0 12px 35px #10294432}
+ .rawi-std-navigation.is-open{display:flex}
+ .rawi-std-menu-button{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #d7e2f2;background:#fff;color:#315d90;border-radius:9px;font-size:12px}
+ .rawi-std-nav-backdrop{position:fixed;z-index:60;inset:0;background:#0d224b57;border:0}
+ .rawi-std-approval-heading{padding:13px}
+ .rawi-std-approval-heading h2{font-size:16px}
+ .rawi-std-approval-data{grid-template-columns:minmax(0,1fr)}
+ .rawi-std-approval-item{padding:12px}
+ .rawi-std-approval-filters button{flex:1;justify-content:center;min-width:0;padding:8px 5px;font-size:11px}
+}
