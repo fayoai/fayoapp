@@ -171,30 +171,62 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const liveSelected=!!selected&&liveKinds.has(selected.kind);
  const genericDraft=selected&&!liveSelected&&!selected.read_only&&selected.storage!=='erp'&&selected.kind!=='system_designs'&&selected.kind!=='document_sequences';
  return <section className="rawi-std" dir={lang==='ar'?'rtl':'ltr'}>
-  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('العمليات','Operations')}</h1><p>{L('إدارة السجلات والمستندات ومسودات راوي المحفوظة داخل الشركة','Manage company records, documents and saved Rawi drafts')}</p></div>
+  <div className="rawi-std-heading"><div><h1><BookOpen size={23}/>{L('العمليات','Operations')}</h1></div>
    {workspaces.length>1&&<select aria-label={L('الشركة','Company')} value={workspace} onChange={e=>setWorkspace(e.target.value)}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}
   </div>
   {error&&<p role="alert" className="rawi-std-error">{error}</p>}
   {notice&&<p role="status" className="rawi-std-notice">{notice}</p>}
   {loading?<div className="rawi-std-empty"><Loader2 className="mif-spinner"/>{L('جاري تحميل المستودعات','Loading repositories')}</div>:!workspace?<div className="rawi-std-empty">{L('لا توجد شركة متاحة','No company workspace is available')}</div>:<>
-   <section className="rawi-std-drafts" aria-label={L('مسودات العمليات','Operational drafts')}>
-    <div className="rawi-std-drafts-head"><h2>{L('مسودات العمليات','Operational drafts')}</h2><span>{drafts.length}</span><button type="button" onClick={loadDrafts}><RefreshCw size={15}/>{L('تحديث','Refresh')}</button></div>
-    {drafts.length?<div className="rawi-std-drafts-list">{drafts.map(row=><div className="rawi-std-draft-item" key={row.id}>
-     <button type="button" className="rawi-std-draft-open" onClick={()=>{setGroupKey(row.group);setRepoKey(row.repository_key);setFocusDraftId(row.id)}}>
-      <strong>{row.repository_name}</strong><span>{String(row.values_json?.document_number||row.values_json?.field_1||row.id).slice(0,85)}</span><small>{L('مسودة','Draft')}</small>
+   <div className="rawi-std-layout rawi-std-operations-layout">
+    <aside className="rawi-std-navigation" aria-label={L('قائمة العمليات','Operations menu')}>
+     <button type="button" className={'rawi-std-nav-landing'+(section==='approvals'?' active':'')} onClick={()=>{setSection('approvals');setReviewId('');loadApprovals()}}>
+      <span>{L('عمليات راوي','Rawi operations')}</span><strong>{approvalCounts('pending')}</strong>
      </button>
-     {draftToLive.has(String(row.repository_key).replace(/^std_/,''))&&<button type="button" className="rawi-std-source-link" onClick={()=>prepareBusinessDraft(row)}>{L('تجهيز عملية فعلية','Prepare operation')}</button>}{row.source_thread_id&&onOpenThread&&<button type="button" className="rawi-std-source-link" onClick={()=>onOpenThread(row.source_thread_id)}>{L('المصدر','Source')}</button>}
-    </div>)}</div>:<p className="rawi-std-drafts-empty">{L('لا توجد مسودات محفوظة بعد. ستظهر هنا العمليات التي ينشئها راوي أو المستخدم.','No saved drafts yet. Rawi and user-created drafts will appear here.')}</p>}
-   </section>
-   <nav className="rawi-std-groups" aria-label={L('الإدارات','Departments')}>
-    {groups.map(g=><button key={g.key} className={groupKey===g.key?'active':''} type="button" onClick={()=>selectGroup(g.key)}>{g.title}<span>{g.repositories.length}</span></button>)}
-   </nav>
-   <div className="rawi-std-layout">
-    <nav className="rawi-std-side" aria-label={L('المستودعات','Repositories')}>
-     {(activeGroup?.repositories||[]).map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>{setProductEditor(null);setRepoKey(r.key)}}>{r.name}</button>)}
-    </nav>
+     <div className="rawi-std-nav-divider"/>
+     {groups.map(group=><div className="rawi-std-nav-group" key={group.key}>
+      <button type="button" className={'rawi-std-nav-group-label'+(section==='repository'&&groupKey===group.key?' active':'')} onClick={()=>selectGroup(group.key)}>
+       <span>{group.title}</span><small>{group.repositories.length}</small>
+      </button>
+      {section==='repository'&&groupKey===group.key&&<nav className="rawi-std-nav-repositories" aria-label={group.title}>
+       {group.repositories.map(r=><button type="button" key={r.key} className={repoKey===r.key?'active':''} onClick={()=>{setProductEditor(null);setRepoKey(r.key)}}>{r.name}</button>)}
+      </nav>}
+     </div>)}
+    </aside>
     <div className="rawi-std-main">
-     {selected&&<>
+     {section==='approvals'&&<section className="rawi-std-approval-screen">
+      <header className="rawi-std-approval-heading"><div><h2>{L('عمليات راوي','Rawi operations')}</h2><span>{L('الموافقة على العمليات','Operation approvals')}</span></div><button type="button" onClick={loadApprovals}><RefreshCw size={17}/>{L('تحديث','Refresh')}</button></header>
+      <div className="rawi-std-approval-filters" role="group" aria-label={L('حالة العملية','Operation status')}>
+       {[['pending','بانتظار الموافقة','Pending'],['approved','المعتمدة','Approved'],['rejected','المرفوضة','Rejected']].map(([status,ar,en])=><button type="button" key={status} className={approvalFilter===status?'active':''} onClick={()=>{setApprovalFilter(status);setReviewId('')}}>{L(ar,en)} <span>{approvalCounts(status)}</span></button>)}
+      </div>
+      <div className="rawi-std-approval-list">
+       {approvalRows.filter(x=>x.status===approvalFilter).map(row=>{
+        const repo=groups.flatMap(g=>g.repositories).find(x=>x.key===row.repository_key);
+        const opened=reviewId===row.id;
+        return <article className="rawi-std-approval-item" key={row.id}>
+         <div className="rawi-std-approval-top">
+          <div><strong>{row.repository_name}</strong><span>{groups.find(g=>g.key===row.group)?.title||''}{row.document_number?' · '+row.document_number:''}</span></div>
+          <small className={'rawi-std-approval-status status-'+row.status}>{row.status==='pending'?L('بانتظار الموافقة','Pending'):row.status==='approved'?L('معتمد','Approved'):L('مرفوض','Rejected')}</small>
+         </div>
+         {row.instruction&&<p className="rawi-std-approval-command">{row.instruction}</p>}
+         <div className="rawi-std-approval-actions">
+          <button type="button" onClick={()=>setReviewId(opened?'':row.id)}>{opened?L('إغلاق التفاصيل','Close details'):L('استعراض','Review')}</button>
+          {row.status==='pending'&&<>
+           <button type="button" className="primary" disabled={approvalBusy===row.id} onClick={()=>processApproval(row.id,'approve')}>{approvalBusy===row.id?L('جاري الاعتماد','Approving'):L('اعتماد','Approve')}</button>
+           <button type="button" className="danger" disabled={approvalBusy===row.id} onClick={()=>processApproval(row.id,'reject')}>{L('رفض','Reject')}</button>
+          </>}
+          {row.status==='approved'&&<button type="button" onClick={()=>openRepository(row.repository_key)}>{L('فتح المستودع','Open repository')}</button>}
+          {row.source_thread_id&&onOpenThread&&<button type="button" onClick={()=>onOpenThread(row.source_thread_id)}>{L('المحادثة','Conversation')}</button>}
+         </div>
+         {opened&&<div className="rawi-std-approval-detail">
+          <div className="rawi-std-approval-data">{(repo?.fields||[]).filter(field=>row.values?.[field.key]!==undefined).map(field=><div key={field.key}><small>{field.label}</small><strong>{show(field,row.values[field.key])}</strong></div>)}</div>
+          {row.lines?.length>0&&<div className="rawi-std-approval-lines"><h3>{L('الأصناف','Items')}</h3>{row.lines.map((line,i)=><div key={i}><span>{lookups.products?.find(x=>x.id===line.item_id)?.name||line.item_id}</span><b>{Number(line.quantity).toLocaleString(lang==='ar'?'ar-SA':'en-US')}</b></div>)}</div>}
+         </div>}
+        </article>
+       })}
+       {!approvalRows.some(x=>x.status===approvalFilter)&&<div className="rawi-std-approval-empty">{approvalFilter==='pending'?L('لا توجد عمليات تنتظر الموافقة','No operations awaiting approval'):approvalFilter==='approved'?L('لا توجد عمليات معتمدة','No approved operations'):L('لا توجد عمليات مرفوضة','No rejected operations')}</div>}
+      </div>
+     </section>}
+     {section==='repository'&&selected&&<>
       <header className="rawi-std-repo-header"><div><h2>{selected.name}</h2><small>{activeGroup?.title}</small></div>
        <div className="rawi-std-header-actions"><button type="button" onClick={loadRecords} disabled={recordsLoading}><RefreshCw size={16}/>{L('تحديث','Refresh')}</button>{selected.kind==='chart_accounts'&&<button type="button" disabled={saving} onClick={seedAccounts}>{L('تهيئة دليل حسابات أساسي','Starter chart')}</button>}
        {!liveSelected&&!selected.read_only&&selected.kind!=='document_sequences'&&<button type="button" className="primary" onClick={()=>startDraft()}><FilePlus2 size={16}/>{L('سجل جديد','New record')}</button>}</div>
