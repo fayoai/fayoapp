@@ -29,7 +29,7 @@ test('only ERP and chat endpoints are routed into company databases',()=>{
 });
 test('authenticated ERP tenant routes to a verified independent connection',async()=>{
  const c=context('/api/admin/erp/w/'+workspace+'/core/items');const queries=[];
- const query=async(_db,sql,args)=>{queries.push({sql,args});return [{database_name:name,status:'ready',application:'enterprise'}]};
+ const query=async(_db,sql,args)=>{queries.push({sql,args});return [{database_name:name,status:'ready',application:'enterprise',neon_project_id:cfg.NEON_PROJECT_ID,neon_branch_id:cfg.NEON_BRANCH_ID}]};
  const result=await attachTenantDb(c,{central:{},query,settings:cfg,onReady:url=>({url})});
  assert.equal(result,null);
  assert.equal(new URL(c.get('tenantSQL').url).pathname,'/'+name);
