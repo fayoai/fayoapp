@@ -12,6 +12,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const [groupKey,setGroupKey]=useState('sales'),[repoKey,setRepoKey]=useState('std_opportunities');
  const [rows,setRows]=useState([]),[report,setReport]=useState(null),[draft,setDraft]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [drafts,setDrafts]=useState([]),[focusDraftId,setFocusDraftId]=useState(null);
+ const [section,setSection]=useState('approvals'),[approvalRows,setApprovalRows]=useState([]),[approvalFilter,setApprovalFilter]=useState('pending'),[reviewId,setReviewId]=useState(''),[approvalBusy,setApprovalBusy]=useState('');
  const [loading,setLoading]=useState(true),[recordsLoading,setRecordsLoading]=useState(false),[saving,setSaving]=useState(false),[search,setSearch]=useState(''),[viewMode,setViewMode]=useState('table');
  const [sequenceKind,setSequenceKind]=useState('sales_orders'),[sequenceValue,setSequenceValue]=useState('1');
  const [realInvoices,setRealInvoices]=useState([]),[qrImage,setQrImage]=useState(null);
@@ -21,7 +22,20 @@ export default function RawiStandardRepositories({onOpenThread}={}){
  const request=useRef(0);
  const prefix=workspace?'/api/admin/erp/w/'+encodeURIComponent(workspace):'';
  const loadDrafts=async()=>{if(!prefix)return;try{const r=await api(prefix+'/standard/drafts');setDrafts(r.data||[])}catch{setDrafts([])}};
- useEffect(()=>{if(workspace)loadDrafts();else setDrafts([])},[workspace]);
+ const loadApprovals=async()=>{if(!prefix)return;try{const r=await api(prefix+'/approvals');setApprovalRows(r.data||[])}catch(e){setError(e.message)}};
+ const processApproval=async(id,action)=>{
+  if(approvalBusy)return;
+  setApprovalBusy(id);setError('');setNotice('');
+  try{
+   await api(prefix+'/approvals/'+encodeURIComponent(id)+'/'+action,{method:'POST',body:'{}'});
+   setReviewId('');setApprovalFilter(action==='approve'?'approved':'rejected');
+   await Promise.all([loadApprovals(),loadDrafts(),loadRecords()]);
+   setNotice(action==='approve'?L('تم الاعتماد وحفظ المستند في مستودعه','Approved and saved in the repository'):L('تم رفض العملية','Operation rejected'));
+  }catch(e){setError(e.message)}finally{setApprovalBusy('')}
+ };
+ const openRepository=(key)=>{const repo=groups.flatMap(g=>g.repositories).find(r=>r.key===key);if(!repo)return;setSection('repository');setGroupKey(repo.group);setRepoKey(key);setDraft(null)};
+ const approvalCounts=status=>approvalRows.filter(x=>x.status===status).length;
+ useEffect(()=>{if(workspace){loadDrafts();loadApprovals()}else{setDrafts([]);setApprovalRows([])}setSection('approvals');setReviewId('');setApprovalFilter('pending')},[workspace]);
  const activeGroup=groups.find(g=>g.key===groupKey)||groups[0];
  const selected=groups.flatMap(g=>g.repositories).find(r=>r.key===repoKey)||null;
  const all=groups.flatMap(g=>g.repositories);
@@ -84,7 +98,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
    setProductEditor({product:r.product,links:r.data||[]});setNotice(L('تم حفظ وحدات الصنف ومعامل التحويل','Saved product units and conversions'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
- const selectGroup=key=>{setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
+ const selectGroup=key=>{setSection('repository');setProductEditor(null);setGroupKey(key);setRepoKey(groups.find(g=>g.key===key)?.repositories?.[0]?.key||'');};
  const draftToLive=new Set(['sales_orders','purchase_orders','sales_invoices','sales_receipts','accounting_receipts','payment_vouchers','journal_entries','stock_count','internal_transfer']);
  const prepareBusinessDraft=row=>{
   const target=groups.flatMap(group=>group.repositories).find(repo=>repo.key===row.repository_key);
@@ -128,7 +142,7 @@ export default function RawiStandardRepositories({onOpenThread}={}){
    const documentLines=lineKinds.has(selected.kind)?{lines:(draft.lines||[]).map(x=>({item_id:x.item_id,quantity:Number(x.quantity),...(x.unit_id?{unit_id:x.unit_id}:{})}))}:{};
    const response=await api(target,{method:draft.id?'PATCH':'POST',body:JSON.stringify({values,stage:draft.stage||'',...documentLines})});
    if(!response?.data?.id)throw Error(L('لم يؤكد النظام حفظ البيانات','The server did not confirm saving'));
-   setDraft(null);await loadRecords();await refreshLookups();await loadDrafts();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
+   setDraft(null);await loadRecords();await refreshLookups();await loadDrafts();await loadApprovals();setNotice(L('تم حفظ السجل في قاعدة بيانات الشركة','Record saved in the company database'));
   }catch(e){setError(e.message)}finally{setSaving(false)}
  };
  const seedAccounts=async()=>{
